@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -31,6 +32,7 @@ import fr.quentin.Evolution;
 import fr.quentin.Position;
 import fr.quentin.utils.DiffHelper;
 import fr.quentin.utils.GitHelper;
+import fr.quentin.utils.SourcesHelper;
 import gr.uom.java.xmi.diff.CodeRange;
 
 // import org.refactoringminer.api.GitService;
@@ -50,7 +52,6 @@ import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
 
 public class ImpactRMinerHandler implements ImpactRoute {
 	Logger logger = Logger.getLogger("ImpactRM commitHandler");
-	private DiffHelper diffHelperInst;
 
 	@Override
 	public Object simplifiedHandler(String before, String after, QueryParamsMap queryMap) {
@@ -74,10 +75,17 @@ public class ImpactRMinerHandler implements ImpactRoute {
 
 		GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
 		JsonObject r = new JsonObject();
-		try {
-			this.diffHelperInst = new DiffHelper(gitURL, commitIdBefore, commitIdAfter);
+        try (SourcesHelper helper = new SourcesHelper(gitURL);) {
+            Path path = helper.materialize(commitIdBefore);
+            MavenLauncher launcher = new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
+            launcher.getEnvironment().setLevel("INFO");
+            launcher.getFactory().getEnvironment().setLevel("INFO");
+
+            // Compile with maven to get deps
+			SourcesHelper.prepare(path);
+			
 			try {
-				miner.detectBetweenCommits(diffHelperInst.getRepo(), commitIdBefore, commitIdAfter,
+				miner.detectBetweenCommits(helper.getRepo(), commitIdBefore, commitIdAfter,
 						new RefactoringHandler() {
 							@Override
 							public void handle(String commitId, List<Refactoring> refactorings) {
@@ -87,37 +95,18 @@ public class ImpactRMinerHandler implements ImpactRoute {
 			} catch (Exception e) {
 				// throw new RuntimeException(e);
 			}
-			this.diffHelperInst.getLauncherBefore().getEnvironment().setLevel("INFO");
-			// this.diffHelperInst.getLauncherBefore().getEnvironment().setNoClasspath(true);
-			this.diffHelperInst.getLauncherBefore().getFactory().getEnvironment().setLevel("INFO");
-
-			// get deps with maven
-			InvocationRequest request = new DefaultInvocationRequest();
-			request.setBaseDirectory(this.diffHelperInst.getPathBefore().toFile());
-			// request.setPomFile( Paths.get(
-			// this.diffHelperInst.getPathBefore().toString(), "pom.xml" ).toFIle() );
-			request.setGoals(Collections.singletonList("compile"));
-
-			Invoker invoker = new DefaultInvoker();
-			invoker.setMavenHome(Paths.get("/usr").toFile());
 
 			try {
-				invoker.execute(request);
-			} catch (MavenInvocationException e) {
-				throw new RuntimeException(e);
-			}
-
-			try {
-				this.diffHelperInst.getLauncherBefore().buildModel();
+				launcher.buildModel();
 			} catch (Exception e) {
-				for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) this.diffHelperInst.getLauncherBefore()
+				for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcher
 						.getModelBuilder()).getProblems()) {
 					System.err.println(pb.toString());
 				}
 				throw new RuntimeException(e);
 			}
 
-			r.add("impact", impactAnalysis(this.diffHelperInst.getLauncherBefore(), detectedRefactorings));
+			r.add("impact", impactAnalysis(path, launcher, detectedRefactorings));
 		} catch (Exception e) {
 			e.printStackTrace();
 			return "{\"error\":\"" + e.toString() + "\"}";
@@ -146,7 +135,7 @@ public class ImpactRMinerHandler implements ImpactRoute {
 		return null;
 	}
 
-	public JsonElement impactAnalysis(MavenLauncher launcher, List<Refactoring> evolutions) throws IOException {
+	public JsonElement impactAnalysis(Path root, MavenLauncher launcher, List<Refactoring> evolutions) throws IOException {
 		List<Evolution> processedEvolutions = new ArrayList<>();
 
 		for (Refactoring op : evolutions) {
@@ -154,14 +143,21 @@ public class ImpactRMinerHandler implements ImpactRoute {
 				List<CodeRange> src = op.leftSide();
 				logger.info(src.getClass().toString());
 				MoveMethodEvolution tmp = new MoveMethodEvolution(
-						this.diffHelperInst.getPathBefore().toAbsolutePath().toString(), src, op);
+					root.toAbsolutePath().toString(), src, op);
+				processedEvolutions.add(tmp);
+				Logger.getLogger("ImpactAna").info("- " + tmp.op + "\n" + tmp.impacts.size());
+			} else {
+				List<CodeRange> src = op.leftSide();
+				logger.info(src.getClass().toString());
+				OtherEvolution tmp = new OtherEvolution(
+					root.toAbsolutePath().toString(), src, op);
 				processedEvolutions.add(tmp);
 				Logger.getLogger("ImpactAna").info("- " + tmp.op + "\n" + tmp.impacts.size());
 			}
 		}
 		Logger.getLogger("ImpactAna")
 				.info("Number of executable refs mapped to positions " + processedEvolutions.size());
-		return this.diffHelperInst.impactAnalysis(launcher, processedEvolutions);
+		return SourcesHelper.impactAnalysis(root, launcher, processedEvolutions);
 	}
 
 	static class MoveMethodEvolution implements Evolution {
@@ -182,6 +178,29 @@ public class ImpactRMinerHandler implements ImpactRoute {
 		}
 
 	}
+    
+    static class OtherEvolution implements Evolution {
+        Set<Position> impacts = new HashSet<>();
+        private Refactoring op;
+
+        OtherEvolution(String root, List<CodeRange> holders, Refactoring op) {
+            this.op = op;
+            for (CodeRange range : holders) {
+                System.out.println("postion");
+                System.out.println(Paths.get(root, range.getFilePath()).toString());
+                System.out.println(range.getStartOffset());
+                System.out.println(range.getEndOffset());
+                this.impacts.add(new Position(Paths.get(root, range.getFilePath()).toString(), range.getStartOffset(),
+                        range.getEndOffset()));
+            }
+        }
+
+        @Override
+        public Set<Position> getImpactingPositions() {
+            return impacts;
+        }
+
+    }
 
 	public static String JSON(String gitURL, String currentCommitId, List<Refactoring> refactoringsAtRevision) {
 		StringBuilder sb = new StringBuilder();

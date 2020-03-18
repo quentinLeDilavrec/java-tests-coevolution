@@ -3,6 +3,7 @@ package fr.quentin.utils;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.URISyntaxException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -22,6 +23,7 @@ import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.lib.RepositoryBuilder;
+import org.eclipse.jgit.lib.TextProgressMonitor;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.revwalk.RevWalkUtils;
@@ -43,10 +45,13 @@ public class GitHelper {
 		Repository repository;
 		if (folder.exists()) {
 			RepositoryBuilder builder = new RepositoryBuilder();
-			repository = builder.setGitDir(new File(folder, ".git")).readEnvironment().findGitDir().build();
+			repository = builder.setGitDir(new File(folder, ".git")).setMustExist(true).readEnvironment().findGitDir()
+					.build();
 
 		} else {
-			Git git = Git.cloneRepository().setDirectory(folder).setURI(cloneUrl).setCloneAllBranches(true).call();
+			Git git = Git.cloneRepository().setDirectory(folder).setURI(cloneUrl)
+					.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out))).setCloneAllBranches(true)
+					.call();
 			repository = git.getRepository();
 		}
 		return repository;
@@ -182,7 +187,8 @@ public class GitHelper {
 
 	private List<TrackingRefUpdate> fetch(Repository repository) throws Exception {
 		try (Git git = new Git(repository)) {
-			FetchResult result = git.fetch().call();
+			FetchResult result = git.fetch().setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out)))
+					.call();
 
 			Collection<TrackingRefUpdate> updates = result.getTrackingRefUpdates();
 			List<TrackingRefUpdate> remoteRefsChanges = new ArrayList<TrackingRefUpdate>();
@@ -363,7 +369,9 @@ public class GitHelper {
 				treeWalk.reset(treeId);
 				while (treeWalk.next()) {
 					String path = treeWalk.getPathString();
-					files.add(new SourceFile(Paths.get(path)));
+					if (fileExtensions.isAllowed(path)) {
+						files.add(new SourceFile(Paths.get(path)));
+					}
 				}
 			}
 		} catch (Exception e) {
@@ -371,24 +379,49 @@ public class GitHelper {
 		}
 	}
 
-	public static SourceFileSet getSourcesAtCommit(Repository repository,
-			RevCommit commit, FilePathFilter fileExtensions) {
+	public static SourceFileSet getSourcesAtCommit(Repository repository, RevCommit commit,
+			FilePathFilter fileExtensions) {
 		List<SourceFile> files = new ArrayList<>();
 		files(repository, commit, files, fileExtensions);
 
 		return new GitSourceTree(repository, commit.getId(), files);
 	}
-	
+
 	public static SourceFileSet getSourcesAtCommit(Repository repository, String commitId,
 			FilePathFilter fileExtensions) {
-		try (RevWalk rw = new RevWalk(repository)) {
+		try (RevWalk rw = new GitHelper().fetchAndCreateNewRevsWalk(repository)) {
 			RevCommit commit = rw.parseCommit(repository.resolve(commitId));
-			if (commit.getParentCount() != 1) {
-				throw new RuntimeException("Commit should have one parent");
-			}
 			return getSourcesAtCommit(repository, commit, fileExtensions);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 	}
+
+	public static SourceFileSet getSourcesBeforeCommit(Repository repository, String commitId,
+			FilePathFilter fileExtensions) {
+		try (RevWalk rw = new GitHelper().fetchAndCreateNewRevsWalk(repository)) {
+			RevCommit commit = rw.parseCommit(repository.resolve(commitId));
+			if (commit.getParentCount() != 1) {
+				throw new RuntimeException("Commit should have one parent");
+			}
+			RevCommit commitBefore = rw.parseCommit(commit.getParent(0));
+			return getSourcesAtCommit(repository, commitBefore, fileExtensions);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	public static String getBeforeCommit(Repository repository, String commitId) {
+		try (RevWalk rw = new GitHelper().fetchAndCreateNewRevsWalk(repository)) {
+			RevCommit commit = rw.parseCommit(repository.resolve(commitId));
+			if (commit.getParentCount() != 1) {
+				throw new RuntimeException("Commit should have one parent");
+			}
+			RevCommit commitBefore = rw.parseCommit(commit.getParent(0));
+			return RevCommit.toString(commitBefore);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
 }

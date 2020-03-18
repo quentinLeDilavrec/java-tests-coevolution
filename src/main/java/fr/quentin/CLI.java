@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,6 +41,7 @@ import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 
 import fr.quentin.utils.ASTHelper;
 import fr.quentin.utils.DiffHelper;
+import fr.quentin.utils.SourcesHelper;
 import gumtree.spoon.AstComparator;
 import gumtree.spoon.diff.Diff;
 import gumtree.spoon.diff.operations.Operation;
@@ -134,29 +136,21 @@ public class CLI {
         // System.out.println(gson.toJson(r));
     }
 
-    public static String ast(String gitURL, String commitID) {
-        try {
-            ASTHelper ASTHelperInst = new ASTHelper(gitURL, commitID);
-            ASTHelperInst.getLauncher().getEnvironment().setLevel("INFO");
-            ASTHelperInst.getLauncher().getFactory().getEnvironment().setLevel("INFO");
+    public static String ast(String gitURL, String commitId) {
+        try (SourcesHelper helper = new SourcesHelper(gitURL);) {
+            Path path = helper.materialize(commitId);
+            MavenLauncher launcher = new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
+            launcher.getEnvironment().setLevel("INFO");
+            launcher.getFactory().getEnvironment().setLevel("INFO");
 
             // Compile with maven to get deps
-            InvocationRequest request = new DefaultInvocationRequest();
-            request.setBaseDirectory(ASTHelperInst.getPathBefore().toFile());
-            request.setGoals(Collections.singletonList("compile"));
-            Invoker invoker = new DefaultInvoker();
-            invoker.setMavenHome(Paths.get("/usr").toFile());
-            try {
-                invoker.execute(request);
-            } catch (MavenInvocationException e) {
-                throw new RuntimeException("Error while compiling project with maven", e);
-            }
+            SourcesHelper.prepare(path);
 
             // Build Spoon model
             try {
-                ASTHelperInst.getLauncher().buildModel();
+                launcher.buildModel();
             } catch (Exception e) {
-                for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) ASTHelperInst.getLauncher().getModelBuilder())
+                for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcher.getModelBuilder())
                         .getProblems()) {
                     logger.info(pb.toString());
                 }
@@ -164,7 +158,7 @@ public class CLI {
                 throw new RuntimeException("Error while building the Spoon model", e);
             }
 
-            return ASTHelperInst.getLauncher().getFactory().Type().getAll().get(0).getQualifiedName();
+            return launcher.getFactory().Type().getAll().get(0).getQualifiedName();
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -176,41 +170,10 @@ public class CLI {
 
         GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
         JsonObject r = new JsonObject();
-        try {
-            DiffHelper diffHelperInst = new DiffHelper(gitURL, before, after);
-            diffHelperInst.getLauncherBefore().getEnvironment().setLevel("INFO");
-            // diffHelperInst.getLauncherBefore().getEnvironment().setNoClasspath(true);
-            diffHelperInst.getLauncherBefore().getFactory().getEnvironment().setLevel("INFO");
-
-            // get deps with maven
-            InvocationRequest request = new DefaultInvocationRequest();
-            request.setBaseDirectory(diffHelperInst.getPathBefore().toFile());
-            // request.setPomFile( Paths.get(
-            // diffHelperInst.getPathBefore().toString(), "pom.xml" ).toFIle() );
-            request.setGoals(Collections.singletonList("compile"));
-
-            Invoker invoker = new DefaultInvoker();
-            invoker.setMavenHome(Paths.get("/usr").toFile());
+        try (SourcesHelper helper = new SourcesHelper(gitURL);) {
 
             try {
-                invoker.execute(request);
-            } catch (MavenInvocationException e) {
-                throw new RuntimeException(e);
-            }
-
-            try {
-                diffHelperInst.getLauncherBefore().buildModel();
-            } catch (Exception e) {
-                for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) diffHelperInst.getLauncherBefore()
-                        .getModelBuilder()).getProblems()) {
-                    logger.info(pb.toString());
-                }
-
-                throw new RuntimeException(e);
-            }
-
-            try {
-                miner.detectBetweenCommits(diffHelperInst.getRepo(), before, after, new RefactoringHandler() {
+                miner.detectBetweenCommits(helper.getRepo(), before, after, new RefactoringHandler() {
                     @Override
                     public void handle(String commitId, List<Refactoring> refactorings) {
                         detectedRefactorings.addAll(refactorings);

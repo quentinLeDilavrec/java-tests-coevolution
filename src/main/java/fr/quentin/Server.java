@@ -100,6 +100,7 @@ public class Server {
 					"Origin,Content-Type,Access-Control-Allow-Origin, Access-Control-Allow-Credentials");
 			return "OK";
 		});
+		
 		internalServerError((req, res) -> {
 			System.out.println("Error");
 			System.out.println(req);

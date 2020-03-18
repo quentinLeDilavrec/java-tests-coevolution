@@ -34,8 +34,10 @@ import spoon.reflect.reference.CtExecutableReference;
 import spoon.reflect.visitor.filter.TypeFilter;
 
 public class DiffHelper {
-	static String VERSIONS_PATH = "/tmp/Versions";
-	static String REPOS_PATH = "/tmp/Repos";
+	
+    static String VERSIONS_PATH = "/home/quentin/resources/Versions";
+	static String REPOS_PATH = "/home/quentin/resources/Repos";
+	
 	static FilePathFilter ALLOW_ALL = new FilePathFilter() {
 		@Override
 		public boolean isAllowed(String filePath) {

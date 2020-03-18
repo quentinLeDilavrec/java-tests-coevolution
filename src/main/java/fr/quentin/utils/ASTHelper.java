@@ -14,15 +14,14 @@ import spoon.MavenLauncher;
  */
 public class ASTHelper {
 
-	static String VERSIONS_PATH = "/tmp/Versions";
-    static String REPOS_PATH = "/tmp/Repos";
+    static String VERSIONS_PATH = "/home/quentin/resources/Versions";
+    static String REPOS_PATH = "/home/quentin/resources/Repos";
     
     private Repository repo;
     private String gitRepoAddress;
     private MavenLauncher launcher;
     private String repoRawPath;
     private Path path;
-
 
 	private static FilePathFilter ALLOW_ALL = new FilePathFilter() {
 		@Override
