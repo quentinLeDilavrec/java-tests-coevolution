@@ -1,13 +1,9 @@
 package fr.quentin.impacts;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -18,36 +14,20 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 
-import org.apache.maven.shared.invoker.DefaultInvocationRequest;
-import org.apache.maven.shared.invoker.DefaultInvoker;
-import org.apache.maven.shared.invoker.InvocationRequest;
-import org.apache.maven.shared.invoker.Invoker;
-import org.apache.maven.shared.invoker.MavenInvocationException;
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
-import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.transport.URIish;
 import org.refactoringminer.api.GitHistoryRefactoringMiner;
-
-import fr.quentin.Evolution;
-import fr.quentin.Position;
-import fr.quentin.utils.DiffHelper;
-import fr.quentin.utils.GitHelper;
-import fr.quentin.utils.SourcesHelper;
-import gr.uom.java.xmi.diff.CodeRange;
-
 // import org.refactoringminer.api.GitService;
 import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringHandler;
 import org.refactoringminer.api.RefactoringType;
 import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
-import org.refactoringminer.util.GitServiceImpl;
 
+import fr.quentin.Evolution;
+import fr.quentin.Position;
+import fr.quentin.utils.SourcesHelper;
+import gr.uom.java.xmi.diff.CodeRange;
 import spark.QueryParamsMap;
 import spoon.MavenLauncher;
-import spoon.reflect.declaration.CtConstructor;
-import spoon.reflect.declaration.CtMethod;
-import spoon.reflect.reference.CtExecutableReference;
-import spoon.reflect.visitor.filter.TypeFilter;
 import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
 
 public class ImpactRMinerHandler implements ImpactRoute {
@@ -72,26 +52,40 @@ public class ImpactRMinerHandler implements ImpactRoute {
 		System.out.println(commitIdAfter);
 
 		List<Refactoring> detectedRefactorings = new ArrayList<Refactoring>();
+		List<Evolution<Refactoring>> evolutions = new ArrayList<Evolution<Refactoring>>();
 
 		GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
 		JsonObject r = new JsonObject();
-        try (SourcesHelper helper = new SourcesHelper(gitURL);) {
-            Path path = helper.materialize(commitIdBefore);
-            MavenLauncher launcher = new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
-            launcher.getEnvironment().setLevel("INFO");
-            launcher.getFactory().getEnvironment().setLevel("INFO");
+		try (SourcesHelper helper = new SourcesHelper(gitURL);) {
+			Path path = helper.materialize(commitIdBefore);
+			MavenLauncher launcher = new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
+			launcher.getEnvironment().setLevel("INFO");
+			launcher.getFactory().getEnvironment().setLevel("INFO");
 
-            // Compile with maven to get deps
+			// Compile with maven to get deps
 			SourcesHelper.prepare(path);
-			
+
 			try {
-				miner.detectBetweenCommits(helper.getRepo(), commitIdBefore, commitIdAfter,
-						new RefactoringHandler() {
-							@Override
-							public void handle(String commitId, List<Refactoring> refactorings) {
-								detectedRefactorings.addAll(refactorings);
+				miner.detectBetweenCommits(helper.getRepo(), commitIdBefore, commitIdAfter, new RefactoringHandler() {
+					@Override
+					public void handle(String commitId, List<Refactoring> refactorings) {
+						detectedRefactorings.addAll(refactorings);
+						for (Refactoring op : refactorings) {
+							if (op.getRefactoringType().equals(RefactoringType.MOVE_OPERATION)) {
+								MoveMethodEvolution tmp = new MoveMethodEvolution(path.toAbsolutePath().toString(), op,
+										commitId);
+								evolutions.add(tmp);
+								Logger.getLogger("ImpactAna").info("- " + tmp.op + "\n" + tmp.impacts.size());
+								// } else {
+								// OtherEvolution tmp = new OtherEvolution(path.toAbsolutePath().toString(),
+								// op);
+								// evolutions.add(tmp);
+								// Logger.getLogger("ImpactAna").info("- " + tmp.op + "\n" +
+								// tmp.impacts.size());
 							}
-						});
+						}
+					}
+				});
 			} catch (Exception e) {
 				// throw new RuntimeException(e);
 			}
@@ -99,15 +93,15 @@ public class ImpactRMinerHandler implements ImpactRoute {
 			try {
 				launcher.buildModel();
 			} catch (Exception e) {
-				for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcher
-						.getModelBuilder()).getProblems()) {
+				for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcher.getModelBuilder()).getProblems()) {
 					System.err.println(pb.toString());
 				}
 				throw new RuntimeException(e);
 			}
+			r.add("impact", SourcesHelper.impactAnalysis(path, launcher, evolutions));
+		} catch (
 
-			r.add("impact", impactAnalysis(path, launcher, detectedRefactorings));
-		} catch (Exception e) {
+		Exception e) {
 			e.printStackTrace();
 			return "{\"error\":\"" + e.toString() + "\"}";
 		}
@@ -135,40 +129,20 @@ public class ImpactRMinerHandler implements ImpactRoute {
 		return null;
 	}
 
-	public JsonElement impactAnalysis(Path root, MavenLauncher launcher, List<Refactoring> evolutions) throws IOException {
-		List<Evolution> processedEvolutions = new ArrayList<>();
-
-		for (Refactoring op : evolutions) {
-			if (op.getRefactoringType().equals(RefactoringType.MOVE_OPERATION)) {
-				List<CodeRange> src = op.leftSide();
-				logger.info(src.getClass().toString());
-				MoveMethodEvolution tmp = new MoveMethodEvolution(
-					root.toAbsolutePath().toString(), src, op);
-				processedEvolutions.add(tmp);
-				Logger.getLogger("ImpactAna").info("- " + tmp.op + "\n" + tmp.impacts.size());
-			} else {
-				List<CodeRange> src = op.leftSide();
-				logger.info(src.getClass().toString());
-				OtherEvolution tmp = new OtherEvolution(
-					root.toAbsolutePath().toString(), src, op);
-				processedEvolutions.add(tmp);
-				Logger.getLogger("ImpactAna").info("- " + tmp.op + "\n" + tmp.impacts.size());
-			}
-		}
-		Logger.getLogger("ImpactAna")
-				.info("Number of executable refs mapped to positions " + processedEvolutions.size());
-		return SourcesHelper.impactAnalysis(root, launcher, processedEvolutions);
-	}
-
-	static class MoveMethodEvolution implements Evolution {
+	static class MoveMethodEvolution implements Evolution<Refactoring> {
 		Set<Position> impacts = new HashSet<>();
+		Set<Position> post = new HashSet<>();
 		private Refactoring op;
+		private String commitId;
 
-		MoveMethodEvolution(String root, List<CodeRange> holders, Refactoring op) {
+		MoveMethodEvolution(String root, Refactoring op, String commitId) {
 			this.op = op;
-			for (CodeRange range : holders) {
-				this.impacts.add(new Position(Paths.get(root, range.getFilePath()).toString(), range.getStartOffset(),
-						range.getEndOffset()));
+			this.commitId = commitId;
+			for (CodeRange range : op.leftSide()) {
+				this.impacts.add(new Position(range.getFilePath(), range.getStartOffset(), range.getEndOffset()));
+			}
+			for (CodeRange range : op.rightSide()) {
+				this.post.add(new Position(range.getFilePath(), range.getStartOffset(), range.getEndOffset()));
 			}
 		}
 
@@ -177,30 +151,68 @@ public class ImpactRMinerHandler implements ImpactRoute {
 			return impacts;
 		}
 
+		@Override
+		public Set<Position> getPostEvolutionPositions() {
+			return post;
+		}
+
+		@Override
+		public Refactoring getOriginal() {
+			return op;
+		}
+
+		@Override
+		public String getCommitId() {
+			return commitId;
+		}
+
+		@Override
+		public JsonObject toJson() {
+			JsonObject r = (JsonObject) Evolution.super.toJson();
+			r.addProperty("type", "Move Method");
+			return r;
+		}
+
 	}
-    
-    static class OtherEvolution implements Evolution {
-        Set<Position> impacts = new HashSet<>();
-        private Refactoring op;
 
-        OtherEvolution(String root, List<CodeRange> holders, Refactoring op) {
-            this.op = op;
-            for (CodeRange range : holders) {
-                System.out.println("postion");
-                System.out.println(Paths.get(root, range.getFilePath()).toString());
-                System.out.println(range.getStartOffset());
-                System.out.println(range.getEndOffset());
-                this.impacts.add(new Position(Paths.get(root, range.getFilePath()).toString(), range.getStartOffset(),
-                        range.getEndOffset()));
-            }
-        }
+	static class OtherEvolution implements Evolution<Refactoring> {
+		Set<Position> impacts = new HashSet<>();
+		Set<Position> post = new HashSet<>();
+		private Refactoring op;
+		private String commitId;
 
-        @Override
-        public Set<Position> getImpactingPositions() {
-            return impacts;
-        }
+		OtherEvolution(String root, Refactoring op, String commitId) {
+			this.op = op;
+			this.commitId = commitId;
+			for (CodeRange range : op.leftSide()) {
+				this.impacts.add(new Position(range.getFilePath(), range.getStartOffset(), range.getEndOffset()));
+			}
+			for (CodeRange range : op.rightSide()) {
+				this.post.add(new Position(range.getFilePath(), range.getStartOffset(), range.getEndOffset()));
+			}
+		}
 
-    }
+		@Override
+		public Set<Position> getImpactingPositions() {
+			return impacts;
+		}
+
+		@Override
+		public Set<Position> getPostEvolutionPositions() {
+			return post;
+		}
+
+		@Override
+		public Refactoring getOriginal() {
+			return op;
+		}
+
+		@Override
+		public String getCommitId() {
+			return commitId;
+		}
+
+	}
 
 	public static String JSON(String gitURL, String currentCommitId, List<Refactoring> refactoringsAtRevision) {
 		StringBuilder sb = new StringBuilder();

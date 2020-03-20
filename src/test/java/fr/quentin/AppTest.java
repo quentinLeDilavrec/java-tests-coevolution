@@ -1,7 +1,6 @@
 package fr.quentin;
 
 import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -47,6 +46,7 @@ public class AppTest {
         String commitId = "904fb1e7001a8b686c6956e32c4cc0cdb6e2f80b";
 
         List<Refactoring> detectedRefactorings = new ArrayList<Refactoring>();
+            List<Evolution<Refactoring>> evolutions = new ArrayList<>();
         GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
 
         try (SourcesHelper helper = new SourcesHelper(gitURL);) {
@@ -65,13 +65,19 @@ public class AppTest {
                     0);
 
             try {
-                miner.detectBetweenCommits(helper.getRepo(), helper.getBeforeCommit(commitId), commitId,
-                        new RefactoringHandler() {
-                            @Override
-                            public void handle(String commitId, List<Refactoring> refactorings) {
-                                detectedRefactorings.addAll(refactorings);
+                miner.detectBetweenCommits(helper.getRepo(), helper.getBeforeCommit(commitId), commitId, new RefactoringHandler() {
+                    @Override
+                    public void handle(String commitId, List<Refactoring> refactorings) {
+                        detectedRefactorings.addAll(refactorings);
+                        for (Refactoring op : refactorings) {
+                            if (op.getRefactoringType().equals(RefactoringType.MOVE_OPERATION)) {
+                                MoveMethodEvolution tmp = new MoveMethodEvolution(path.toAbsolutePath().toString(), op,
+                                        commitId);
+                                evolutions.add(tmp);
                             }
-                        });
+                        }
+                    }
+                });
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -79,22 +85,12 @@ public class AppTest {
             System.out.println("refactorings");
             System.out.println(detectedRefactorings);
 
-            List<Evolution> processedEvolutions = new ArrayList<>();
-
-            for (Refactoring op : detectedRefactorings) {
-                System.out.println(op.getRefactoringType());
-                if (op.getRefactoringType().equals(RefactoringType.MOVE_OPERATION)) {
-                    List<CodeRange> src = op.leftSide();
-                    MoveMethodEvolution tmp = new MoveMethodEvolution(path.toAbsolutePath().toString(), src, op);
-                    processedEvolutions.add(tmp);
-                }
-            }
             ImpactAnalysis l = new ImpactAnalysis(launcher);
             System.out.println("evolutions");
-            System.out.println(processedEvolutions);
+            System.out.println(evolutions);
             int MAX_EVO = 1000;
             List<ImpactChain> imptst1 = l
-                    .getImpactedTests(processedEvolutions.subList(0, Math.min(processedEvolutions.size(), MAX_EVO)));
+                    .getImpactedTests(evolutions.subList(0, Math.min(evolutions.size(), MAX_EVO)));
             System.out.println("chains");
             System.out.println(imptst1);
             Impacts x = new Impacts(imptst1);
@@ -117,6 +113,7 @@ public class AppTest {
         String commitIdBefore = "3bf9a6d0876fc5c99221934a5ecd161ea51204f0";
 
         List<Refactoring> detectedRefactorings = new ArrayList<Refactoring>();
+        List<Evolution<Refactoring>> evolutions = new ArrayList<>();
         GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
 
         try (SourcesHelper helper = new SourcesHelper(gitURL);) {
@@ -130,7 +127,7 @@ public class AppTest {
                         return true;
                     }
                 }
-                
+
             });
             MavenLauncher launcher = new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
             launcher.getEnvironment().setLevel("INFO");
@@ -146,13 +143,19 @@ public class AppTest {
                     0);
 
             try {
-                miner.detectBetweenCommits(helper.getRepo(), commitIdBefore, commitId,
-                        new RefactoringHandler() {
-                            @Override
-                            public void handle(String commitId, List<Refactoring> refactorings) {
-                                detectedRefactorings.addAll(refactorings);
+                miner.detectBetweenCommits(helper.getRepo(), commitIdBefore, commitId, new RefactoringHandler() {
+                    @Override
+                    public void handle(String commitId, List<Refactoring> refactorings) {
+                        detectedRefactorings.addAll(refactorings);
+                        for (Refactoring op : refactorings) {
+                            if (op.getRefactoringType().equals(RefactoringType.MOVE_OPERATION)) {
+                                MoveMethodEvolution tmp = new MoveMethodEvolution(path.toAbsolutePath().toString(), op,
+                                        commitId);
+                                evolutions.add(tmp);
                             }
-                        });
+                        }
+                    }
+                });
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -160,35 +163,19 @@ public class AppTest {
             System.out.println("refactorings");
             System.out.println(detectedRefactorings);
 
-            List<Evolution> processedEvolutions = new ArrayList<>();
-
-            for (Refactoring op : detectedRefactorings) {
-                System.out.println(op.getRefactoringType());
-                if (op.getRefactoringType().equals(RefactoringType.MOVE_OPERATION)) {
-                    List<CodeRange> src = op.leftSide();
-                    MoveMethodEvolution tmp = new MoveMethodEvolution(path.toAbsolutePath().toString(), src, op);
-                    processedEvolutions.add(tmp);
-                }
-            }
-            for (Refactoring op : detectedRefactorings) {
-                System.out.println(op.getRefactoringType());
-                    List<CodeRange> src = op.leftSide();
-                    MoveMethodEvolution tmp = new MoveMethodEvolution(path.toAbsolutePath().toString(), src, op);
-                    processedEvolutions.add(tmp);
-            }
             ImpactAnalysis l = new ImpactAnalysis(launcher);
             System.out.println("evolutions");
-            System.out.println(processedEvolutions);
+            System.out.println(evolutions);
             int MAX_EVO = 1000;
             List<ImpactChain> imptst1 = l
-                    .getImpactedTests(processedEvolutions.subList(0, Math.min(processedEvolutions.size(), MAX_EVO)));
+                    .getImpactedTests(evolutions.subList(0, Math.min(evolutions.size(), MAX_EVO)));
             System.out.println("chains");
             System.out.println(imptst1);
             Impacts x = new Impacts(imptst1);
             System.out.println(x);
         }
     }
-    
+
     /**
      * 
      * @throws Exception
@@ -201,8 +188,8 @@ public class AppTest {
         String commitId = "904fb1e7001a8b686c6956e32c4cc0cdb6e2f80b";
         String commitIdBefore = "4b42324566bdd0da145a647d136a2f555c533978";
 
-
         List<Refactoring> detectedRefactorings = new ArrayList<Refactoring>();
+        List<Evolution<Refactoring>> evolutions = new ArrayList<>();
         GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
 
         try (SourcesHelper helper = new SourcesHelper(gitURL);) {
@@ -221,62 +208,51 @@ public class AppTest {
                     0);
 
             try {
-                miner.detectBetweenCommits(helper.getRepo(), commitIdBefore, commitId,
-                        new RefactoringHandler() {
-                            @Override
-                            public void handle(String commitId, List<Refactoring> refactorings) {
-                                detectedRefactorings.addAll(refactorings);
+                miner.detectBetweenCommits(helper.getRepo(), commitIdBefore, commitId, new RefactoringHandler() {
+                    @Override
+                    public void handle(String commitId, List<Refactoring> refactorings) {
+                        detectedRefactorings.addAll(refactorings);
+                        for (Refactoring op : refactorings) {
+                            if (op.getRefactoringType().equals(RefactoringType.MOVE_OPERATION)) {
+                                MoveMethodEvolution tmp = new MoveMethodEvolution(path.toAbsolutePath().toString(), op,
+                                        commitId);
+                                evolutions.add(tmp);
                             }
-                        });
+                        }
+                    }
+                });
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
 
             System.out.println("refactorings");
             System.out.println(detectedRefactorings);
-
-            List<Evolution> processedEvolutions = new ArrayList<>();
-
-            for (Refactoring op : detectedRefactorings) {
-                System.out.println(op.getRefactoringType());
-                if (op.getRefactoringType().equals(RefactoringType.MOVE_OPERATION)) {
-                    List<CodeRange> src = op.leftSide();
-                    MoveMethodEvolution tmp = new MoveMethodEvolution(path.toAbsolutePath().toString(), src, op);
-                    processedEvolutions.add(tmp);
-                }
-            }
-            for (Refactoring op : detectedRefactorings) {
-                System.out.println(op.getRefactoringType());
-                    List<CodeRange> src = op.leftSide();
-                    OtherEvolution tmp = new OtherEvolution(path.toAbsolutePath().toString(), src, op);
-                    processedEvolutions.add(tmp);
-            }
             ImpactAnalysis l = new ImpactAnalysis(launcher);
             System.out.println("evolutions");
-            System.out.println(processedEvolutions);
+            System.out.println(evolutions);
             int MAX_EVO = 1000;
             List<ImpactChain> imptst1 = l
-                    .getImpactedTests(processedEvolutions.subList(0, Math.min(processedEvolutions.size(), MAX_EVO)));
+                    .getImpactedTests(evolutions.subList(0, Math.min(evolutions.size(), MAX_EVO)));
             System.out.println("chains");
             System.out.println(imptst1);
             Impacts x = new Impacts(imptst1);
             System.out.println(x);
         }
     }
-    
-    
-    static class MoveMethodEvolution implements Evolution {
+
+    static class MoveMethodEvolution implements Evolution<Refactoring> {
         Set<Position> impacts = new HashSet<>();
+        Set<Position> post = new HashSet<>();
         private Refactoring op;
 
-        MoveMethodEvolution(String root, List<CodeRange> holders, Refactoring op) {
+        MoveMethodEvolution(String root, Refactoring op, String commitId) {
             this.op = op;
-            for (CodeRange range : holders) {
-                System.out.println("postion");
-                System.out.println(Paths.get(root, range.getFilePath()).toString());
-                System.out.println(range.getStartOffset());
-                System.out.println(range.getEndOffset());
+            for (CodeRange range : op.leftSide()) {
                 this.impacts.add(new Position(Paths.get(root, range.getFilePath()).toString(), range.getStartOffset(),
+                        range.getEndOffset()));
+            }
+            for (CodeRange range : op.rightSide()) {
+                this.post.add(new Position(Paths.get(root, range.getFilePath()).toString(), range.getStartOffset(),
                         range.getEndOffset()));
             }
         }
@@ -284,22 +260,39 @@ public class AppTest {
         @Override
         public Set<Position> getImpactingPositions() {
             return impacts;
+        }
+
+        @Override
+        public Set<Position> getPostEvolutionPositions() {
+            return post;
+        }
+
+        @Override
+        public Refactoring getOriginal() {
+            return op;
+        }
+
+        @Override
+        public String getCommitId() {
+            // TODO Auto-generated method stub
+            return null;
         }
 
     }
-    
-    static class OtherEvolution implements Evolution {
+
+    static class OtherEvolution implements Evolution<Refactoring> {
         Set<Position> impacts = new HashSet<>();
+        Set<Position> post = new HashSet<>();
         private Refactoring op;
 
-        OtherEvolution(String root, List<CodeRange> holders, Refactoring op) {
+        OtherEvolution(String root, Refactoring op) {
             this.op = op;
-            for (CodeRange range : holders) {
-                System.out.println("postion");
-                System.out.println(Paths.get(root, range.getFilePath()).toString());
-                System.out.println(range.getStartOffset());
-                System.out.println(range.getEndOffset());
+            for (CodeRange range : op.leftSide()) {
                 this.impacts.add(new Position(Paths.get(root, range.getFilePath()).toString(), range.getStartOffset(),
+                        range.getEndOffset()));
+            }
+            for (CodeRange range : op.rightSide()) {
+                this.post.add(new Position(Paths.get(root, range.getFilePath()).toString(), range.getStartOffset(),
                         range.getEndOffset()));
             }
         }
@@ -309,6 +302,21 @@ public class AppTest {
             return impacts;
         }
 
+        @Override
+        public Set<Position> getPostEvolutionPositions() {
+            return post;
+        }
+
+        @Override
+        public Refactoring getOriginal() {
+            return op;
+        }
+
+        @Override
+        public String getCommitId() {
+            // TODO Auto-generated method stub
+            return null;
+        }
     }
 
 }

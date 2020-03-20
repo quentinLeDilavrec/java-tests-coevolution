@@ -27,7 +27,7 @@ import static spark.Spark.*;
 public class Server {
 	public final static int DEFAULT_PORT = 8095;
 	public final static List<String> DEFAULT_ORIGINS = Collections.unmodifiableList(
-			Arrays.asList("http://131.254.17.96:8080", "http://127.0.0.1:8080", "http://localhost:8080"));
+			Arrays.asList("http://131.254.17.96:8080", "http://127.0.0.1:8080", "http://localhost:8080", "http://176.180.199.146:50000"));
 	// private static Route aaa = (req, res) -> {
 	// System.out.println("=========gumtree=========");
 

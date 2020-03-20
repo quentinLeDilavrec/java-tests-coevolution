@@ -102,7 +102,7 @@ public class DiffHelper {
 		return pathAfter;
 	}
 
-	public JsonElement impactAnalysis(MavenLauncher launcher, List<Evolution> evolutions) throws IOException {
+	public <T> JsonElement impactAnalysis(MavenLauncher launcher, List<Evolution<T>> evolutions) throws IOException {
 		ImpactAnalysis l = new ImpactAnalysis(launcher);
 
 		List<CtExecutableReference<?>> allExecutableReference = new ArrayList<>();
@@ -133,7 +133,7 @@ public class DiffHelper {
 		return x.toJson(new ToJson() {
 			public JsonElement apply(Object x) {
 				if (x instanceof JsonSerializable) {
-					JsonSerializable<?> y = (JsonSerializable<?>) x;
+					JsonSerializable y = (JsonSerializable) x;
 					return y.toJson(this);
 				} else if (x instanceof CtMethod) {
 					CtMethod<?> y = (CtMethod<?>) x;

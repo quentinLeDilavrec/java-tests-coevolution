@@ -14,6 +14,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
 import org.apache.log4j.Logger;
+import org.refactoringminer.api.Refactoring;
 
 import fr.quentin.Evolution;
 import fr.quentin.ImpactAnalysis;
@@ -175,7 +176,7 @@ public class ImpactGumtreeSpoonHandler implements ImpactRoute {
 		}
 		Logger.getLogger("ImpactAna").info("Number of executable refs " + allExecutableReference.size());
 
-		List<Evolution> processedEvolutions = new ArrayList<>();
+		List<Evolution<MoveOperation>> processedEvolutions = new ArrayList<>();
 
 		for (Operation<?> op : evolutions.getRootOperations()) {
 			try {
@@ -184,7 +185,7 @@ public class ImpactGumtreeSpoonHandler implements ImpactRoute {
 					logger.info(src.getClass());
 					if (src.getPosition().isValidPosition()) {
 						System.out.println(src.getPosition().hashCode());
-						processedEvolutions.add(new MoveEvolution(src, (MoveOperation) op));
+						processedEvolutions.add(new MoveEvolution((MoveOperation) op));
 					}
 				}
 			} catch (IOException e) {
@@ -196,19 +197,38 @@ public class ImpactGumtreeSpoonHandler implements ImpactRoute {
 		return this.diffHelperInst.impactAnalysis(launcher, processedEvolutions);
 	}
 
-	static class MoveEvolution implements Evolution {
+	static class MoveEvolution implements Evolution<MoveOperation> {
 		Set<Position> impacts = new HashSet<>();
+		Set<Position> post = new HashSet<>();
 		private MoveOperation op;
 
-		MoveEvolution(SourcePositionHolder holder, MoveOperation op) throws IOException {
-			SourcePosition p = holder.getPosition();
+		MoveEvolution(MoveOperation op) throws IOException {
+			SourcePosition p = op.getSrcNode().getPosition();
 			this.op = op;
 			this.impacts.add(new Position(p.getFile().getCanonicalPath(), p.getSourceStart(), p.getSourceEnd()));
+			SourcePosition pDst = op.getDstNode().getPosition();
+			this.post.add(new Position(pDst.getFile().getCanonicalPath(), pDst.getSourceStart(), pDst.getSourceEnd()));
 		}
 
 		@Override
 		public Set<Position> getImpactingPositions() {
 			return impacts;
+		}
+
+		@Override
+		public Set<Position> getPostEvolutionPositions() {
+			return post;
+		}
+
+		@Override
+		public MoveOperation getOriginal() {
+			return op;
+		}
+
+		@Override
+		public String getCommitId() {
+			// TODO Auto-generated method stub
+			return null;
 		}
 	}
 
