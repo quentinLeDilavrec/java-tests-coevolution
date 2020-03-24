@@ -211,7 +211,7 @@ public class ImpactGumtreeSpoonHandler implements ImpactRoute {
 		}
 
 		@Override
-		public Set<Position> getImpactingPositions() {
+		public Set<Position> getPreEvolutionPositions() {
 			return impacts;
 		}
 

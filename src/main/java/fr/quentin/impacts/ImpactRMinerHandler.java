@@ -147,7 +147,7 @@ public class ImpactRMinerHandler implements ImpactRoute {
 		}
 
 		@Override
-		public Set<Position> getImpactingPositions() {
+		public Set<Position> getPreEvolutionPositions() {
 			return impacts;
 		}
 
@@ -193,7 +193,7 @@ public class ImpactRMinerHandler implements ImpactRoute {
 		}
 
 		@Override
-		public Set<Position> getImpactingPositions() {
+		public Set<Position> getPreEvolutionPositions() {
 			return impacts;
 		}
 

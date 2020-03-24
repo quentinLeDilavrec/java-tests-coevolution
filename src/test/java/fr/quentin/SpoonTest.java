@@ -1,13 +1,10 @@
 package fr.quentin;
 
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.nio.file.Path;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
 
 import fr.quentin.utils.SourcesHelper;
 import spoon.MavenLauncher;
@@ -46,7 +43,8 @@ public class SpoonTest {
     public void InteractoModelShouldBuild() throws Exception {
         MavenLauncher launcher = build("https://github.com/quentinLeDilavrec/interacto-java-api.git",
                 "5377ad5864cd54e776aa30f690fd84253153677a");
-        assertNotEquals("At least one top-level type should exist.", launcher.getFactory().Type().getAll().size(), 0);
+        assertNotEquals(launcher.getFactory().Type().getAll().size(), 0,
+        "At least one top-level type should exist.");
 
         /**
          * java.lang.IllegalStateException: Module should be known at
@@ -62,12 +60,12 @@ public class SpoonTest {
 
         MavenLauncher launcher = build("https://github.com/INRIA/spoon.git",
                 "4b42324566bdd0da145a647d136a2f555c533978");
-        assertNotEquals("At least one top-level type should exist.", launcher.getFactory().Type().getAll().size(), 0);
+        assertNotEquals(launcher.getFactory().Type().getAll().size(), 0,"At least one top-level type should exist.");
 
         MavenLauncher launcherAfter = build("https://github.com/INRIA/spoon.git",
                 "904fb1e7001a8b686c6956e32c4cc0cdb6e2f80b");
-        assertNotEquals("At least one top-level type should exist.", launcherAfter.getFactory().Type().getAll().size(),
-                0);
+        assertNotEquals(launcherAfter.getFactory().Type().getAll().size(),
+                0,"At least one top-level type should exist.");
 
     }
 
@@ -75,7 +73,7 @@ public class SpoonTest {
     public void TruthModelShouldBuild() throws Exception {
         MavenLauncher launcher = build("https:// github.com/google/truth.git",
                 "fb7f2fe21d8ca690daabedbd31a0ade99244f99c");
-        assertNotEquals("At least one top-level type should exist.", launcher.getFactory().Type().getAll().size(), 0);
+        assertNotEquals(launcher.getFactory().Type().getAll().size(), 0,"At least one top-level type should exist.");
 
         /*
          * spoon.compiler.ModelBuildingException: The type Platform is already defined
@@ -84,8 +82,8 @@ public class SpoonTest {
          */
         MavenLauncher launcherAfter = build("https:// github.com/google/truth.git",
                 "1768840bf1e69892fd2a23776817f620edfed536");
-        assertNotEquals("At least one top-level type should exist.", launcherAfter.getFactory().Type().getAll().size(),
-                0);
+        assertNotEquals(launcherAfter.getFactory().Type().getAll().size(),
+                0,"At least one top-level type should exist.");
 
     }
 
@@ -93,15 +91,15 @@ public class SpoonTest {
     public void antlr4rModelShouldBuild() throws Exception {
         MavenLauncher launcher = build("https://github.com/antlr/antlr4.git",
                 "53678867ca61ffb4aa79298b40efcc74bebf952c");
-        assertNotEquals("At least one top-level type should exist.", launcher.getFactory().Type().getAll().size(), 0);
+        assertNotEquals(launcher.getFactory().Type().getAll().size(), 0,"At least one top-level type should exist.");
 
         /*
          * evolution des not seem to be in the spoon AST
          */
         MavenLauncher launcherAfter = build("https://github.com/antlr/antlr4.git",
                 "b395127e733b33c27f344695ebf155ecf5edeeab");
-        assertNotEquals("At least one top-level type should exist.", launcherAfter.getFactory().Type().getAll().size(),
-                0);
+        assertNotEquals(launcherAfter.getFactory().Type().getAll().size(),
+                0,"At least one top-level type should exist.");
 
     }
 
@@ -109,12 +107,12 @@ public class SpoonTest {
     public void HiveModelShouldBuild() throws Exception {
         MavenLauncher launcher = build("https://github.com/apache/hive.git",
                 "42326958148c2558be9c3d4dfe44c9e735704617");
-        assertNotEquals("At least one top-level type should exist.", launcher.getFactory().Type().getAll().size(), 0);
+        assertNotEquals(launcher.getFactory().Type().getAll().size(), 0,"At least one top-level type should exist.");
 
         MavenLauncher launcherAfter = build("https://github.com/apache/hive.git",
                 "240097b78b70172e1cf9bc37876a566ddfb9e115");
-        assertNotEquals("At least one top-level type should exist.", launcherAfter.getFactory().Type().getAll().size(),
-                0);
+        assertNotEquals(launcherAfter.getFactory().Type().getAll().size(),
+                0,"At least one top-level type should exist.");
 
     }
 
@@ -122,12 +120,12 @@ public class SpoonTest {
     public void Neo4jModelShouldBuild() throws Exception {
         MavenLauncher launcher = build("https://github.com/neo4j/neo4j.git",
                 "5d73d6f87a7e5df53447a26c515ca5632466d374");
-        assertNotEquals("At least one top-level type should exist.", launcher.getFactory().Type().getAll().size(), 0);
+        assertNotEquals(launcher.getFactory().Type().getAll().size(), 0,"At least one top-level type should exist.");
 
         MavenLauncher launcherAfter = build("https://github.com/neo4j/neo4j.git",
                 "021d17c8234904dcb1d54596662352395927fe7b");
-        assertNotEquals("At least one top-level type should exist.", launcherAfter.getFactory().Type().getAll().size(),
-                0);
+        assertNotEquals(launcherAfter.getFactory().Type().getAll().size(),
+                0,"At least one top-level type should exist.");
 
     }
 
@@ -135,12 +133,12 @@ public class SpoonTest {
     public void WildflyModelShouldBuild() throws Exception {
         MavenLauncher launcher = build("https://github.com/wildfly/wildfly.git",
                 "727e0e0f7e2b75bc13f738d0543a1077cdd4edd8");
-        assertNotEquals("At least one top-level type should exist.", launcher.getFactory().Type().getAll().size(), 0);
+        assertNotEquals(launcher.getFactory().Type().getAll().size(), 0,"At least one top-level type should exist.");
 
         MavenLauncher launcherAfter = build("https://github.com/wildfly/wildfly.git",
                 "4aa2e8746b5492bbc1cf2b36af956cf3b01e40f5");
-        assertNotEquals("At least one top-level type should exist.", launcherAfter.getFactory().Type().getAll().size(),
-                0);
+        assertNotEquals(launcherAfter.getFactory().Type().getAll().size(),
+                0,"At least one top-level type should exist.");
 
     }
 }

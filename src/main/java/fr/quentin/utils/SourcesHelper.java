@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -88,6 +89,7 @@ public class SourcesHelper implements AutoCloseable {
 	public Path materialize(String commitId, FilePathFilter filter) throws IOException {
 		SourceFileSet sources = GitHelper.getSourcesAtCommit(repo, commitId, filter);
 		Path path = Paths.get(VERSIONS_PATH, repoRawPath.substring(0, repoRawPath.length() - 4), commitId);
+		path.toFile().delete();
 		sources.materializeAt(path);
 		return path;
 	}
@@ -99,6 +101,7 @@ public class SourcesHelper implements AutoCloseable {
 	public Path materializePrev(String commitId, FilePathFilter filter) throws IOException {
 		SourceFileSet sources = GitHelper.getSourcesBeforeCommit(repo, commitId, filter);
 		Path path = Paths.get(VERSIONS_PATH, repoRawPath.substring(0, repoRawPath.length() - 4), commitId);
+		path.toFile().delete();
 		sources.materializeAt(path);
 		return path;
 	}
@@ -128,16 +131,16 @@ public class SourcesHelper implements AutoCloseable {
 		}
 	}
 
-    public static InvocationResult prepare(Path path) {
+    public static InvocationResult prepare(Path path) throws Exception {
             InvocationRequest request = new DefaultInvocationRequest();
             request.setBaseDirectory(path.toFile());
-            request.setGoals(Collections.singletonList("compile"));
+            request.setGoals(Arrays.asList("compile","clean"));
             Invoker invoker = new DefaultInvoker();
             invoker.setMavenHome(Paths.get("/usr").toFile());
             try {
                 return invoker.execute(request);
             } catch (MavenInvocationException e) {
-                throw new RuntimeException("Error while compiling project with maven", e);
+                throw new Exception("Error while compiling project with maven", e);
             }
     }
 
