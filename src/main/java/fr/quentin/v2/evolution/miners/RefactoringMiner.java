@@ -207,8 +207,12 @@ public class RefactoringMiner implements EvolutionsMiner {
                 .append("\"").append(",").append("\n");
         sb.append("\t").append("\"").append("sha1").append("\"").append(": ").append("\"").append(currentCommitId)
                 .append("\"").append(",").append("\n");
-        String url = "https://github.com/" + gitURL.substring(19, gitURL.indexOf(".git")) + "/commit/"
-                + currentCommitId;
+        String url;
+        if (gitURL.indexOf(".git") > -1) {
+            url = gitURL.substring(0, gitURL.length() - ".git".length()) + "/commit/" + currentCommitId;
+        } else {
+            url = gitURL + "/commit/" + currentCommitId;
+        }
         sb.append("\t").append("\"").append("url").append("\"").append(": ").append("\"").append(url).append("\"")
                 .append(",").append("\n");
         sb.append("\t").append("\"").append("refactorings").append("\"").append(": ");
