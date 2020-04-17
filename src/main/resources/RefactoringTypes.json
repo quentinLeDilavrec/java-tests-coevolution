@@ -1,0 +1,602 @@
+{
+    "CHANGE_ATTRIBUTE_TYPE": {
+        "left": [
+            {
+                "description": "original attribute declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "changed-type attribute declaration"
+            }
+        ]
+    },
+    "CHANGE_RETURN_TYPE": {
+        "left": [
+            {
+                "description": "original return type"
+            }
+        ],
+        "right": [
+            {
+                "description": "changed return type"
+            }
+        ]
+    },
+    "CHANGE_VARIABLE_TYPE": {
+        "left": [
+            {
+                "description": "original variable declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "changed-type variable declaration"
+            }
+        ]
+    },
+    "CHANGE_PARAMETER_TYPE": {
+        "left": [
+            {
+                "description": "original variable declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "changed-type variable declaration"
+            }
+        ],
+        "partOf": "CHANGE_VARIABLE_TYPE"
+    },
+    "CONVERT_ANONYMOUS_CLASS_TO_TYPE": {
+        "left": [
+            {
+                "description": "anonymous class declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "added type declaration"
+            }
+        ]
+    },
+    "EXTRACT_ATTRIBUTE": {
+        "left": [
+            {
+                "many": true,
+                "description": "statement with the initializer of the extracted attribute"
+            }
+        ],
+        "right": [
+            {
+                "description": "extracted attribute declaration"
+            },
+            {
+                "many": true,
+                "description": "statement with the name of the extracted attribute"
+            }
+        ]
+    },
+    "EXTRACT_SUBCLASS": {
+        "left": [
+            {
+                "description": "original type declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "extracted type declaration"
+            }
+        ],
+        "partOf": "EXTRACT_CLASS"
+    },
+    "EXTRACT_CLASS": {
+        "left": [
+            {
+                "description": "original type declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "extracted type declaration"
+            }
+        ]
+    },
+    "EXTRACT_OPERATION": {
+        "left": [
+            {
+                "description": "source method declaration before extraction"
+            },
+            {
+                "many": true,
+                "description": "extracted code from source method declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "extracted method declaration"
+            },
+            {
+                "many": true,
+                "description": "extracted code to extracted method declaration"
+            },
+            {
+                "description": "source method declaration after extraction"
+            },
+            {
+                "many": true,
+                "description": "added statement in extracted method declaration"
+            },
+            {
+                "many": true,
+                "description": "added statement in extracted method declaration"
+            }
+        ]
+    },
+    "EXTRACT_AND_MOVE_OPERATION": {
+        "left": [
+            {
+                "description": "source method declaration before extraction"
+            },
+            {
+                "many": true,
+                "description": "extracted code from source method declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "extracted method declaration"
+            },
+            {
+                "many": true,
+                "description": "extracted code to extracted method declaration"
+            },
+            {
+                "description": "source method declaration after extraction"
+            },
+            {
+                "many": true,
+                "description": "added statement in extracted method declaration"
+            },
+            {
+                "many": true,
+                "description": "added statement in extracted method declaration"
+            }
+        ],
+        "partOf": "ExtractAndMoveOperation"
+    },
+    "EXTRACT_SUPERCLASS": {
+        "left": [
+            {
+                "many": true,
+                "description": "sub-type declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "extracted super-type declaration"
+            }
+        ]
+    },
+    "EXTRACT_INTERFACE": {
+        "left": [
+            {
+                "many": true,
+                "description": "sub-type declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "extracted super-type declaration"
+            }
+        ],
+        "partOf": "EXTRACT_SUPERCLASS"
+    },
+    "EXTRACT_VARIABLE": {
+        "left": [
+            {
+                "many": true,
+                "description": "statement with the initializer of the extracted variable"
+            }
+        ],
+        "right": [
+            {
+                "description": "extracted variable declaration"
+            },
+            {
+                "many": true,
+                "description": "statement with the name of the extracted variable"
+            }
+        ]
+    },
+    "INLINE_OPERATION": {
+        "left": [
+            {
+                "description": "inlined method declaration"
+            },
+            {
+                "many": true,
+                "description": "inlined code from inlined method declaration"
+            },
+            {
+                "description": "target method declaration before inline"
+            },
+            {
+                "many": true,
+                "description": "inlined method invocation"
+            },
+            {
+                "many": true,
+                "description": "deleted statement in inlined method declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "target method declaration after inline"
+            },
+            {
+                "description": "inlined code in target method declaration"
+            }
+        ]
+    },
+    "MOVE_AND_INLINE_OPERATION": {
+        "left": [
+            {
+                "description": "inlined method declaration"
+            },
+            {
+                "many": true,
+                "description": "inlined code from inlined method declaration"
+            },
+            {
+                "description": "target method declaration before inline"
+            },
+            {
+                "many": true,
+                "description": "inlined method invocation"
+            },
+            {
+                "many": true,
+                "description": "deleted statement in inlined method declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "target method declaration after inline"
+            },
+            {
+                "description": "inlined code in target method declaration"
+            }
+        ],
+        "partOf": "INLINE_OPERATION"
+    },
+    "INLINE_VARIABLE": {
+        "left": [
+            {
+                "description": "inlined variable declaration"
+            },
+            {
+                "many": true,
+                "description": "statement with the name of the inlined variable"
+            }
+        ],
+        "right": [
+            {
+                "many": true,
+                "description": "statement with the initializer of the inlined variable"
+            }
+        ]
+    },
+    "MERGE_ATTRIBUTE": {
+        "left": [
+            {
+                "many": true,
+                "description": "merged attribute declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "new attribute declaration"
+            }
+        ]
+    },
+    "MERGE_VARIABLE": {
+        "left": [
+            {
+                "many": true,
+                "description": "merged variable declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "new variable declaration"
+            }
+        ]
+    },
+    "MERGE_PARAMETER": {
+        "left": [
+            {
+                "many": true,
+                "description": "merged variable declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "new variable declaration"
+            }
+        ],
+        "partOf": "MERGE_VARIABLE"
+    },
+    "MOVE_RENAME_ATTRIBUTE": {
+        "left": [
+            {
+                "description": "original attribute declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "moved and renamed attribute declaration"
+            }
+        ]
+    },
+    "MOVE_RENAME_CLASS": {
+        "left": [
+            {
+                "description": "original type declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "moved and renamed type declaration"
+            }
+        ]
+    },
+    "MOVE_ATTRIBUTE": {
+        "left": [
+            {
+                "description": "original attribute declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "moved attribute declaration"
+            }
+        ]
+    },
+    "MOVE_CLASS": {
+        "left": [
+            {
+                "description": "original type declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "moved type declaration"
+            }
+        ]
+    },
+    "MOVE_OPERATION": {
+        "left": [
+            {
+                "description": "original method declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "moved method declaration"
+            }
+        ]
+    },
+    "MOVE_AND_RENAME_OPERATION": {
+        "left": [
+            {
+                "description": "original method declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "moved method declaration"
+            }
+        ],
+        "partOf": "MOVE_OPERATION"
+    },
+    "MOVE_SOURCE_FOLDER": {
+        "left": [
+            {
+                "many": true,
+                "description": "original type declaration"
+            }
+        ],
+        "right": [
+            {
+                "many": true,
+                "description": "moved type declaration"
+            }
+        ]
+    },
+    "PULL_UP_ATTRIBUTE": {
+        "left": [
+            {
+                "description": "original attribute declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "pulled up attribute declaration"
+            }
+        ]
+    },
+    "PULL_UP_OPERATION": {
+        "left": [
+            {
+                "description": "original method declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "pulled up method declaration"
+            }
+        ]
+    },
+    "PUSH_DOWN_ATTRIBUTE": {
+        "left": [
+            {
+                "description": "original attribute declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "pushed down attribute declaration"
+            }
+        ]
+    },
+    "PUSH_DOWN_OPERATION": {
+        "left": [
+            {
+                "description": "original method declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "pushed down method declaration"
+            }
+        ]
+    },
+    "RENAME_ATTRIBUTE": {
+        "left": [
+            {
+                "description": "original attribute declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "renamed attribute declaration"
+            }
+        ]
+    },
+    "RENAME_CLASS": {
+        "left": [
+            {
+                "description": "original type declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "renamed type declaration"
+            }
+        ]
+    },
+    "RENAME_METHOD": {
+        "left": [
+            {
+                "description": "original method declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "renamed method declaration"
+            }
+        ]
+    },
+    "RENAME_PACKAGE": {
+        "left": [
+            {
+                "description": "original type declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "moved type declaration"
+            }
+        ]
+    },
+    "RENAME_VARIABLE": {
+        "left": [
+            {
+                "description": "original variable declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "renamed variable declaration"
+            }
+        ]
+    },
+    "RENAME_PARAMETER": {
+        "left": [
+            {
+                "description": "original variable declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "renamed variable declaration"
+            }
+        ],
+        "partOf": "RENAME_VARIABLE"
+    },
+    "PARAMETERIZE_VARIABLE": {
+        "left": [
+            {
+                "description": "original variable declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "renamed variable declaration"
+            }
+        ],
+        "partOf": "RENAME_VARIABLE"
+    },
+    "REPLACE_VARIABLE_WITH_ATTRIBUTE": {
+        "left": [
+            {
+                "description": "original variable declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "renamed variable declaration"
+            }
+        ],
+        "partOf": "RENAME_VARIABLE"
+    },
+    "REPLACE_ATTRIBUTE": {
+        "left": [
+            {
+                "description": "original attribute declaration"
+            }
+        ],
+        "right": [
+            {
+                "description": "replaced attribute declaration"
+            }
+        ]
+    },
+    "SPLIT_ATTRIBUTE": {
+        "left": [
+            {
+                "description": "original attribute declaration"
+            }
+        ],
+        "right": [
+            {
+                "many": true,
+                "description": "split attribute declaration"
+            }
+        ]
+    },
+    "SPLIT_VARIABLE": {
+        "left": [
+            {
+                "description": "original variable declaration"
+            }
+        ],
+        "right": [
+            {
+                "many": true,
+                "description": "split variable declaration"
+            }
+        ]
+    }
+}

@@ -1,4 +1,4 @@
-package fr.quentin.differs;
+package fr.quentin.v1.differs;
 
 import java.util.Base64;
 

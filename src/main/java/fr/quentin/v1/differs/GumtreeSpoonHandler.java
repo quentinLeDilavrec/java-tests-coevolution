@@ -1,4 +1,4 @@
-package fr.quentin.differs;
+package fr.quentin.v1.differs;
 
 import gumtree.spoon.AstComparator;
 import gumtree.spoon.diff.Diff;

@@ -1,4 +1,4 @@
-package fr.quentin.impacts;
+package fr.quentin.v1.impacts;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -52,7 +52,7 @@ public class ImpactGumtreeSpoonHandler implements ImpactRoute {
 	private DiffHelper diffHelperInst;
 
 	@Override
-	public Object simplifiedHandler(String before, String after, QueryParamsMap qm) {
+	public Object simplifiedHandler(String before, String after, ImpactQuery body, QueryParamsMap qm) {
 		try {
 			AstComparator comp = new AstComparator();
 			Diff diff = comp.compare(before, after);
@@ -65,7 +65,7 @@ public class ImpactGumtreeSpoonHandler implements ImpactRoute {
 	}
 
 	@Override
-	public Object commitHandler(String gitURL, String commitIdBefore, String commitIdAfter, QueryParamsMap queryMap) {
+	public Object commitHandler(String gitURL, String commitIdBefore, String commitIdAfter, ImpactQuery body, QueryParamsMap queryMap) {
 
 		logger.info(gitURL);
 		logger.info(commitIdBefore);
@@ -145,7 +145,7 @@ public class ImpactGumtreeSpoonHandler implements ImpactRoute {
 	// (defalias 'redo 'undo-tree-redo)
 	// (global-set-key (kbd "C-S-z") 'redo)
 	@Override
-	public Object tagHandler(String repo, String tagBefore, String tagAfter, QueryParamsMap queryMap) {
+	public Object tagHandler(String repo, String tagBefore, String tagAfter, ImpactQuery body, QueryParamsMap queryMap) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -201,6 +201,8 @@ public class ImpactGumtreeSpoonHandler implements ImpactRoute {
 		Set<Position> impacts = new HashSet<>();
 		Set<Position> post = new HashSet<>();
 		private MoveOperation op;
+		private String commitIdBefore;
+		private String commitIdAfter;
 
 		MoveEvolution(MoveOperation op) throws IOException {
 			SourcePosition p = op.getSrcNode().getPosition();
@@ -226,10 +228,15 @@ public class ImpactGumtreeSpoonHandler implements ImpactRoute {
 		}
 
 		@Override
-		public String getCommitId() {
-			// TODO Auto-generated method stub
-			return null;
+		public String getCommitIdBefore() {
+			return commitIdBefore;
 		}
+
+		@Override
+		public String getCommitIdAfter() {
+			return commitIdAfter;
+		}
+
 	}
 
 	public Object commitHandlerOld(String gitRepoAddress, String commitIdBefore, String commitIdAfter,

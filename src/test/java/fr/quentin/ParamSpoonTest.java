@@ -213,9 +213,9 @@ public class ParamSpoonTest {
     @Parameters(name = "{index}: {0}")
     public static List<Case[]> data() throws JsonSyntaxException, IOException {
         List<Case> more = preprocessadditionalCases(Arrays.asList(
-                // "https://github.com/quentinLeDilavrec/interacto-java-api.git;d022a91c49378cd182d6b1398dad3939164443b4;3bf9a6d0876fc5c99221934a5ecd161ea51204f0",
-                // "https://github.com/INRIA/spoon.git;4b42324566bdd0da145a647d136a2f555c533978;904fb1e7001a8b686c6956e32c4cc0cdb6e2f80b"
-                ));
+        // "https://github.com/quentinLeDilavrec/interacto-java-api.git;d022a91c49378cd182d6b1398dad3939164443b4;3bf9a6d0876fc5c99221934a5ecd161ea51204f0",
+        // "https://github.com/INRIA/spoon.git;4b42324566bdd0da145a647d136a2f555c533978;904fb1e7001a8b686c6956e32c4cc0cdb6e2f80b"
+        ));
         List<Case> alreadyProcessed = parse("data_processed.json", new TypeToken<List<Case>>() {
         }.getType());
         alreadyProcessed.addAll(more);
@@ -377,10 +377,16 @@ public class ParamSpoonTest {
                 miner.detectBetweenCommits(helper.getRepo(), evoCase.before, evoCase.after, new RefactoringHandler() {
                     @Override
                     public void handle(String commitId, List<Refactoring> refactorings) {
+                        String before;
+                        try {
+                            before = helper.getBeforeCommit(commitId);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
                         for (Refactoring op : refactorings) {
                             if (op.getRefactoringType().equals(RefactoringType.MOVE_OPERATION)) {
                                 MoveMethodEvolution tmp = new MoveMethodEvolution(path.toAbsolutePath().toString(), op,
-                                        commitId);
+                                        before, commitId);
                                 evolutions.add(tmp);
                             }
                         }
@@ -398,8 +404,8 @@ public class ParamSpoonTest {
                     e.description = mme.getOriginal().toString();
                     e.beforePositions = mme.getPreEvolutionPositions();
                     e.type = "Move Method";
-                    e.before = helper.getBeforeCommit(mme.getCommitId());
-                    e.after = mme.getCommitId();
+                    e.before = mme.getCommitIdBefore();
+                    e.after = mme.getCommitIdAfter();
                 }
             } else {
 

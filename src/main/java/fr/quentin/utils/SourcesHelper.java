@@ -37,6 +37,7 @@ import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.transport.URIish;
 import org.eclipse.jgit.treewalk.TreeWalk;
+import org.refactoringminer.api.Refactoring;
 
 import fr.quentin.Evolution;
 import fr.quentin.ImpactAnalysis;

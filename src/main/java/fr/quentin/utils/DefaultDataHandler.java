@@ -37,7 +37,15 @@ public class DefaultDataHandler implements Route {
 	public String handle(Request req, Response res) throws Exception {
 		System.out.println("=========" + this.getClass().getSimpleName() + "=========");
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
-		DataQuery body = gson.fromJson(req.body(), DataQuery.class);
+		DataQuery body;
+		if (req.body().length()>0) {
+			body = gson.fromJson(req.body(), DataQuery.class);
+		} else {
+			body = new DataQuery();
+			body.repo = req.queryParams("repo");
+			body.commitId = req.queryParams("commitId");
+			body.path = req.queryParams("path");
+		}
 		JsonObject o = new JsonObject();
 		try {
 			if (materialized) {
@@ -52,12 +60,24 @@ public class DefaultDataHandler implements Route {
 				String content = new String(Files.readAllBytes(path));
 				o.addProperty("content", content);
 			} else {
+				if (body.repo == null) {
+					o.addProperty("error", "missing repository");
+					return gson.toJson(o);
+				}
+				if (body.commitId == null) {
+					o.addProperty("error", "missing commitId");
+					return gson.toJson(o);
+				}
+				if (body.path == null) {
+					o.addProperty("error", "missing path");
+					return gson.toJson(o);
+				}
 				try (SourcesHelper helper = new SourcesHelper(body.repo);) {
 					o.addProperty("content", helper.getContent(body.commitId, body.path));
 				}
 			}
 		} catch (Exception e) {
-			o.addProperty("error", "File not found");
+			o.addProperty("error", "File not found: "+ body.repo +";"+ body.commitId + ";" + body.path);
 			System.out.println(body.repo + body.commitId + body.path);
 			e.printStackTrace();
 		}

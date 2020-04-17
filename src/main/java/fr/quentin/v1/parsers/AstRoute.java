@@ -1,4 +1,4 @@
-package fr.quentin.parsers;
+package fr.quentin.v1.parsers;
 
 import java.util.Base64;
 

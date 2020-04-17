@@ -13,10 +13,18 @@ import java.util.stream.Collectors;
 import com.google.gson.JsonElement;
 
 // import fr.quentin.differs.ChangeDistillerHandler;
-import fr.quentin.differs.GumtreeSpoonHandler;
-import fr.quentin.impacts.ImpactGumtreeSpoonHandler;
-import fr.quentin.impacts.ImpactRMinerHandler;
-import fr.quentin.parsers.SpoonHandler;
+import fr.quentin.v1.differs.GumtreeSpoonHandler;
+import fr.quentin.v1.impacts.ImpactGumtreeSpoonHandler;
+import fr.quentin.v1.impacts.ImpactRMinerHandler;
+import fr.quentin.v1.parsers.SpoonHandler;
+import fr.quentin.v2.ast.ASTHandler;
+import fr.quentin.v2.ast.ASTRoute;
+import fr.quentin.v2.evolution.EvolutionHandler;
+import fr.quentin.v2.evolution.EvolutionRoute;
+import fr.quentin.v2.impact.ImpactHandler;
+import fr.quentin.v2.impact.ImpactRoute;
+import fr.quentin.v2.sources.SourcesHandler;
+import fr.quentin.v2.sources.SourcesRoute;
 import fr.quentin.utils.DefaultDataHandler;
 
 import static spark.Spark.*;
@@ -27,7 +35,8 @@ import static spark.Spark.*;
 public class Server {
 	public final static int DEFAULT_PORT = 8095;
 	public final static List<String> DEFAULT_ORIGINS = Collections.unmodifiableList(
-			Arrays.asList("http://131.254.17.96:8080", "http://127.0.0.1:8080", "http://localhost:8080", "http://176.180.199.146:50000"));
+			Arrays.asList("http://131.254.17.96:8080", "http://127.0.0.1:8080", "http://127.0.0.1:8087",
+					"http://localhost:8080", "http://176.180.199.146:50000", "http://192.168.1.53:8080"));
 	// private static Route aaa = (req, res) -> {
 	// System.out.println("=========gumtree=========");
 
@@ -65,7 +74,6 @@ public class Server {
 	 * @param autorizedOrigins like "http://131.254.17.96:8080"
 	 */
 	public static void serve(int serverport, Set<String> autorizedOrigins) {
-
 		port(serverport);
 
 		before((req, res) -> {
@@ -75,32 +83,85 @@ public class Server {
 				res.header("Access-Control-Allow-Origin", req.headers("Origin"));
 			}
 			res.header("Access-Control-Allow-Credentials", "true");
-			res.header("Access-Control-Allow-Methods", "OPTIONS,PUT");
+			res.header("Access-Control-Allow-Methods", "OPTIONS,PUT,GET");
 		});
 
-		path("/data", () -> {
-			put("/default", new DefaultDataHandler());
-			// put("/", );
+		path("/api/v1", () -> {
+			path("/data", () -> {
+				put("/default", new DefaultDataHandler());
+				get("/default", new DefaultDataHandler());
+				// put("/", );
+			});
+
+			path("/ast", () -> {
+				put("/spoon", new SpoonHandler());
+				// put("/", );
+			});
+
+			path("/diff", () -> {
+				// put("/ChangeDistiller", new ChangeDistillerHandler());
+				put("/RefactoringMiner", new ImpactRMinerHandler());
+				// put("/gumtree", new GumtreeSpoonHandler());
+				put("/gumtree", new ImpactGumtreeSpoonHandler());
+			});
+			// String accessControlRequestHeaders =
+			// "Origin,Content-Type,Access-Control-Allow-Origin,
+			// Access-Control-Allow-Credentials";
+			options("/*", (req, res) -> {
+				String accessControlRequestHeaders = req.headers("Access-Control-Request-Headers");
+				if (accessControlRequestHeaders != null) {
+					res.header("Access-Control-Allow-Headers", accessControlRequestHeaders);
+				}
+				String accessControlRequestMethod = req.headers("Access-Control-Request-Method");
+				if (accessControlRequestMethod != null) {
+					res.header("Access-Control-Allow-Methods", accessControlRequestMethod);
+				}
+				return "OK";
+			});
 		});
 
-		path("/ast", () -> {
-			put("/spoon", new SpoonHandler());
-			// put("/", );
+		path("/api/v2", () -> {
+			SourcesHandler srcH = new SourcesHandler();
+			path("/data", () -> {
+				SourcesRoute srcR = new SourcesRoute(srcH, "JGit");
+				put("/default", srcR);
+				put("/JGit", srcR);
+			});
+
+			ASTHandler astH = new ASTHandler(srcH);
+			path("/ast", () -> {
+				ASTRoute astR = new ASTRoute(srcH, astH, "Spoon");
+				put("/Spoon", astR);
+				put("/default", astR);
+			});
+
+			EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
+			path("/evolution", () -> {
+				EvolutionRoute evoR = new EvolutionRoute(srcH, astH, evoH, "RefactoringMiner");
+				put("/RefactoringMiner", evoR);
+				put("/default", evoR);
+			});
+
+			ImpactHandler impactH = new ImpactHandler(srcH, astH, evoH);
+			path("/impact", () -> {
+				ImpactRoute impactR = new ImpactRoute(srcH, astH, evoH, impactH, "myMiner");
+				put("/myMiner", impactR);
+				put("/default", impactR);
+			});
+
+			options("/*", (req, res) -> {
+				String accessControlRequestHeaders = req.headers("Access-Control-Request-Headers");
+				if (accessControlRequestHeaders != null) {
+					res.header("Access-Control-Allow-Headers", accessControlRequestHeaders);
+				}
+				String accessControlRequestMethod = req.headers("Access-Control-Request-Method");
+				if (accessControlRequestMethod != null) {
+					res.header("Access-Control-Allow-Methods", accessControlRequestMethod);
+				}
+				return "OK";
+			});
 		});
 
-		path("/diff", () -> {
-			// put("/ChangeDistiller", new ChangeDistillerHandler());
-			put("/RefactoringMiner", new ImpactRMinerHandler());
-			// put("/gumtree", new GumtreeSpoonHandler());
-			put("/gumtree", new ImpactGumtreeSpoonHandler());
-		});
-
-		options("/*", (req, res) -> {
-			res.header("Access-Control-Allow-Headers",
-					"Origin,Content-Type,Access-Control-Allow-Origin, Access-Control-Allow-Credentials");
-			return "OK";
-		});
-		
 		internalServerError((req, res) -> {
 			System.out.println("Error");
 			System.out.println(req);
@@ -112,6 +173,7 @@ public class Server {
 			// Handle the exception here
 			System.out.println("Exception");
 			System.out.println(e.getMessage());
+			e.printStackTrace();
 			System.out.println(req);
 			System.out.println(res);
 			res.status(500);

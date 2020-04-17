@@ -1,4 +1,4 @@
-package fr.quentin.impacts;
+package fr.quentin.v1.impacts;
 
 import java.io.File;
 import java.util.List;
@@ -27,7 +27,7 @@ import spark.QueryParamsMap;
 public class RefDiffHandler implements ImpactRoute {
 
 	@Override
-	public Object simplifiedHandler(String before, String after, QueryParamsMap qm) {
+	public Object simplifiedHandler(String before, String after, ImpactQuery body, QueryParamsMap qm) {
 		RefDiffConfigImpl config = new RefDiffConfigImpl();
 		RefDiff refDiff = new RefDiff(config);
 		GitService gitService = new GitServiceImpl();
@@ -61,7 +61,7 @@ public class RefDiffHandler implements ImpactRoute {
 	}
 
 	@Override
-	public Object commitHandler(String repo, String commitIdBefore, String commitIdAfter, QueryParamsMap queryMap) {
+	public Object commitHandler(String repo, String commitIdBefore, String commitIdAfter, ImpactQuery body, QueryParamsMap queryMap) {
 
 		System.out.println(repo);
 		System.out.println(commitIdBefore);
@@ -70,7 +70,7 @@ public class RefDiffHandler implements ImpactRoute {
 	}
 
 	@Override
-	public Object tagHandler(String repo, String tagBefore, String tagAfter, QueryParamsMap queryMap) {
+	public Object tagHandler(String repo, String tagBefore, String tagAfter, ImpactQuery body, QueryParamsMap queryMap) {
 		// TODO Auto-generated method stub
 		return null;
 	}

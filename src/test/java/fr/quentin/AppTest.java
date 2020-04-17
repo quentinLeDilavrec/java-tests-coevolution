@@ -2,6 +2,7 @@ package fr.quentin;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -71,10 +72,16 @@ public class AppTest {
                             @Override
                             public void handle(String commitId, List<Refactoring> refactorings) {
                                 detectedRefactorings.addAll(refactorings);
+                                String before;
+                                try {
+                                    before = helper.getBeforeCommit(commitId);
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
                                 for (Refactoring op : refactorings) {
                                     if (op.getRefactoringType().equals(RefactoringType.MOVE_OPERATION)) {
                                         MoveMethodEvolution tmp = new MoveMethodEvolution(
-                                                path.toAbsolutePath().toString(), op, commitId);
+                                                path.toAbsolutePath().toString(), op, before, commitId);
                                         evolutions.add(tmp);
                                     }
                                 }
@@ -148,10 +155,16 @@ public class AppTest {
                     @Override
                     public void handle(String commitId, List<Refactoring> refactorings) {
                         detectedRefactorings.addAll(refactorings);
+                            String before;
+                            try {
+                                before = helper.getBeforeCommit(commitId);
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
                         for (Refactoring op : refactorings) {
                             if (op.getRefactoringType().equals(RefactoringType.MOVE_OPERATION)) {
                                 MoveMethodEvolution tmp = new MoveMethodEvolution(path.toAbsolutePath().toString(), op,
-                                        commitId);
+                                before, commitId);
                                 evolutions.add(tmp);
                             }
                         }
@@ -212,10 +225,16 @@ public class AppTest {
                     @Override
                     public void handle(String commitId, List<Refactoring> refactorings) {
                         detectedRefactorings.addAll(refactorings);
+                            String before;
+                            try {
+                                before = helper.getBeforeCommit(commitId);
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
                         for (Refactoring op : refactorings) {
                             if (op.getRefactoringType().equals(RefactoringType.MOVE_OPERATION)) {
                                 MoveMethodEvolution tmp = new MoveMethodEvolution(path.toAbsolutePath().toString(), op,
-                                        commitId);
+                                before, commitId);
                                 evolutions.add(tmp);
                             }
                         }
@@ -243,11 +262,13 @@ public class AppTest {
         Set<Position> impacts = new HashSet<>();
         Set<Position> post = new HashSet<>();
         private Refactoring op;
-        private String commitId;
+        private String commitIdBefore;
+        private String commitIdAfter;
 
-        MoveMethodEvolution(String root, Refactoring op, String commitId) {
+        MoveMethodEvolution(String root, Refactoring op, String commitIdBefore, String commitIdAfter) {
             this.op = op;
-            this.commitId = commitId;
+            this.commitIdBefore = commitIdBefore;
+            this.commitIdAfter = commitIdAfter;
             for (CodeRange range : op.leftSide()) {
                 this.impacts.add(new Position(Paths.get(root, range.getFilePath()).toString(), range.getStartOffset(),
                         range.getEndOffset()));
@@ -273,21 +294,29 @@ public class AppTest {
             return op;
         }
 
-        @Override
-        public String getCommitId() {
-            return commitId;
-        }
 
+		@Override
+		public String getCommitIdBefore() {
+			return commitIdBefore;
+		}
+
+		@Override
+		public String getCommitIdAfter() {
+			return commitIdAfter;
+		}
     }
 
     static class OtherEvolution implements Evolution<Refactoring> {
         Set<Position> impacts = new HashSet<>();
         Set<Position> post = new HashSet<>();
         private Refactoring op;
-        private String commitId;
+        private String commitIdBefore;
+        private String commitIdAfter;
 
-        OtherEvolution(String root, Refactoring op, String commitId) {
+        OtherEvolution(String root, Refactoring op, String commitIdBefore, String commitIdAfter) {
             this.op = op;
+            this.commitIdBefore = commitIdBefore;
+            this.commitIdAfter = commitIdAfter;
             for (CodeRange range : op.leftSide()) {
                 this.impacts.add(new Position(Paths.get(root, range.getFilePath()).toString(), range.getStartOffset(),
                         range.getEndOffset()));
@@ -313,10 +342,16 @@ public class AppTest {
             return op;
         }
 
-        @Override
-        public String getCommitId() {
-            return commitId;
-        }
+
+		@Override
+		public String getCommitIdBefore() {
+			return commitIdBefore;
+		}
+
+		@Override
+		public String getCommitIdAfter() {
+			return commitIdAfter;
+		}
     }
 
 }
