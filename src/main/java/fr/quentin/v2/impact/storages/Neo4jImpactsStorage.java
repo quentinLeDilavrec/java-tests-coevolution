@@ -42,24 +42,22 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
     }
 
     private void way2(Impacts.Specifier impacts_spec, Impacts value) {
+        Map<ImpactElement, Map<ImpactElement, Relations>> aaa = value.getPerRootCause();
+        List<Object> tmp = new ArrayList<>();
+        List<Object> ranges_to_type = new ArrayList<>();
+        for (Entry<ImpactElement, Map<ImpactElement, Relations>> rootEntry : aaa.entrySet()) {
+            List<String> getCommitIdBeforeAndAfter = getCommitIdBeforeAndAfter(rootEntry.getKey());
+            tmp.addAll(basifyRootCauseImpact(impacts_spec.astSpec.sources.repository, getCommitIdBeforeAndAfter.get(0),
+                    value.getCauseRootDir(), rootEntry.getKey(), ranges_to_type));
+            for (Entry<ImpactElement, Relations> verticeEntry : rootEntry.getValue().entrySet()) {
+                tmp.addAll(basifyImpact(impacts_spec.astSpec.sources.repository, getCommitIdBeforeAndAfter.get(0),
+                        value.getCauseRootDir(), rootEntry.getKey(), verticeEntry.getValue()));
+            }
+        }
         try (Session session = driver.session()) {
             String done = session.writeTransaction(new TransactionWork<String>() {
                 @Override
                 public String execute(Transaction tx) {
-                    Map<ImpactElement, Map<ImpactElement, Relations>> aaa = value.getPerRootCause();
-                    List<Object> tmp = new ArrayList<>();
-                    List<Object> ranges_to_type = new ArrayList<>();
-                    for (Entry<ImpactElement, Map<ImpactElement, Relations>> rootEntry : aaa.entrySet()) {
-                        List<String> getCommitIdBeforeAndAfter = getCommitIdBeforeAndAfter(rootEntry.getKey());
-                        tmp.addAll(basifyRootCauseImpact(impacts_spec.astSpec.sources.repository,
-                                getCommitIdBeforeAndAfter.get(0), value.getCauseRootDir(), rootEntry.getKey(),
-                                ranges_to_type));
-                        for (Entry<ImpactElement, Relations> verticeEntry : rootEntry.getValue().entrySet()) {
-                            tmp.addAll(basifyImpact(impacts_spec.astSpec.sources.repository,
-                                    getCommitIdBeforeAndAfter.get(0), value.getCauseRootDir(), rootEntry.getKey(),
-                                    verticeEntry.getValue()));
-                        }
-                    }
                     Result result = tx.run(getCypher(),
                             parameters("json", tmp, "tool", impacts_spec.miner, "rangesToType", ranges_to_type));
                     result.consume();

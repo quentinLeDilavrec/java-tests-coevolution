@@ -43,18 +43,17 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
         way2(impacts_spec, value);
     }
 
-    
     private void way2(Specifier impacts_spec, Evolutions value) {
+        Map<String, EvoType> evoTypesByName = getCRefactoringTypes();
+        List<Evolution<Refactoring>> a = value.toList();
+        List<Object> tmp = new ArrayList<>();
+        for (Evolution<Refactoring> evolution : a) {
+            tmp.add(basifyEvo(impacts_spec.sources, evolution, evoTypesByName));
+        }
         try (Session session = driver.session()) {
             String done = session.writeTransaction(new TransactionWork<String>() {
                 @Override
                 public String execute(Transaction tx) {
-                    Map<String, EvoType> evoTypesByName = getCRefactoringTypes();
-                    List<Evolution<Refactoring>> a = value.toList();
-                    List<Object> tmp = new ArrayList<>();
-                    for (Evolution<Refactoring> evolution : a) {
-                        tmp.add(basifyEvo(impacts_spec.sources, evolution, evoTypesByName));
-                    }
                     Result result = tx.run(getCypher(), parameters("json", tmp, "tool", impacts_spec.miner));
                     result.consume();
                     return "done evolution";
@@ -202,6 +201,7 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
     public Neo4jEvolutionsStorage() {
         this("bolt://localhost:7687", "neo4j", "neo4j");
     }
+
     private void way1(Specifier impacts_spec, Evolutions value) {
         try (Session session = driver.session()) {
             String done = session.writeTransaction(new TransactionWork<String>() {
@@ -274,7 +274,8 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
 
     private static String getCypher() {
         try {
-            return new String(Files.readAllBytes(Paths.get(Neo4jEvolutionsStorage.class.getClassLoader().getResource("evolutions_cypher.sql").getFile())));
+            return new String(Files.readAllBytes(Paths.get(
+                    Neo4jEvolutionsStorage.class.getClassLoader().getResource("evolutions_cypher.sql").getFile())));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -283,8 +284,8 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
     private static Map<String, EvoType> getCRefactoringTypes() {
         try {
             Map<String, EvoType> res = new Gson().fromJson(
-                    new String(Files.readAllBytes(
-                            Paths.get(Neo4jEvolutionsStorage.class.getClassLoader().getResource("RefactoringTypes_named.json").getFile()))),
+                    new String(Files.readAllBytes(Paths.get(Neo4jEvolutionsStorage.class.getClassLoader()
+                            .getResource("RefactoringTypes_named.json").getFile()))),
                     new TypeToken<Map<String, EvoType>>() {
                     }.getType());
             for (Entry<String, EvoType> e : res.entrySet()) {
