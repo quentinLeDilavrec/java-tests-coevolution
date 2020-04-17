@@ -16,6 +16,7 @@ import spark.Route;
 import fr.quentin.v2.evolution.EvolutionHandler;
 import fr.quentin.v2.sources.Sources;
 import fr.quentin.v2.sources.SourcesHandler;
+import fr.quentin.utils.SourcesHelper;
 import fr.quentin.v2.ast.ASTHandler;
 
 public class ImpactRoute implements Route {
@@ -82,8 +83,16 @@ public class ImpactRoute implements Route {
             JsonObject tmp = new JsonObject();
             tmp.addProperty("error", "simplified impact handler not implemented yet");
             r = tmp;
-        } else if (body.repo != null && body.commitIdBefore != null && body.commitIdAfter != null) {
+        } else if (body.repo != null && body.commitIdAfter != null) {
             Sources.Specifier srcSpec = sourcesHandler.buildSpec(body.repo);
+            System.out.println(body.commitIdBefore);
+            if( body.commitIdBefore == null) {
+                try (SourcesHelper helper = sourcesHandler.handle(srcSpec, "JGit").open();) {
+                    body.commitIdBefore = helper.getBeforeCommit(body.commitIdAfter);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
             // TODO use body.cases to filter wanted evolutions
             r = impactsHandler.handle(impactsHandler.buildSpec(astHandler.buildSpec(srcSpec, body.commitIdBefore),
                     evoHandler.buildSpec(srcSpec, body.commitIdBefore, body.commitIdAfter), minerId)).toJson();

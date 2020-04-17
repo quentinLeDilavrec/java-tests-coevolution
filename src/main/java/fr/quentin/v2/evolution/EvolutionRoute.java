@@ -8,6 +8,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+import fr.quentin.utils.SourcesHelper;
 import fr.quentin.v2.ast.AST;
 import fr.quentin.v2.ast.ASTHandler;
 import fr.quentin.v2.sources.Sources;
@@ -71,8 +72,16 @@ public class EvolutionRoute implements Route {
             JsonObject tmp = new JsonObject();
             tmp.addProperty("error", "simplified evolution handler not implemented yet");
             r = tmp;
-        } else if (body.repo != null && body.commitIdBefore != null && body.commitIdAfter != null) {
+        } else if (body.repo != null && body.commitIdAfter != null) {
             Sources.Specifier srcSpec = sourcesHandler.buildSpec(body.repo);
+            System.out.println(body.commitIdBefore);
+            if( body.commitIdBefore == null) {
+                try (SourcesHelper helper = sourcesHandler.handle(srcSpec, "JGit").open();) {
+                    body.commitIdBefore = helper.getBeforeCommit(body.commitIdAfter);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
             // TODO use body.cases to filter wanted evolutions
             r = evoHandler.handle(evoHandler.buildSpec(srcSpec, body.commitIdBefore, body.commitIdAfter, minerId))
                     .toJson();
