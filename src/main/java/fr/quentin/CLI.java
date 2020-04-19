@@ -125,7 +125,7 @@ public class CLI {
                         try {
                             evos = evoH.handle(evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter));
                         } catch (Exception e) {
-                            System.out.println("no commits for " + s[0]);
+                            System.out.println("failed evolution analysis " + s[0]);
                             break;
                         }
                         if (evos != null && evos.toList().size() > 0) {
@@ -140,12 +140,17 @@ public class CLI {
                     } else if (evos.toList().size() <= 0) {
                         System.out.println("no evolutions found for " + s[0]);
                     } else {
-                        Impacts impacts = impactH.handle(impactH.buildSpec(astH.buildSpec(srcSpec, commitIdBefore),
-                                evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter)));
                         System.out.println(Integer.toString(evos.toList().size()) + " evolutions found for " + s[0]
                                 + " from " + commitIdBefore + " to " + commitIdAfter);
-                        System.out.println(Integer.toString(impacts.getPerRootCause().size()) + " impacts found for "
-                                + s[0] + " from " + commitIdBefore + " to " + commitIdAfter);
+                        try {
+                            Impacts impacts = impactH.handle(impactH.buildSpec(astH.buildSpec(srcSpec, commitIdBefore),
+                                    evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter)));
+                            System.out
+                                    .println(Integer.toString(impacts.getPerRootCause().size()) + " impacts found for "
+                                            + s[0] + " from " + commitIdBefore + " to " + commitIdAfter);
+                        } catch (Exception e) {
+                            System.out.println("failed evolution analysis for " + s[0]);
+                        }
                     }
                     return null;
                 });
