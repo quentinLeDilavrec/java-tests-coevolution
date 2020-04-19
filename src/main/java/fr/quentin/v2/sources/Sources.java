@@ -15,10 +15,18 @@ public abstract class Sources {
 	public static class Specifier {
         public final String repository;
         public final String miner;
+        public final Integer stars;
 
         public Specifier(String repository, String miner) {
             this.repository = repository;
             this.miner = miner;
+            this.stars = null;
+        }
+
+        public Specifier(String repository, String miner, Integer stars) {
+            this.repository = repository;
+            this.miner = miner;
+            this.stars = stars;
         }
         // TODO allow to specify Impacts more precisely with filters
         @Override

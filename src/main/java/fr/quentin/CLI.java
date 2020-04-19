@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -11,7 +12,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 // import org.apache.commons.cli;
 import org.apache.commons.cli.CommandLine;
@@ -42,6 +46,13 @@ import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 import fr.quentin.utils.ASTHelper;
 import fr.quentin.utils.DiffHelper;
 import fr.quentin.utils.SourcesHelper;
+import fr.quentin.v2.ast.ASTHandler;
+import fr.quentin.v2.evolution.EvolutionHandler;
+import fr.quentin.v2.evolution.Evolutions;
+import fr.quentin.v2.impact.ImpactHandler;
+import fr.quentin.v2.impact.Impacts;
+import fr.quentin.v2.sources.Sources;
+import fr.quentin.v2.sources.SourcesHandler;
 import gumtree.spoon.AstComparator;
 import gumtree.spoon.diff.Diff;
 import gumtree.spoon.diff.operations.Operation;
@@ -54,19 +65,25 @@ import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
 public class CLI {
     static Logger logger = Logger.getLogger("ImpactRM commitHandler");
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         CommandLineParser parser = new DefaultParser();
 
         // create the Options
         Options options = new Options();
         options.addOption("r", "repo", true, "The repository where the code is located");
+        options.addOption("f", "file", true,
+                "a file that contain per line <repo> <stars> <list of important commitId time ordered and starting with the most recent>");
 
         try {
             if (args.length < 1) {
-                throw new UnsupportedOperationException("use compare or ast");
+                throw new UnsupportedOperationException("use batch, compare or ast");
             }
             CommandLine line = parser.parse(options, Arrays.copyOfRange(args, 1, args.length));
-            if (Objects.equals(args[0], "ast")) {
+            if (Objects.equals(args[0], "batch")) {
+                if (line.getOptionValue("file") != null) {
+                    batch(Files.lines(Paths.get(line.getOptionValue("file"))));
+                }
+            } else if (Objects.equals(args[0], "ast")) {
                 if (line.hasOption("repo")) {
                     System.out.println(ast(line.getOptionValue("repo"), line.getArgList().get(0)));
                 } else {
@@ -85,6 +102,58 @@ public class CLI {
         } catch (ParseException exp) {
             System.out.println("Unexpected exception:" + exp.getMessage());
         }
+    }
+
+    private static void batch(Stream<String> lines) {
+        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
+        SourcesHandler srcH = new SourcesHandler();
+        ASTHandler astH = new ASTHandler(srcH);
+        EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
+        ImpactHandler impactH = new ImpactHandler(srcH, astH, evoH);
+        lines.forEach(line -> {
+            String[] s = line.split(" ");
+            if (s.length > 2) {
+                executor.submit(() -> {
+                    Sources.Specifier srcSpec = srcH.buildSpec(s[0], Integer.parseInt(s[1]));
+
+                    Evolutions evos = null;
+                    String commitIdAfter = null;
+                    String commitIdBefore = null;
+                    for (int i = 3; i < s.length; i++) {
+                        commitIdAfter = s[i];
+                        commitIdBefore = s[i + 1];
+                        try {
+                            evos = evoH.handle(evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter));
+                        } catch (Exception e) {
+                            System.out.println("no commits for " + s[0]);
+                            break;
+                        }
+                        if (evos != null && evos.toList().size() > 0) {
+                            break;
+                        }
+                    }
+
+                    if (s.length < 3) {
+                        System.out.println("no commits for " + s[0]);
+                    } else if (evos == null) {
+                        System.out.println("evolution no working " + s[0]);
+                    } else if (evos.toList().size() <= 0) {
+                        System.out.println("no evolutions found for " + s[0]);
+                    } else {
+                        Impacts impacts = impactH.handle(impactH.buildSpec(astH.buildSpec(srcSpec, commitIdBefore),
+                                evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter)));
+                        System.out.println(Integer.toString(evos.toList().size()) + " evolutions found for " + s[0]
+                                + " from " + commitIdBefore + " to " + commitIdAfter);
+                        System.out.println(Integer.toString(impacts.getPerRootCause().size()) + " impacts found for "
+                                + s[0] + " from " + commitIdBefore + " to " + commitIdAfter);
+                    }
+                    return null;
+                });
+            } else {
+                System.out.println("no commits for " + s[0]);
+            }
+        });
+
     }
 
     public static String ast(String path) {
@@ -121,7 +190,7 @@ public class CLI {
 
                 return Integer.toString(launcher.getFactory().Type().getAll().size());
                 // .stream().map(x -> x.getQualifiedName()).reduce("",
-                //         (a, b) -> a + " " + b);
+                // (a, b) -> a + " " + b);
 
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -150,8 +219,7 @@ public class CLI {
             try {
                 launcher.buildModel();
             } catch (Exception e) {
-                for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcher.getModelBuilder())
-                        .getProblems()) {
+                for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcher.getModelBuilder()).getProblems()) {
                     logger.info(pb.toString());
                 }
 

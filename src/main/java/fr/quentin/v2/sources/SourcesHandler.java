@@ -21,6 +21,10 @@ public class SourcesHandler {
     private Sources.Specifier buildSpec(String repository, String miner) {
         return new Sources.Specifier(repository, miner);
     }
+    
+    public Sources.Specifier buildSpec(String repository, Integer stars) {
+        return new Sources.Specifier(repository, "JGit", stars);
+    }
 
     public Sources handle(Sources.Specifier spec, String miner) {
         Sources res = null;
