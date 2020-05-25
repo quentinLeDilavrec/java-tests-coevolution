@@ -103,13 +103,17 @@ public class Evolutions {
 
     protected final Set<Evolution> evolutions = new HashSet<>();
     private Map<ImmutablePair<String, List<ImmutablePair<Range, String>>>, Evolution> evoByBeforeList = new HashMap<>();
-
+    private Sources sources;
+    public Sources getSources() {
+        return sources;
+    }
     public Evolution getEvolution(String type, List<ImmutablePair<Range, String>> before) {
         return evoByBeforeList.get(new ImmutablePair<>(type, before));
     }
 
-    public Evolutions(Specifier spec) {
+    public Evolutions(Specifier spec, Sources sources) {
         this.spec = spec;
+        this.sources = sources;
     }
 
     protected final Evolution addEvolution(String type, List<ImmutablePair<Range, String>> before,

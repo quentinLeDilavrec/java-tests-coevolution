@@ -16,6 +16,7 @@ import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Specifier;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
+import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import gr.uom.java.xmi.diff.CodeRange;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionsStorage;
 
@@ -31,6 +32,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -38,21 +41,35 @@ import com.google.gson.reflect.TypeToken;
 public class Neo4jEvolutionsStorage implements EvolutionsStorage {
 
     @Override
-    public void put(Specifier impacts_spec, Evolutions value) {
-        way2(impacts_spec, value);
+    public void put(Specifier evos_spec, Evolutions value) {
+        way2(evos_spec, value);
     }
 
-    private void way2(Specifier impacts_spec, Evolutions value) {
+    private void way2(Specifier evos_spec, Evolutions value) {
         Set<Evolution> a = value.toSet();
         List<Object> tmp = new ArrayList<>();
         for (Evolution evolution : a) {
-            tmp.add(basifyEvo(impacts_spec.sources.repository, evolution));
+            tmp.add(basifyEvo(evos_spec.sources.repository, evolution));
+        }
+        List<Map<String, Object>> commits = new ArrayList<>();
+        try {
+            for (Commit commit : value.getSources().getCommitBetween(evos_spec.commitIdBefore,
+                    evos_spec.commitIdAfter)) {
+                Map<String,Object> o = new HashMap<>();
+                o.put("repository", commit.getRepository().getUrl());
+                o.put("sha1", commit.getId());
+                o.put("children", commit.getChildrens().stream().map(x->x.getId()).collect(Collectors.toList()));
+                o.put("parents", commit.getParents().stream().map(x->x.getId()).collect(Collectors.toList()));
+            }
+        } catch (Exception e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
         }
         try (Session session = driver.session()) {
             String done = session.writeTransaction(new TransactionWork<String>() {
                 @Override
                 public String execute(Transaction tx) {
-                    Result result = tx.run(getCypher(), parameters("json", tmp, "tool", impacts_spec.miner));
+                    Result result = tx.run(getCypher(), parameters("json", tmp, "tool", evos_spec.miner, "commits", commits));
                     result.consume();
                     return "done evolution";
                 }

@@ -77,7 +77,7 @@ public class RefactoringMiner implements EvolutionsMiner {
         // List<Evolutions.Evolution> evolutions = new
         // ArrayList<Evolutions.Evolution>();
 
-        EvolutionsExtension result = new EvolutionsExtension(spec);
+        EvolutionsExtension result = new EvolutionsExtension(spec, src);
         Map<ImmutablePair<String, String>, List<Refactoring>> tmp = new HashMap<>();
         try (SourcesHelper helper = src.open()) {
             miner.detectBetweenCommits(helper.getRepo(), spec.commitIdBefore, spec.commitIdAfter,
@@ -120,12 +120,12 @@ public class RefactoringMiner implements EvolutionsMiner {
 
     public final class EvolutionsExtension extends Evolutions {
 
-        private EvolutionsExtension(Specifier spec) {
-            super(spec);
+        private EvolutionsExtension(Specifier spec, Sources sources) {
+            super(spec, sources);
         }
 
-        private EvolutionsExtension(Specifier spec, Set<Evolution> subSet) {
-            this(spec);
+        private EvolutionsExtension(Specifier spec, Sources sources, Set<Evolution> subSet) {
+            this(spec,sources);
             evolutions.addAll(subSet);
         }
 
@@ -182,7 +182,7 @@ public class RefactoringMiner implements EvolutionsMiner {
                 }
                 Evolutions newEvo = new EvolutionsExtension(EvolutionHandler.buildSpec(spec.sources,
                         evolutionsSubSet.iterator().next().getCommitBefore().getId(),
-                        evolutionsSubSet.iterator().next().getCommitAfter().getId()), evolutionsSubSet);
+                        evolutionsSubSet.iterator().next().getCommitAfter().getId()),getSources(), evolutionsSubSet);
                 r.add(newEvo);
             }
             return r;
