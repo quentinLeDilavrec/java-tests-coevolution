@@ -49,6 +49,7 @@ import fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner.CoE
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 import fr.quentin.coevolutionMiner.v2.evolution.storages.Neo4jEvolutionsStorage;
+import fr.quentin.coevolutionMiner.v2.evolution.storages.Neo4jEvolutionsStorage.EvoType;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.coevolutionMiner.v2.utils.Tuple;
@@ -61,6 +62,55 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
 
     @Override
     public void put(CoEvolutions value) {
+        Set<CoEvolution> validated_coevos = value.getValidated();
+        Set<CoEvolution> unvalidated_coevos = value.getUnvalidated();
+        List<Map<String, Object>> tmp = new ArrayList<>();
+        for (CoEvolution coevolution : validated_coevos) {
+            tmp.add(basifyCoevo(coevolution, true, value.spec.srcSpec.repository));
+        }
+        for (CoEvolution coevolution : unvalidated_coevos) {
+            tmp.add(basifyCoevo(coevolution, false, value.spec.srcSpec.repository));
+        }
+        try (Session session = driver.session()) {
+            String done = session.writeTransaction(new TransactionWork<String>() {
+                @Override
+                public String execute(Transaction tx) {
+                    Result result = tx.run(getCypher(), parameters("json", tmp, "tool", value.spec.miner));
+                    result.consume();
+                    return "done coevolution";
+                }
+            });
+            System.out.println(done);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private Map<String, Object> basifyCoevo(CoEvolution coevolution, Object validated, String repository) {
+        Map<String, Object> coevo = new HashMap<>();
+        List<String> causes_url = new ArrayList<>();
+        List<Map<String, Object>> causes = new ArrayList<>();
+        for (Evolution evolution : coevolution.getCauses()) {
+            Map<String, Object> tmp = Neo4jEvolutionsStorage.basifyEvo(repository, evolution);
+            causes.add(tmp);
+            causes_url.add((String)(((Map<String, Object>)tmp.get("content")).get("url")));
+        }
+        List<Map<String, Object>> resolutions = new ArrayList<>();
+        List<String> resolutions_url = new ArrayList<>();
+        for (Evolution evolution : coevolution.getResolutions()) {
+            Map<String, Object> tmp = Neo4jEvolutionsStorage.basifyEvo(repository, evolution);
+            resolutions.add(tmp);
+            resolutions_url.add((String)(((Map<String, Object>)tmp.get("content")).get("url")));
+        }
+        Map<String, Object> content = new HashMap<>();
+        content.put("validated", validated);
+        content.put("causes", causes_url);
+        content.put("resolutions", resolutions_url);
+        coevo.put("content", content);
+        coevo.put("causes", causes);
+        coevo.put("resolutions", resolutions);
+
+        return coevo;
     }
 
     private final Driver driver;
@@ -175,16 +225,17 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                         // }
                         Set<Evolution> evosShort = getEvo(x.get("short"), evolutions, astBefore, astAfter);
 
-                        Set<Evolution> evosShortAdjusted = getEvo(x.get("shortAdjusted"), evolutions, astBefore, astAfter);
-                        
+                        Set<Evolution> evosShortAdjusted = getEvo(x.get("shortAdjusted"), evolutions, astBefore,
+                                astAfter);
+
                         // for (Evolution aaa : evosShort) {
                         // if (aaa.getType().equals("Move Method")||aaa.getType().equals("Change
                         // Variable Type")||aaa.getType().equals("Rename Variable")) {
                         // tmp.TestAfter = aaa.getAfter().get(0).getTarget();
                         // }
                         // }
-                        
-                        coevoBuilder.addCoevolution(causes, evosLong,evosShort,evosShortAdjusted, testBefore);
+
+                        coevoBuilder.addCoevolution(causes, evosLong, evosShort, evosShortAdjusted, testBefore);
 
                         return null;
                     });
@@ -230,6 +281,15 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         try {
             return new String(Files.readAllBytes(Paths.get(
                     Neo4jCoEvolutionsStorage.class.getClassLoader().getResource("coevolution_miner.cql").getFile())));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static String getCypher() {
+        try {
+            return new String(Files.readAllBytes(Paths.get(
+                    Neo4jCoEvolutionsStorage.class.getClassLoader().getResource("coevolutions_cypher.cql").getFile())));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

@@ -75,6 +75,12 @@ public class CoEvolutions {
     public static class CoEvolution {
         protected Set<Evolution> causes;
         protected Set<Evolution> resolutions;
+        public Set<Evolution> getCauses() {
+            return causes;
+        }
+        public Set<Evolution> getResolutions() {
+            return resolutions;
+        }
         // public AST.FileSnapshot.Range TestBefore;
         // public AST.FileSnapshot.Range TestAfter;
 		public Set<Range> getTestsBefore() {
@@ -122,7 +128,11 @@ public class CoEvolutions {
         
     }
 
-    public Set<CoEvolution> toSet() {
+    public Set<CoEvolution> getValidated() {
+        return null;
+    }
+
+    public Set<CoEvolution> getUnvalidated() {
         return null;
     }
 

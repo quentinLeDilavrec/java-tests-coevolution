@@ -53,19 +53,27 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     Logger logger = Logger.getLogger(MyCoEvolutionsMiner.class.getName());
 
     private final class CoEvolutionsManyCommit extends CoEvolutions {
-        private Set<CoEvolution> coevolutions = new HashSet<>();
+        private final Set<CoEvolution> validatedcoevolutions = new HashSet<>();
+        private final Set<CoEvolution> unvalidatedCoevolutions = new HashSet<>();
 
         CoEvolutionsManyCommit(Specifier spec) {
             super(spec);
         }
 
-        void add(Set<CoEvolution> set) {
-            coevolutions.addAll(set);
+        void addValidated(Set<CoEvolution> set) {
+            validatedcoevolutions.addAll(set);
+        }
+        void addUnvalidated(Set<CoEvolution> set) {
+            unvalidatedCoevolutions.addAll(set);
         }
 
         @Override
-        public Set<CoEvolution> toSet() {
-            return coevolutions;
+        public Set<CoEvolution> getValidated() {
+            return validatedcoevolutions;
+        }
+        @Override
+        public Set<CoEvolution> getUnvalidated() {
+            return unvalidatedCoevolutions;
         }
 
         @Override
@@ -249,7 +257,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             }
             System.out.println("unvalidated found");
             System.out.println(currCoevolutions.getUnvalidated().size());
-            res.add(currCoevolutions.toSet());
+            res.addValidated(currCoevolutions.getValidated());
+            res.addUnvalidated(currCoevolutions.getUnvalidated());
             currentCommit = nextCommit;
         }
         for (Evolution evolution : evolutions) {
@@ -308,8 +317,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
 
         public void validate(CoEvolution entry) {
-            if (unvalidatedCoevolutions.contains(entry))
+            if (unvalidatedCoevolutions.contains(entry)){
                 validatedcoevolutions.add(entry);
+                unvalidatedCoevolutions.remove(entry);
+            }
         }
 
         class CoEvolutionExtension extends CoEvolution {
@@ -337,10 +348,11 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
 
         @Override
-        public Set<CoEvolution> toSet() {
+        public Set<CoEvolution> getValidated() {
             return Collections.unmodifiableSet(validatedcoevolutions);
         }
 
+        @Override
         public Set<CoEvolution> getUnvalidated() {
             return Collections.unmodifiableSet(unvalidatedCoevolutions);
         }

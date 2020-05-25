@@ -43,11 +43,10 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
     }
 
     private void way2(Specifier impacts_spec, Evolutions value) {
-        Map<String, EvoType> evoTypesByName = getCRefactoringTypes();
         Set<Evolution> a = value.toSet();
         List<Object> tmp = new ArrayList<>();
         for (Evolution evolution : a) {
-            tmp.add(basifyEvo(impacts_spec.sources, evolution, evoTypesByName));
+            tmp.add(basifyEvo(impacts_spec.sources.repository, evolution));
         }
         try (Session session = driver.session()) {
             String done = session.writeTransaction(new TransactionWork<String>() {
@@ -64,7 +63,7 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
         }
     }
 
-    public static String makeEvoUrl(String repository, Evolution evolution){
+    public static String makeEvoUrl(String repository, Evolution evolution) {
         Map<String, EvoType> evoTypesByName = getCRefactoringTypes();
         Refactoring ori = (Refactoring) evolution.getOriginal();
 
@@ -147,12 +146,15 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
         }
         for (Entry<String, List<String>> entry : after_e.entrySet()) {
             entry.getValue().sort(new Comparator<String>() {
+
                 @Override
                 public int compare(String a, String b) {
                     return a.compareTo(b);
                 }
             });
-            for (String s : entry.getValue()) {
+            for (
+
+            String s : entry.getValue()) {
                 url.append("&after" + entry.getKey() + "=" + s);
             }
         }
@@ -164,26 +166,26 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
         public String description;
     }
 
-    private static class EvoType {
+    public static class EvoType {
         public String name;
         public String displayName;
         public List<Side> left;
         public List<Side> right;
     }
 
-    private Object basifyEvo(Sources.Specifier sources, Evolution evolution,
-            Map<String, EvoType> evoTypesByName) {
+    public static Map<String, Object> basifyEvo(String repository, Evolution evolution) {
+        Map<String, EvoType> evoTypesByName = getCRefactoringTypes();
         Map<String, Object> res = new HashMap<>();
         Map<String, Object> evofields = new HashMap<>();
         res.put("content", evofields);
-        evofields.put("repository", sources.repository);
+        evofields.put("repository", repository);
         evofields.put("commitIdBefore", evolution.getCommitBefore().getId());
         evofields.put("commitIdAfter", evolution.getCommitAfter().getId());
         Refactoring ori = (Refactoring) evolution.getOriginal();
         evofields.put("type", ori.getRefactoringType().getDisplayName());
 
         StringBuilder url = new StringBuilder();
-        url.append("http://176.180.199.146:50000/?repo=" + sources.repository);
+        url.append("http://176.180.199.146:50000/?repo=" + repository);
         url.append("&before=" + evolution.getCommitBefore().getId());
         url.append("&after=" + evolution.getCommitAfter().getId());
         url.append("&type=" + ori.getRefactoringType().getDisplayName());
@@ -264,13 +266,16 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
         }
         for (Entry<String, List<String>> entry : after_e.entrySet()) {
             entry.getValue().sort(new Comparator<String>() {
+
                 @Override
                 public int compare(String a, String b) {
                     return a.compareTo(b);
                 }
             });
             evofields.put("after" + entry.getKey(), entry.getValue());
-            for (String s : entry.getValue()) {
+            for (
+
+            String s : entry.getValue()) {
                 url.append("&after" + entry.getKey() + "=" + s);
             }
         }
@@ -306,8 +311,8 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
     }
 
     private static Map<String, EvoType> RefactoringTypes = null;
-    
-    private static Map<String, EvoType> getCRefactoringTypes() {
+
+    public static Map<String, EvoType> getCRefactoringTypes() {
         if (RefactoringTypes != null) {
             return RefactoringTypes;
         }
