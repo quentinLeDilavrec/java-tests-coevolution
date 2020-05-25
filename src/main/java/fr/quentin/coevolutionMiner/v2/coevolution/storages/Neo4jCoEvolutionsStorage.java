@@ -77,7 +77,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                 public String execute(Transaction tx) {
                     Result result = tx.run(getCypher(), parameters("json", tmp, "tool", value.spec.miner));
                     result.consume();
-                    return "done coevolution";
+                    return "done evolution";
                 }
             });
             System.out.println(done);
@@ -86,29 +86,32 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         }
     }
 
-    private Map<String, Object> basifyCoevo(CoEvolution coevolution, Object validated, String repository) {
+    private Map<String, Object> basifyCoevo(CoEvolution coevolution, boolean validated, String repository) {
         Map<String, Object> coevo = new HashMap<>();
         List<String> causes_url = new ArrayList<>();
-        List<Map<String, Object>> causes = new ArrayList<>();
+        List<Map<String, Object>> pointed = new ArrayList<>();
         for (Evolution evolution : coevolution.getCauses()) {
             Map<String, Object> tmp = Neo4jEvolutionsStorage.basifyEvo(repository, evolution);
-            causes.add(tmp);
+            Map<String, Object> o = new HashMap<>();
+            o.put("content", tmp);
+            o.put("type", "cause");
+            pointed.add(o);
             causes_url.add((String)(((Map<String, Object>)tmp.get("content")).get("url")));
         }
-        List<Map<String, Object>> resolutions = new ArrayList<>();
         List<String> resolutions_url = new ArrayList<>();
         for (Evolution evolution : coevolution.getResolutions()) {
             Map<String, Object> tmp = Neo4jEvolutionsStorage.basifyEvo(repository, evolution);
-            resolutions.add(tmp);
+            Map<String, Object> o = new HashMap<>();
+            o.put("content", tmp);
+            o.put("type", "resolution");
+            pointed.add(o);
             resolutions_url.add((String)(((Map<String, Object>)tmp.get("content")).get("url")));
         }
         Map<String, Object> content = new HashMap<>();
-        content.put("validated", validated);
         content.put("causes", causes_url);
         content.put("resolutions", resolutions_url);
         coevo.put("content", content);
-        coevo.put("causes", causes);
-        coevo.put("resolutions", resolutions);
+        coevo.put("pointed", pointed);
 
         return coevo;
     }

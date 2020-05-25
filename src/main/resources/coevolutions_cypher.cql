@@ -8,42 +8,12 @@ ON CREATE SET t.name = tool
 
 MERGE (coevolution)-[:WAS_MINED_BY]->(t)
 
-WITH coevo as coevo, coevolution as coevolution
-CALL {
-	WITH coevo as coevo, coevolution as coevolution
-    UNWIND coevo.causes as l
+UNWIND coevo.pointed as l
+WITH l as l, coevolution as coevolution
+CALL apoc.merge.node(['Evo'], l.content) YIELD node as evo
 
-    WITH l as content, coevolution as coevolution
-	CALL apoc.merge.node(['Evo'], content) YIELD node as evo
+MERGE (coevolution)-[:COEVO_CAUSE]->(evo)
+WHERE l.type="cause"
 
-    MERGE (coevolution)-[:COEVO_CAUSE]->(evo)
-	RETURN 0
-}
-
-// FOREACH (content IN coevo.causes |
-
-//     WITH l as content, coevolution as coevolution
-// 	CALL apoc.merge.node(['Evo'], content) YIELD node as evo
-
-//     MERGE (coevolution)-[:COEVO_CAUSE]->(evo)
-// )
-
-WITH coevo as coevo, coevolution as coevolution
-CALL {
-	WITH coevo as coevo, coevolution as coevolution
-    UNWIND coevo.resolutions as l
-
-    WITH l as content, coevolution as coevolution
-	CALL apoc.merge.node(['Evo'], content) YIELD node as evo
-
-    MERGE (coevolution)-[:RESOLUTIONS]->(evo)
-	RETURN 0
-}
-RETURN 0
-// FOREACH (content IN coevo.resolutions |
-
-// //	WITH l as content, coevolution as coevolution
-// 	CALL apoc.merge.node(['Evo'], content) YIELD node as evo
-
-//     MERGE (coevolution)-[:RESOLUTIONS]->(evo)
-// )
+MERGE (coevolution)-[:RESOLUTIONS]->(evo)
+WHERE l.type="resolution"
