@@ -108,6 +108,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
             resolutions_url.add((String)(((Map<String, Object>)tmp.get("content")).get("url")));
         }
         Map<String, Object> content = new HashMap<>();
+        content.put("validated", validated);
         content.put("causes", causes_url);
         content.put("resolutions", resolutions_url);
         coevo.put("content", content);
