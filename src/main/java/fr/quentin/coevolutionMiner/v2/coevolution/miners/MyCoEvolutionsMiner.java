@@ -188,14 +188,22 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             }
             for (CoEvolution entry : currCoevolutions.getUnvalidated()) {
                 // TODO loop on tests before to make checks with multiple set of properties
-                AST.FileSnapshot.Range posBefore = entry.getTestsBefore().iterator().next();
+                AST.FileSnapshot.Range posBefore = null;
+				for(AST.FileSnapshot.Range aefgzf : entry.getTestsBefore()) {
+                    posBefore = aefgzf;
+                    break;
+                }
 
                 CtMethod<?> testsBefore = (CtMethod<?>) before_ast.getOriginal(posBefore);
                 Exception resultTestBefore = executeTest(sourcesProvider, before_ast.rootDir,
                         testsBefore.getDeclaringType().getQualifiedName(), testsBefore.getSimpleName());
 
                 // TODO idem
-                AST.FileSnapshot.Range posAfter = entry.getTestsAfter().iterator().next();
+                AST.FileSnapshot.Range posAfter = null;
+				for(AST.FileSnapshot.Range aefgzf : entry.getTestsAfter()) {
+                    posAfter = aefgzf;
+                    break;
+                }
                 if (posAfter == null) {
                     if (resultTestBefore != null) {
                         logger.info("Test before evo failed");
