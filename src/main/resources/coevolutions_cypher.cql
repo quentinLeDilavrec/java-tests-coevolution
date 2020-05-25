@@ -10,6 +10,7 @@ MERGE (coevolution)-[:WAS_MINED_BY]->(t)
 
 WITH coevo as coevo, coevolution as coevolution
 CALL {
+	WITH coevo as coevo, coevolution as coevolution
     UNWIND coevo.causes as l
 
     WITH l as content, coevolution as coevolution
@@ -29,6 +30,7 @@ CALL {
 
 WITH coevo as coevo, coevolution as coevolution
 CALL {
+	WITH coevo as coevo, coevolution as coevolution
     UNWIND coevo.resolutions as l
 
     WITH l as content, coevolution as coevolution
