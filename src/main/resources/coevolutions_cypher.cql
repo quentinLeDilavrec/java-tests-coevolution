@@ -8,8 +8,8 @@ ON CREATE SET t.name = tool
 
 MERGE (coevolution)-[:WAS_MINED_BY]->(t)
 
-WITH coevolution as coevolution, coevo as coevo
-UNWIND coevo.pointed as l
+WITH coevolution as coevolution, coevo.pointed as pointed
+UNWIND pointed as l
 WITH l as l, coevolution as coevolution
 CALL apoc.merge.node(['Evo'], l.content) YIELD node as evo
 
