@@ -54,7 +54,6 @@ import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
-import fr.quentin.coevolutionMiner.v2.impact.Impacts;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import gumtree.spoon.AstComparator;
@@ -161,7 +160,7 @@ public class CLI {
                             CoEvolutions coevo = coevoH.handle(CoEvolutionHandler.buildSpec(srcSpec,
                                     EvolutionHandler.buildSpec(srcSpec, commitIdBefore, commitIdAfter)));
                             System.out
-                                    .println(Integer.toString(coevo.toSet().size()) + " coevolutions found for "
+                                    .println(Integer.toString(coevo.getValidated().size()) + " coevolutions found for "
                                             + s.get(0) + " from " + commitIdBefore + " to " + commitIdAfter);
                         } catch (Exception e) {
                             System.out.println("failed impacts analysis for " + s.get(0));
