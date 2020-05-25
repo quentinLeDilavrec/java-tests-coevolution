@@ -18,8 +18,9 @@ import org.refactoringminer.api.RefactoringType;
 import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 
 import fr.quentin.AppTest.MoveMethodEvolution;
-import fr.quentin.utils.FilePathFilter;
-import fr.quentin.utils.SourcesHelper;
+import fr.quentin.coevolutionMiner.utils.FilePathFilter;
+import fr.quentin.coevolutionMiner.utils.SourcesHelper;
+import fr.quentin.impactMiner.Position;
 import spoon.MavenLauncher;
 import spoon.reflect.cu.SourcePosition;
 import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
@@ -53,7 +54,7 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
 @RunWith(Parameterized.class)
-public class ParamSpoonTest {
+class ParamSpoonTest {
 
     static class RefactoringOriginal {
         String type;

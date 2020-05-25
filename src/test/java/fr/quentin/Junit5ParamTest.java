@@ -33,7 +33,7 @@ import org.junit.platform.commons.util.StringUtils;
 /**
  * Junit5ParamTest
  */
-public class Junit5ParamTest {
+class Junit5ParamTest {
 
     @Nested
     class AAA {

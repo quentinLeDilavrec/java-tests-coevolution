@@ -1,0 +1,128 @@
+package fr.quentin.coevolutionMiner.differs;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.List;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+
+import ch.uzh.ifi.seal.changedistiller.ChangeDistiller;
+import ch.uzh.ifi.seal.changedistiller.ChangeDistiller.Language;
+import ch.uzh.ifi.seal.changedistiller.distilling.FileDistiller;
+import ch.uzh.ifi.seal.changedistiller.model.entities.SourceCodeChange;
+import ch.uzh.ifi.seal.changedistiller.model.entities.SourceCodeEntity;
+import ch.uzh.ifi.seal.changedistiller.model.entities.Update;
+import spark.QueryParamsMap;
+
+public class ChangeDistillerHandler implements DiffRoute {
+	// public static Function<String, JsonElement> spoonHandler = (String code) -> {
+	// // Json4SpoonGenerator x = new Json4SpoonGenerator();
+	// // AstComparator comp = new AstComparator();
+	// // Gson gson = new GsonBuilder().setPrettyPrinting().create();
+	// JsonObject r = new JsonObject();// =
+	// x.getJSONasJsonObject(comp.getCtType(code));
+	// // System.err.println(comp.getCtType(code));
+	// // System.err.println(r);
+	// return r;
+	// // return gson.toJson(r);
+	// };
+	// public static BiFunction<BeforeAfter<String, String>, QueryParamsMap,
+	// JsonElement> diffHandler = (
+	// BeforeAfter<String, String> beforeafter, QueryParamsMap qm) -> {
+
+	// };
+
+	private static File makeFile(String name, String s) throws IOException {
+		// Create temp file.
+		File temp = File.createTempFile("tempchdist" + name, ".java");
+		// Delete temp file when program exits.
+		temp.deleteOnExit();
+		// Write to temp file
+		BufferedWriter out = new BufferedWriter(new FileWriter(temp));
+		out.write(s);
+		out.close();
+		return temp;
+	}
+
+	@Override
+	public Object simplifiedHandler(String before, String after, QueryParamsMap qm) {
+		File left = null, right = null;
+		JsonArray r = new JsonArray();
+		try {
+
+			left = makeFile("MyClass.java_v1", before);
+			right = makeFile("MyClass.java_v2", after);
+
+			FileDistiller distiller = ChangeDistiller.createFileDistiller(Language.JAVA);
+			try {
+				distiller.extractClassifiedSourceCodeChanges(left, right);
+			} catch (Exception e) {
+				/*
+				 * An exception most likely indicates a bug in ChangeDistiller. Please file a
+				 * bug report at https://bitbucket.org/sealuzh/tools-changedistiller/issues and
+				 * attach the full stack trace along with the two files that you tried to
+				 * distill.
+				 */
+				System.err.println("Warning: error while change distilling. " + e.getMessage());
+			}
+			List<SourceCodeChange> changes = distiller.getSourceCodeChanges();
+			System.out.println(changes);
+			if (changes != null) {
+				for (SourceCodeChange change : changes) {
+					System.out.println(change);
+					JsonObject o = new JsonObject();
+					o.addProperty("type",change.getClass().getSimpleName());
+					o.addProperty("changedType",change.getChangedEntity().getType().name());
+					o.addProperty("label",change.getLabel());
+					o.addProperty("significance",change.getSignificanceLevel().name());
+					JsonObject changedEntity = EntityToJson(change.getChangedEntity());
+					if (change instanceof Update ) {
+						changedEntity.addProperty("side", "left");
+						o.add("from",changedEntity);
+						Update x = (Update)change;
+						JsonObject newEntity = EntityToJson(x.getNewEntity());
+						newEntity.addProperty("side", "right");
+						o.add("into",newEntity);
+					}
+					// o.addProperty("changedPType",change.getParentEntity().getType().name());
+					// o.addProperty("changedPUniqName",change.getParentEntity().getUniqueName());
+					// o.addProperty("changedLabel",change.getChangedEntity().getLabel());
+					// o.addProperty("changedAssoSize",change.getChangedEntity().getAssociatedEntities().size());
+					// o.addProperty("TYPE",change.getChangeType().name());
+					// o.addProperty("typeIsBodyChange",change.getChangeType().isBodyChange());
+					// o.addProperty("typeIsDeclChange",change.getChangeType().isDeclarationChange());
+					// o.addProperty("typeOrdinal",change.getChangeType().ordinal());
+					// o.addProperty("typeHasUnstableSigLevel",change.getChangeType().hasUnstableSignificanceLevel());
+					// o.addProperty("sigDeclLab",change.getSignificanceLevel().getDeclaringClass().getName());
+					// o.addProperty("sigName",change.getSignificanceLevel().name());
+					// o.addProperty("sigValue",change.getSignificanceLevel().value());
+					o.addProperty("toString",change.toString());
+					r.add(o);
+				}
+			}
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} finally {
+			if (left != null) {
+				left.delete();
+			}
+			if (right != null) {
+				right.delete();
+			}
+		}
+		return r;
+	}
+
+	private static JsonObject EntityToJson(SourceCodeEntity e) {
+		JsonObject o = new JsonObject();
+		o.addProperty("type",e.getType().name());
+		o.addProperty("uniqName",e.getUniqueName());
+		o.addProperty("start",e.getStartPosition());
+		o.addProperty("end",e.getEndPosition());
+		return o;
+	}
+}

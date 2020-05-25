@@ -19,14 +19,19 @@ import org.refactoringminer.api.RefactoringHandler;
 import org.refactoringminer.api.RefactoringType;
 import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 
-import fr.quentin.utils.FilePathFilter;
-import fr.quentin.utils.SourcesHelper;
+import fr.quentin.coevolutionMiner.utils.FilePathFilter;
+import fr.quentin.coevolutionMiner.utils.SourcesHelper;
+import fr.quentin.impactMiner.Evolution;
+import fr.quentin.impactMiner.ImpactAnalysis;
+import fr.quentin.impactMiner.ImpactChain;
+import fr.quentin.impactMiner.Impacts;
+import fr.quentin.impactMiner.Position;
 import spoon.MavenLauncher;
 
 /**
  * Unit test for simple App.
  */
-public class AppTest {
+class AppTest {
 
     /*
      * TODO check if Impacts graph is correctly constructed in the following setup {

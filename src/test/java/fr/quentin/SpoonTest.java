@@ -6,13 +6,13 @@ import java.nio.file.Path;
 
 import org.junit.jupiter.api.Test;
 
-import fr.quentin.utils.SourcesHelper;
+import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import spoon.MavenLauncher;
 
 /**
  * Unit test for spoon model builder.
  */
-public class SpoonTest {
+class SpoonTest {
     // @Rule
     // public ExpectedException exceptionRule = ExpectedException.none();
 
