@@ -12,8 +12,4 @@ UNWIND coevo.pointed as l
 WITH l as l, coevolution as coevolution
 CALL apoc.merge.node(['Evo'], l.content) YIELD node as evo
 
-MERGE (coevolution)-[:COEVO_CAUSE]->(evo)
-WHERE l.type="cause"
-
-MERGE (coevolution)-[:RESOLUTIONS]->(evo)
-WHERE l.type="resolution"
+MERGE (coevolution)-[:COMPOSE {type:l.type}]->(evo)
