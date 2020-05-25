@@ -11,7 +11,8 @@ MERGE (coevolution)-[:WAS_MINED_BY]->(t)
 WITH coevolution as coevolution, coevo.pointed as pointed
 UNWIND pointed as l
 WITH l as l, coevolution as coevolution
-CALL apoc.merge.node(['Evo'], l.content) YIELD node as evo
+// MERGE (evo:Evo {url:l.content.url})
+CALL apoc.merge.node(['Evo'], l.content.content) YIELD node as evo
 
 WITH l as l, coevolution as coevolution, evo as evo
 MERGE (coevolution)-[:COMPOSE {type:l.type}]->(evo)

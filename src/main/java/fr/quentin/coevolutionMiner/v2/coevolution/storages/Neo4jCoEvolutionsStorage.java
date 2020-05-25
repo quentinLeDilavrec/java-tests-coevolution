@@ -77,7 +77,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                 public String execute(Transaction tx) {
                     Result result = tx.run(getCypher(), parameters("json", tmp, "tool", value.spec.miner));
                     result.consume();
-                    return "done evolution";
+                    return "done coevolution";
                 }
             });
             System.out.println(done);
@@ -266,7 +266,11 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                 if (descRange != null)
                     before.add(descRange);
             }
-            r.add(evolutions.getEvolution(evoType, before));
+            try {
+                r.add(evolutions.getEvolution(evoType, before));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         return r;
     }

@@ -69,8 +69,10 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
             String done = session.writeTransaction(new TransactionWork<String>() {
                 @Override
                 public String execute(Transaction tx) {
-                    Result result = tx.run(getCypher(), parameters("json", tmp, "tool", evos_spec.miner, "commits", commits));
+                    Result result = tx.run(getCypher(), parameters("json", tmp, "tool", evos_spec.miner));
                     result.consume();
+                    Result result2 = tx.run(getCommitCypher(), parameters("commits", commits));
+                    result2.consume();
                     return "done evolution";
                 }
             });
@@ -79,7 +81,6 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
             e.printStackTrace();
         }
     }
-
     public static String makeEvoUrl(String repository, Evolution evolution) {
         Map<String, EvoType> evoTypesByName = getCRefactoringTypes();
         Refactoring ori = (Refactoring) evolution.getOriginal();
@@ -326,6 +327,16 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
             throw new RuntimeException(e);
         }
     }
+
+    protected String getCommitCypher() {
+        try {
+            return new String(Files.readAllBytes(Paths.get(
+                    Neo4jEvolutionsStorage.class.getClassLoader().getResource("commits_cypher.cql").getFile())));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
     private static Map<String, EvoType> RefactoringTypes = null;
 

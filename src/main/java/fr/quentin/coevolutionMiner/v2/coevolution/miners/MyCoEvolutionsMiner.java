@@ -189,11 +189,13 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             coevoBuilder.setImpactsAfter(afterImpacts);
             store.construct(coevoBuilder, currentImpacts.getImpactedTests());
 
+            // TODO compile tests separately
             Exception afterTestsCompileException = compileAllTests(sourcesProvider, after_ast.rootDir);
             if (afterTestsCompileException != null) {
                 logger.info("Tests after evolutions Don't Build");
                 continue;
             }
+            Set<CoEvolution> toValidate = new HashSet<>();
             for (CoEvolution entry : currCoevolutions.getUnvalidated()) {
                 // TODO loop on tests before to make checks with multiple set of properties
                 AST.FileSnapshot.Range posBefore = null;
@@ -230,7 +232,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         logger.info("TestStayedFailed");
                     } else {
                         logger.info("TestNowSuccessful");
-                        currCoevolutions.validate(entry);
+                        toValidate.add(entry);
                     }
                 } else {
                     // TODO execute a test without its co-evolution by modifying code
@@ -243,7 +245,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                             logger.info("TestNowFail");
                         } else {
                             logger.info("TestStayedSuccessful");
-                            currCoevolutions.validate(entry); // TODO implement the deactivation of evolutions
+                            toValidate.add(entry); // TODO implement the deactivation of evolutions
                             // for now here it does not garantie that this coevolution solves anythis (at
                             // least it does not make it invalid)
                         }
@@ -254,6 +256,9 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     }
                     // logger.info(resultTestAfterWithoutResolutions!=null?resultTestAfter!=null?"TestNotResolved":"TestNowSuccessful":resultTestAfter!=null?"ResolutionMakeTestFail":"GoodResolution");
                 }
+            }
+            for (CoEvolution entry : toValidate) {
+                currCoevolutions.validate(entry);
             }
             System.out.println("unvalidated found");
             System.out.println(currCoevolutions.getUnvalidated().size());
@@ -330,6 +335,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
             public CoEvolutionExtension(Set<Evolution> causes, Set<Evolution> resolutions,
                     Set<AST.FileSnapshot.Range> testsBefore, Set<Range> testsAfter) {
+                super();
                 this.causes = causes;
                 this.resolutions = resolutions;
                 this.testsBefore = testsBefore;

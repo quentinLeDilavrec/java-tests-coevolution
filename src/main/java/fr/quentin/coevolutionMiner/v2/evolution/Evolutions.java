@@ -104,11 +104,17 @@ public class Evolutions {
     protected final Set<Evolution> evolutions = new HashSet<>();
     private Map<ImmutablePair<String, List<ImmutablePair<Range, String>>>, Evolution> evoByBeforeList = new HashMap<>();
     private Sources sources;
+
     public Sources getSources() {
         return sources;
     }
-    public Evolution getEvolution(String type, List<ImmutablePair<Range, String>> before) {
-        return evoByBeforeList.get(new ImmutablePair<>(type, before));
+
+    public Evolution getEvolution(String type, List<ImmutablePair<Range, String>> before) throws Exception {
+        Evolution tmp = evoByBeforeList.get(new ImmutablePair<>(type, before));
+        if (tmp == null) {
+            throw new Exception("evo of type " + type + " and " + before + " is not in list");
+        }
+        return tmp;
     }
 
     public Evolutions(Specifier spec, Sources sources) {
@@ -135,14 +141,13 @@ public class Evolutions {
     // @uniq // (also put relations as attributs)
     public class Evolution {
 
-        Evolution(Object original, String type) {
+        private Evolution(Object original, String type) {
             this.original = original;
             this.type = type;
         }
 
         Evolution(Object original, String type, Sources.Commit commitBefore, Sources.Commit commitAfter) {
-            this.original = original;
-            this.type = type;
+            this(original, type);
             this.commitBefore = commitBefore;
             this.commitAfter = commitAfter;
         }
