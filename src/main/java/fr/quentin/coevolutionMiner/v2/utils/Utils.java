@@ -51,7 +51,9 @@ public class Utils {
 	}
 
 	public static boolean isTest(CtElement e) {
-		if (e instanceof CtExecutable) {
+		if (e == null) {
+			return false;
+		} else if (e instanceof CtExecutable) {
 			return ImpactAnalysis.isTest((CtExecutable) e);
 		} else {
 			return false;

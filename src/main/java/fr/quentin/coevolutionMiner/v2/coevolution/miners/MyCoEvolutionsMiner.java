@@ -189,7 +189,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             for (CoEvolution entry : currCoevolutions.getUnvalidated()) {
                 // TODO loop on tests before to make checks with multiple set of properties
                 AST.FileSnapshot.Range posBefore = null;
-				for(AST.FileSnapshot.Range aefgzf : entry.getTestsBefore()) {
+                for (AST.FileSnapshot.Range aefgzf : entry.getTestsBefore()) {
                     posBefore = aefgzf;
                     break;
                 }
@@ -200,7 +200,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
                 // TODO idem
                 AST.FileSnapshot.Range posAfter = null;
-				for(AST.FileSnapshot.Range aefgzf : entry.getTestsAfter()) {
+                for (AST.FileSnapshot.Range aefgzf : entry.getTestsAfter()) {
                     posAfter = aefgzf;
                     break;
                 }
@@ -218,7 +218,12 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     // test.get(0).getSimpleName();
                     Exception resultTestAfter = executeTest(sourcesProvider, after_ast.rootDir,
                             testsAfter.getDeclaringType().getQualifiedName(), testsAfter.getSimpleName());
-                    logger.info(resultTestAfter != null ? "TestStayedFailed" : "TestNowSuccessful");
+                    if (resultTestAfter != null) {
+                        logger.info("TestStayedFailed");
+                    } else {
+                        logger.info("TestNowSuccessful");
+                        currCoevolutions.validate(entry);
+                    }
                 } else {
                     // TODO execute a test without its co-evolution by modifying code
                     // Exception resultTestAfterWithoutResolutions =
@@ -226,7 +231,14 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     if (testsAfter != null) {
                         Exception resultTestAfter = executeTest(sourcesProvider, after_ast.rootDir,
                                 testsAfter.getDeclaringType().getQualifiedName(), testsAfter.getSimpleName());
-                        logger.info(resultTestAfter != null ? "TestNowFail" : "TestStayedSuccessful");
+                        if (resultTestAfter != null) {
+                            logger.info("TestNowFail");
+                        } else {
+                            logger.info("TestStayedSuccessful");
+                            currCoevolutions.validate(entry); // TODO implement the deactivation of evolutions
+                            // for now here it does not garantie that this coevolution solves anythis (at
+                            // least it does not make it invalid)
+                        }
                     } else {
                         logger.info("Test after not found");
                         System.out.println(testsAfter);
@@ -235,6 +247,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     // logger.info(resultTestAfterWithoutResolutions!=null?resultTestAfter!=null?"TestNotResolved":"TestNowSuccessful":resultTestAfter!=null?"ResolutionMakeTestFail":"GoodResolution");
                 }
             }
+            System.out.println("unvalidated found");
+            System.out.println(currCoevolutions.getUnvalidated().size());
             res.add(currCoevolutions.toSet());
             currentCommit = nextCommit;
         }
@@ -291,6 +305,11 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             this.evolutions = evolutions;
             this.astBefore = astBefore;
             this.astAfter = astAfter;
+        }
+
+        public void validate(CoEvolution entry) {
+            if (unvalidatedCoevolutions.contains(entry))
+                validatedcoevolutions.add(entry);
         }
 
         class CoEvolutionExtension extends CoEvolution {
@@ -360,10 +379,17 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             private Set<AST.FileSnapshot.Range> adjustToTests(Impacts impacts, Evolution.DescRange desc) {
                 Set<Impact> tmp = impacts.getPerRootCause().get(desc);
                 Set<AST.FileSnapshot.Range> r = new HashSet<>();
-                for (Impact impact : tmp) {
-                    for (Impacts.Impact.DescRange eff : impact.getEffects()) {
-                        if (impacts.getAst().isTest(eff.getTarget())) {
-                            r.add(eff.getTarget());
+                if (tmp != null) {
+                    for (Impact impact : tmp) {
+                        for (Impacts.Impact.DescRange eff : impact.getEffects()) {
+                            if (impacts.getAst().isTest(eff.getTarget())) {
+                                r.add(eff.getTarget());
+                            }
+                        }
+                        for (Impacts.Impact.DescRange cau : impact.getCauses()) {
+                            if (impacts.getAst().isTest(cau.getTarget())) {
+                                r.add(cau.getTarget());
+                            }
                         }
                     }
                 }
@@ -381,14 +407,14 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     }
                 }
                 direct.addAll(directShort);
-                for (Evolution evo : directLong) {
+                for (Evolution evo : directShort) {
                     for (Evolution.DescRange desc : evo.getAfter()) {
                         testsAfter.addAll(adjustToTests(impactsAfter, desc));
                     }
                 }
                 direct.addAll(directShortAdjusted);
-                for (Evolution evo : directLong) {
-                    if (evo.getType().equals("Move Method") || evo.getType().equals("ChangeVariable Type")
+                for (Evolution evo : directShortAdjusted) {
+                    if (evo.getType().equals("Move Method") || evo.getType().equals("Change Variable Type")
                             || evo.getType().equals("Rename Variable")) {
                         for (Evolution.DescRange desc : evo.getAfter()) {
                             testsAfter.addAll(adjustToTests(impactsAfter, desc));
@@ -397,7 +423,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 }
                 // TODO coevolutions should be assembled at some point (maybe here) by subset of
                 // their evolutions
-                CoEvolution tmp = new CoEvolutionExtension(throughCall, direct, Collections.singleton(testBefore), testsAfter);
+                CoEvolution tmp = new CoEvolutionExtension(throughCall, direct, Collections.singleton(testBefore),
+                        testsAfter);
                 unvalidatedCoevolutions.add(tmp);
             }
 
@@ -405,18 +432,19 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     }
 
     // private final class FilterMethod implements Filter<CtMethod<?>> {
-    //     private final AST.FileSnapshot.Range range;
+    // private final AST.FileSnapshot.Range range;
 
-    //     private FilterMethod(AST.FileSnapshot.Range range) {
-    //         this.range = range;
-    //     }
+    // private FilterMethod(AST.FileSnapshot.Range range) {
+    // this.range = range;
+    // }
 
-    //     @Override
-    //     public boolean matches(CtMethod<?> element) {
-    //         return range.getFile().getPath().equals(element.getPosition().getFile().toPath().toString())
-    //                 && range.getStart() == element.getPosition().getSourceStart()
-    //                 && range.getEnd() == element.getPosition().getSourceEnd();
-    //     }
+    // @Override
+    // public boolean matches(CtMethod<?> element) {
+    // return
+    // range.getFile().getPath().equals(element.getPosition().getFile().toPath().toString())
+    // && range.getStart() == element.getPosition().getSourceStart()
+    // && range.getEnd() == element.getPosition().getSourceEnd();
+    // }
     // }
 
     private Exception executeTest(Sources sourcesProvider, Path path, String declaringClass, String name) {
