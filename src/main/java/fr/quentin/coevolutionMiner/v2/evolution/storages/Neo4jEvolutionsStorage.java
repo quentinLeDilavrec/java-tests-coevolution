@@ -316,7 +316,7 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
     }
 
     public Neo4jEvolutionsStorage() {
-        this("bolt://localhost:7687", "neo4j", "neo4j");
+        this("bolt://localhost:7687", "neo4j", "password");
     }
 
     private static String getCypher() {

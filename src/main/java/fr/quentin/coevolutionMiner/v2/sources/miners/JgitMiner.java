@@ -4,7 +4,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
+import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.eclipse.jgit.revwalk.RevCommit;
 
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
@@ -33,7 +36,9 @@ public class JgitMiner implements SourcesMiner {
             public Set<Sources.Commit> getCommitBetween(String commitIdBefore, String commitIdAfter) {
                 try (SourcesHelper helper = open();) {
                     Map<String, Sources.Commit> result = new HashMap<>(commits);
-                    helper.getCommitsBetween(commitIdBefore, commitIdAfter).forEach(x -> {
+                    ImmutableTriple<RevCommit, Iterable<RevCommit>, RevCommit> tmp0 = helper
+                            .getCommitsBetween(commitIdBefore, commitIdAfter);
+                    Consumer<? super RevCommit> consumer = x -> {
                         String name = x.getId().getName();
                         Commit o = result.getOrDefault(name,createCommit(name));
                         for (RevCommit commit : x.getParents()) {
@@ -45,7 +50,10 @@ public class JgitMiner implements SourcesMiner {
                         }
                         commits.putIfAbsent(o.getId(), o);
                         result.putIfAbsent(o.getId(), o);
-                    });
+                    };
+                    consumer.accept(tmp0.left);
+                    consumer.accept(tmp0.right);
+                    tmp0.middle.forEach(consumer);
                     for (Commit commit : result.values()){
                         for (Commit parent : commit.getParents()) {
 							Commit tmp = result.get(parent.getId());

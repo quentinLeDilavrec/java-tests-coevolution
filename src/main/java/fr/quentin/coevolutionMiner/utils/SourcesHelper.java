@@ -1,9 +1,13 @@
 package fr.quentin.coevolutionMiner.utils;
 
+import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -11,6 +15,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 import com.google.gson.GsonBuilder;
@@ -19,6 +24,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
+import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.maven.shared.invoker.DefaultInvocationRequest;
 import org.apache.maven.shared.invoker.DefaultInvoker;
 import org.apache.maven.shared.invoker.InvocationRequest;
@@ -144,7 +150,7 @@ public class SourcesHelper implements AutoCloseable {
 		}
 	}
 
-	public Iterable<RevCommit> getCommitsBetween(String commitIdBefore, String commitIdAfter)
+	public ImmutableTriple<RevCommit,Iterable<RevCommit>,RevCommit> getCommitsBetween(String commitIdBefore, String commitIdAfter)
 			throws Exception {
 		// try (RevWalk rw = new GitHelper().fetchAndCreateNewRevsWalk(repository)) {
 		try (RevWalk walk = new GitHelper().fetchAndCreateNewRevsWalk(repo)) {
@@ -154,7 +160,72 @@ public class SourcesHelper implements AutoCloseable {
 			RevCommit commit = walk.parseCommit(repo.resolve(commitIdAfter));
 
 			try (Git git = new Git(repo)) {
-				return git.log().addRange(commitBefore, commit).call();
+				return new ImmutableTriple<RevCommit,Iterable<RevCommit>,RevCommit>(commitBefore,git.log().addRange(commitBefore, commit).call(),commit);
+			}
+		} catch(Exception e) {
+			//rm -fr .git
+			runCommand(Paths.get(REPOS_PATH + this.repoRawPath),"rm", "-rf", ".git");
+			// runCommand(Paths.get(REPOS_PATH + this.repoRawPath),"git", "reset", "--hard");
+			// runCommand(Paths.get(REPOS_PATH + this.repoRawPath),"git", "fsck");
+			// runCommand(Paths.get(REPOS_PATH + this.repoRawPath),"git", "pull", "origin", "master");
+			// runCommand(Paths.get(REPOS_PATH + this.repoRawPath),"git", "checkout","ede8888f9e23de3457e4e261e2337296b533a916");
+			// System.err.println("native git pull working?");
+			
+			cloneIfNotExists();
+			
+			try (RevWalk walk = new GitHelper().fetchAndCreateNewRevsWalk(repo)) {
+				// try (ObjectReader reader = repo.newObjectReader(); RevWalk walk = new
+				// RevWalk(reader)) {
+				RevCommit commitBefore = walk.parseCommit(repo.resolve(commitIdBefore));
+				RevCommit commit = walk.parseCommit(repo.resolve(commitIdAfter));
+	
+				try (Git git = new Git(repo)) {
+					return new ImmutableTriple<RevCommit,Iterable<RevCommit>,RevCommit>(commitBefore,git.log().addRange(commitBefore, commit).call(),commit);
+				}
+			}
+		}
+	}
+
+	public static void runCommand(Path directory, String... command) throws IOException, InterruptedException {
+		Objects.requireNonNull(directory, "directory");
+		if (!Files.exists(directory)) {
+			throw new RuntimeException("can't run command in non-existing directory '" + directory + "'");
+		}
+		ProcessBuilder pb = new ProcessBuilder()
+				.command(command)
+				.directory(directory.toFile());
+		Process p = pb.start();
+		StreamGobbler errorGobbler = new StreamGobbler(p.getErrorStream(), "ERROR");
+		StreamGobbler outputGobbler = new StreamGobbler(p.getInputStream(), "OUTPUT");
+		outputGobbler.start();
+		errorGobbler.start();
+		int exit = p.waitFor();
+		errorGobbler.join();
+		outputGobbler.join();
+		if (exit != 0) {
+			throw new AssertionError(String.format("runCommand returned %d", exit));
+		}
+	}
+
+	private static class StreamGobbler extends Thread {
+
+		private final InputStream is;
+		private final String type;
+
+		private StreamGobbler(InputStream is, String type) {
+			this.is = is;
+			this.type = type;
+		}
+
+		@Override
+		public void run() {
+			try (BufferedReader br = new BufferedReader(new InputStreamReader(is));) {
+				String line;
+				while ((line = br.readLine()) != null) {
+					System.out.println(type + "> " + line);
+				}
+			} catch (IOException ioe) {
+				ioe.printStackTrace();
 			}
 		}
 	}

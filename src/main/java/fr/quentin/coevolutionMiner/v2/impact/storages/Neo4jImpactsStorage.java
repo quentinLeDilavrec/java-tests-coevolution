@@ -48,7 +48,7 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
     }
 
     public Neo4jImpactsStorage() {
-        this("bolt://localhost:7687", "neo4j", "neo4j");
+        this("bolt://localhost:7687", "neo4j", "password");
     }
 
     @Override

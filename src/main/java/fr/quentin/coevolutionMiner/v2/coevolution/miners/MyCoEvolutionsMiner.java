@@ -110,7 +110,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         try {
             commits = sourcesProvider.getCommitBetween(commitIdInitial, spec.evoSpec.commitIdAfter);
             System.out.println(commits.size() > 2
-                    ? "caution computation might be wrong due to impacts rendered incorect by modification in other commits"
+                    ? "caution computation of coevolutions only between consecutive commits"
                     : commits.size());
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -135,8 +135,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         System.out.println(spec.evoSpec.commitIdAfter);
         for (Commit commit : commits) {
             System.out.println(commit.getId());
-            if (commit.getId().equals(commitIdInitial))
+            if (commit.getId().equals(commitIdInitial)){
                 currentCommit = commit;
+                break;
+            }
             // perBeforeCommit.put(commit, new ArrayList<>());
         }
         if (currentCommit == null) {
