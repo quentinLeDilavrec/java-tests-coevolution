@@ -124,7 +124,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
     }
 
     public Neo4jCoEvolutionsStorage() {
-        this("bolt://localhost:7687", "neo4j", "neo4j");
+        this("bolt://localhost:7687", "neo4j", "password");
     }
 
     @Override
