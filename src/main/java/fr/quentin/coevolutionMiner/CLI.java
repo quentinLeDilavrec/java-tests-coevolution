@@ -74,6 +74,9 @@ public class CLI {
         // create the Options
         Options options = new Options();
         options.addOption("r", "repo", true, "The repository where the code is located");
+        options.addOption("t", "thread", true, "thread count");
+        options.addOption("l", "limit", true, "limit lines processed");
+        options.addOption("s", "start", true, "starting line 0-indexed");
         options.addOption("f", "file", true,
                 "a file that contain per line <repo> <stars> <list of important commitId time ordered and starting with the most recent>");
 
@@ -84,7 +87,10 @@ public class CLI {
             CommandLine line = parser.parse(options, Arrays.copyOfRange(args, 1, args.length));
             if (Objects.equals(args[0], "batch")) {
                 if (line.getOptionValue("file") != null) {
-                    batch(Files.lines(Paths.get(line.getOptionValue("file"))));
+                    batch(Files.lines(Paths.get(line.getOptionValue("file")))
+                            .skip(Integer.parseInt(line.getOptionValue("start", "0")))
+                            .limit(Integer.parseInt(line.getOptionValue("limit", "1"))),
+                            Integer.parseInt(line.getOptionValue("thread", "1")));
                 }
             } else if (Objects.equals(args[0], "ast")) {
                 if (line.hasOption("repo")) {
@@ -107,8 +113,8 @@ public class CLI {
         }
     }
 
-    private static void batch(Stream<String> lines) {
-        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
+    private static void batch(Stream<String> lines, int pool_size) {
+        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(pool_size);
         SourcesHandler srcH = new SourcesHandler();
         ASTHandler astH = new ASTHandler(srcH);
         EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
@@ -116,9 +122,15 @@ public class CLI {
         CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH);
         System.out.println("Starting");
         lines.forEach(line -> {
+            System.out.println("(laucher start) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                    + Integer.toString(executor.getActiveCount()) + " "
+                    + Long.toString(executor.getCompletedTaskCount()));
             List<String> s = Arrays.asList(line.split(" "));
             if (s.size() > 2) {
                 executor.submit(() -> {
+                    System.out.println("(submit start) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                            + Integer.toString(executor.getActiveCount()) + " "
+                            + Long.toString(executor.getCompletedTaskCount()));
                     Sources.Specifier srcSpec = srcH.buildSpec(s.get(0), Integer.parseInt(s.get(1)));
                     System.out.println(s.size());
 
@@ -167,11 +179,17 @@ public class CLI {
                             e.printStackTrace();
                         }
                     }
-                    return null;
+                    System.out.println("(submit end) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                            + Integer.toString(executor.getActiveCount()) + " "
+                            + Long.toString(executor.getCompletedTaskCount()));
+                    return 0;
                 });
             } else {
                 System.out.println("no commits for " + s.get(0));
             }
+            System.out.println("(launch end) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                    + Integer.toString(executor.getActiveCount()) + " "
+                    + Long.toString(executor.getCompletedTaskCount()));
         });
         System.out.println("Shutdown");
         executor.shutdown();
