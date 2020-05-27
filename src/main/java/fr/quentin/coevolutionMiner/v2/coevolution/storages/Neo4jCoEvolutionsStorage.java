@@ -77,7 +77,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                 public String execute(Transaction tx) {
                     Result result = tx.run(getCypher(), parameters("json", tmp, "tool", value.spec.miner));
                     result.consume();
-                    return "done coevolution";
+                    return "done coevolution on "+ value.spec.srcSpec.repository;
                 }
             });
             System.out.println(done);

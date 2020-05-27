@@ -73,7 +73,7 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
                     result.consume();
                     Result result2 = tx.run(getCommitCypher(), parameters("commits", commits));
                     result2.consume();
-                    return "done evolution";
+                    return "done evolution on " + value.spec.sources.repository;
                 }
             });
             System.out.println(done);

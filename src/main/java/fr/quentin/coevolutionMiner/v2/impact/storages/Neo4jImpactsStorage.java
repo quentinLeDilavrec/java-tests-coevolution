@@ -32,7 +32,7 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
                 public String execute(Transaction tx) {
                     Result result = tx.run(getCypher(), value);
                     result.consume();
-                    return "done impact";
+                    return "done impact on "+impacts.spec.evoSpec.sources.repository;
                 }
             });
             System.out.println(done);
