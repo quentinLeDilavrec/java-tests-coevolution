@@ -95,6 +95,10 @@ public class SourcesHelper implements AutoCloseable {
 		this.gitRepoAddress = gitRepoAddress;
 		URIish parsedRepoURI = new URIish(gitRepoAddress);
 		this.repoRawPath = parsedRepoURI.getRawPath();
+		System.out.println(repoRawPath);
+		if (repoRawPath.endsWith(".git")) {
+			this.repoRawPath = this.repoRawPath.substring(0, repoRawPath.length() - 4);
+		}
 		this.repo = this.cloneIfNotExists();
 	}
 
@@ -164,7 +168,7 @@ public class SourcesHelper implements AutoCloseable {
 			}
 		} catch(Exception e) {
 			//rm -fr .git
-			runCommand(Paths.get(REPOS_PATH + this.repoRawPath),"rm", "-rf", ".git");
+			runCommand(Paths.get(REPOS_PATH),"rm", "-rf", this.repoRawPath);
 			// runCommand(Paths.get(REPOS_PATH + this.repoRawPath),"git", "reset", "--hard");
 			// runCommand(Paths.get(REPOS_PATH + this.repoRawPath),"git", "fsck");
 			// runCommand(Paths.get(REPOS_PATH + this.repoRawPath),"git", "pull", "origin", "master");
