@@ -122,17 +122,16 @@ public class CLI {
         CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH);
         System.out.println("Starting");
         lines.forEach(line -> {
-            System.out.println("(laucher start) CLI status " + Long.toString(executor.getTaskCount()) + " "
+            logger.info("(laucher start) CLI status " + Long.toString(executor.getTaskCount()) + " "
                     + Integer.toString(executor.getActiveCount()) + " "
                     + Long.toString(executor.getCompletedTaskCount()));
             List<String> s = Arrays.asList(line.split(" "));
             if (s.size() > 2) {
                 executor.submit(() -> {
-                    System.out.println("(submit start) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                    logger.info("(submit start) CLI status " + Long.toString(executor.getTaskCount()) + " "
                             + Integer.toString(executor.getActiveCount()) + " "
                             + Long.toString(executor.getCompletedTaskCount()));
                     Sources.Specifier srcSpec = srcH.buildSpec(s.get(0), Integer.parseInt(s.get(1)));
-                    System.out.println(s.size());
 
                     Evolutions evos = null;
                     String commitIdAfter = null;
@@ -142,9 +141,9 @@ public class CLI {
                         commitIdBefore = s.get(i + 1);
                         try {
                             evos = evoH.handle(evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter));
-                            System.out.println("done evolution analysis " + s.get(0));
+                            logger.info("done evolution analysis " + s.get(0));
                         } catch (Exception e) {
-                            System.out.println("failed evolution analysis " + s.get(0));
+                            logger.info("failed evolution analysis " + s.get(0));
                             break;
                         }
                         if (evos != null && evos.toSet().size() > 0) {
@@ -153,13 +152,13 @@ public class CLI {
                     }
 
                     if (s.size() < 3) {
-                        System.out.println("no commits for " + s.get(0));
+                        logger.info("no commits for " + s.get(0));
                     } else if (evos == null) {
-                        System.out.println("evolution no working " + s.get(0));
+                        logger.info("evolution no working " + s.get(0));
                     } else if (evos.toSet().size() <= 0) {
-                        System.out.println("no evolutions found for " + s.get(0));
+                        logger.info("no evolutions found for " + s.get(0));
                     } else {
-                        System.out.println(Integer.toString(evos.toSet().size()) + " evolutions found for " + s.get(0)
+                        logger.info(Integer.toString(evos.toSet().size()) + " evolutions found for " + s.get(0)
                                 + " from " + commitIdBefore + " to " + commitIdAfter);
                         try {
                             // Impacts impacts = impactH.handle(impactH.buildSpec(astH.buildSpec(srcSpec,
@@ -175,11 +174,11 @@ public class CLI {
                                     .println(Integer.toString(coevo.getValidated().size()) + " coevolutions found for "
                                             + s.get(0) + " from " + commitIdBefore + " to " + commitIdAfter);
                         } catch (Exception e) {
-                            System.out.println("failed impacts analysis for " + s.get(0));
+                            logger.info("failed impacts analysis for " + s.get(0));
                             e.printStackTrace();
                         }
                     }
-                    System.out.println("(submit end) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                    logger.info("(submit end) CLI status " + Long.toString(executor.getTaskCount()) + " "
                             + Integer.toString(executor.getActiveCount()) + " "
                             + Long.toString(executor.getCompletedTaskCount()));
                     return 0;
@@ -187,7 +186,7 @@ public class CLI {
             } else {
                 System.out.println("no commits for " + s.get(0));
             }
-            System.out.println("(launch end) CLI status " + Long.toString(executor.getTaskCount()) + " "
+            logger.info("(launch end) CLI status " + Long.toString(executor.getTaskCount()) + " "
                     + Integer.toString(executor.getActiveCount()) + " "
                     + Long.toString(executor.getCompletedTaskCount()));
         });
@@ -200,6 +199,7 @@ public class CLI {
             System.out.println("done");
             impactH.close();
             evoH.close();
+            coevoH.close();
             executor.shutdownNow();
         } catch (InterruptedException e) {
             executor.shutdownNow();
