@@ -77,6 +77,7 @@ public class CLI {
         options.addOption("t", "thread", true, "thread count");
         options.addOption("l", "limit", true, "limit lines processed");
         options.addOption("s", "start", true, "starting line 0-indexed");
+        options.addOption("c", "commitsMax", true, "number of commits to compute impacts");
         options.addOption("f", "file", true,
                 "a file that contain per line <repo> <stars> <list of important commitId time ordered and starting with the most recent>");
 
@@ -90,7 +91,8 @@ public class CLI {
                     batch(Files.lines(Paths.get(line.getOptionValue("file")))
                             .skip(Integer.parseInt(line.getOptionValue("start", "0")))
                             .limit(Integer.parseInt(line.getOptionValue("limit", "1"))),
-                            Integer.parseInt(line.getOptionValue("thread", "1")));
+                            Integer.parseInt(line.getOptionValue("thread", "1")),
+                            Integer.parseInt(line.getOptionValue("commitsMax", "1")));
                 }
             } else if (Objects.equals(args[0], "ast")) {
                 if (line.hasOption("repo")) {
@@ -113,7 +115,7 @@ public class CLI {
         }
     }
 
-    private static void batch(Stream<String> lines, int pool_size) {
+    private static void batch(Stream<String> lines, int pool_size, int max_commits_impacts) {
         ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(pool_size);
         SourcesHandler srcH = new SourcesHandler();
         ASTHandler astH = new ASTHandler(srcH);
@@ -136,48 +138,54 @@ public class CLI {
                     Evolutions evos = null;
                     String commitIdAfter = null;
                     String commitIdBefore = null;
-                    for (int i = 2; i < s.size(); i++) {
-                        commitIdAfter = s.get(i);
-                        commitIdBefore = s.get(i + 1);
-                        try {
-                            evos = evoH.handle(evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter));
-                            logger.info("done evolution analysis " + s.get(0));
-                        } catch (Exception e) {
-                            logger.info("failed evolution analysis " + s.get(0));
-                            break;
+                    int commit_index = 2;
+                    int impact_computed = 0;
+                    for (; commit_index < s.size() && impact_computed < max_commits_impacts;) {
+
+                        for (; commit_index < s.size(); commit_index++) {
+                            commitIdAfter = s.get(commit_index);
+                            commitIdBefore = s.get(commit_index + 1);
+                            try {
+                                evos = evoH.handle(evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter));
+                                logger.info("done evolution analysis " + s.get(0));
+                            } catch (Exception e) {
+                                logger.info("failed evolution analysis " + s.get(0));
+                                break;
+                            }
+                            if (evos != null && evos.toSet().size() > 0) {
+                                break;
+                            }
                         }
-                        if (evos != null && evos.toSet().size() > 0) {
-                            break;
+                        if (s.size() < 3) {
+                            logger.info("no commits for " + s.get(0));
+                        } else if (evos == null) {
+                            logger.info("evolution no working " + s.get(0));
+                        } else if (evos.toSet().size() <= 0) {
+                            logger.info("no evolutions found for " + s.get(0));
+                        } else {
+                            impact_computed+=1;
+                            logger.info(Integer.toString(evos.toSet().size()) + " evolutions found for " + s.get(0)
+                                    + " from " + commitIdBefore + " to " + commitIdAfter);
+                            try {
+                                // Impacts impacts = impactH.handle(impactH.buildSpec(astH.buildSpec(srcSpec,
+                                // commitIdBefore),
+                                // EvolutionHandler.buildSpec(srcSpec, commitIdBefore, commitIdAfter)));
+                                // System.out
+                                // .println(Integer.toString(impacts.getPerRootCause().size()) + " impacts found
+                                // for "
+                                // + s.get(0) + " from " + commitIdBefore + " to " + commitIdAfter);
+                                CoEvolutions coevo = coevoH.handle(CoEvolutionHandler.buildSpec(srcSpec,
+                                        EvolutionHandler.buildSpec(srcSpec, commitIdBefore, commitIdAfter)));
+                                System.out.println(
+                                        Integer.toString(coevo.getValidated().size()) + " coevolutions found for "
+                                                + s.get(0) + " from " + commitIdBefore + " to " + commitIdAfter);
+                            } catch (Exception e) {
+                                logger.info("failed impacts analysis for " + s.get(0));
+                                e.printStackTrace();
+                            }
                         }
                     }
 
-                    if (s.size() < 3) {
-                        logger.info("no commits for " + s.get(0));
-                    } else if (evos == null) {
-                        logger.info("evolution no working " + s.get(0));
-                    } else if (evos.toSet().size() <= 0) {
-                        logger.info("no evolutions found for " + s.get(0));
-                    } else {
-                        logger.info(Integer.toString(evos.toSet().size()) + " evolutions found for " + s.get(0)
-                                + " from " + commitIdBefore + " to " + commitIdAfter);
-                        try {
-                            // Impacts impacts = impactH.handle(impactH.buildSpec(astH.buildSpec(srcSpec,
-                            // commitIdBefore),
-                            // EvolutionHandler.buildSpec(srcSpec, commitIdBefore, commitIdAfter)));
-                            // System.out
-                            // .println(Integer.toString(impacts.getPerRootCause().size()) + " impacts found
-                            // for "
-                            // + s.get(0) + " from " + commitIdBefore + " to " + commitIdAfter);
-                            CoEvolutions coevo = coevoH.handle(CoEvolutionHandler.buildSpec(srcSpec,
-                                    EvolutionHandler.buildSpec(srcSpec, commitIdBefore, commitIdAfter)));
-                            System.out
-                                    .println(Integer.toString(coevo.getValidated().size()) + " coevolutions found for "
-                                            + s.get(0) + " from " + commitIdBefore + " to " + commitIdAfter);
-                        } catch (Exception e) {
-                            logger.info("failed impacts analysis for " + s.get(0));
-                            e.printStackTrace();
-                        }
-                    }
                     logger.info("(submit end) CLI status " + Long.toString(executor.getTaskCount()) + " "
                             + Integer.toString(executor.getActiveCount()) + " "
                             + Long.toString(executor.getCompletedTaskCount()));
