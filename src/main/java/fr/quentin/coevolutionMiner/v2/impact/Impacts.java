@@ -51,10 +51,10 @@ public abstract class Impacts {
 
     public JsonElement toJson() {
         Gson gson = new Gson();
-        return gson.toJsonTree(getValue());
+        return gson.toJsonTree(getValueCompressed());
     }
 
-    public Map<String, Object> getValue() { // TODO SoftReference? memoize result?
+    public final Map<String, Object> getValue() { // TODO SoftReference? memoize result?
         Map<String, Object> res = new HashMap<>();
         List<Map<String, Object>> ranges_to_type = new ArrayList<>();
         res.put("rangesToType", ranges_to_type);
@@ -65,33 +65,55 @@ public abstract class Impacts {
 
             Map<String, Object> content = makeContent(ast.rootDir, impact);
             content.put("type", impact.getType());
-            List<Map<String, Object>> causes = new ArrayList<>();
+            List<Object> causes = new ArrayList<>();
             for (Impact.DescRange aaa : impact.getCauses()) {
                 Map<String, Object> o = makeRange(aaa);
                 causes.add(o);
             }
-            List<Map<String, Object>> effects = new ArrayList<>();
+            List<Object> effects = new ArrayList<>();
             for (Impact.DescRange aaa : impact.getEffects()) {
                 Map<String, Object> o = makeRange(aaa);
                 effects.add(o);
             }
             json.add(makeImpact(content, causes, effects));
         }
-        // for (Entry<Object, Set<Impact>> rootEntry : getPerRootCause().entrySet()) {
-        // if (rootEntry.getKey() instanceof Evolutions.Evolution.DescRange) {
-        // Evolutions.Evolution evo = ((Evolutions.Evolution.DescRange)
-        // rootEntry.getKey()).getSource();
-        // json.addAll(DbUtils.basifyRootCauseImpact(spec.astSpec.sources.repository,
-        // evo.getCommitBefore().getId(), getCauseRootDir(), evo, ranges_to_type));
-        // for (Entry<ImpactElement, Relations> verticeEntry :
-        // rootEntry.getValue().entrySet()) {
-        // json.addAll(DbUtils.basifyImpact(spec.astSpec.sources.repository,
-        // evo.getCommitBefore().getId(),
-        // getCauseRootDir(), evo, verticeEntry.getValue()));
-        // }
-        // }
-        // }
         return res;
+    }
+
+    public final Map<String, Object> getValueCompressed() { // TODO SoftReference? memoize result?
+        Map<String, Object> res = new HashMap<>();
+        List<Map<String, Object>> serializedImpacts = new ArrayList<>();
+        List<Map<String, Object>> serializedRanges = new ArrayList<>();
+        Map<AST.FileSnapshot.Range, Integer> serializedEvolutionsMap = new HashMap<>();
+        res.put("ranges", serializedRanges);
+        res.put("impacts", serializedImpacts);
+        res.put("tool", spec.miner);
+        for (Impact impact : impacts.values()) {
+            Map<String, Object> content = makeContent(ast.rootDir, impact);
+            content.put("type", impact.getType());
+            List<Object> causes = new ArrayList<>();
+            for (Impact.DescRange aaa : impact.getCauses()) {
+                causes.add(compressRefToRange(aaa,serializedEvolutionsMap,serializedRanges));
+            }
+            List<Object> effects = new ArrayList<>();
+            for (Impact.DescRange aaa : impact.getEffects()) {
+                effects.add(compressRefToRange(aaa,serializedEvolutionsMap,serializedRanges));
+            }
+            serializedImpacts.add(makeImpact(content, causes, effects));
+        }
+        return res;
+    }
+
+    private Integer compressRefToRange(Impact.DescRange aaa, Map<Range, Integer> map,
+            List<Map<String, Object>> list) {
+        Integer r = map.get(aaa.getTarget());
+        if (r == null) {
+            r = list.size();
+            map.put(aaa.getTarget(),r);
+            Map<String, Object> o = makeRange(aaa);
+            list.add(o);
+        }
+        return r;
     }
 
     protected Map<String, Object> makeRange(DescRange descRange) {
@@ -138,8 +160,8 @@ public abstract class Impacts {
         return content;
     }
 
-    private final Map<String, Object> makeImpact(Map<String, Object> content, List<Map<String, Object>> causes,
-            List<Map<String, Object>> effects) {
+    private final Map<String, Object> makeImpact(Map<String, Object> content, List<Object> causes,
+            List<Object> effects) {
         Map<String, Object> callImpact = new HashMap<>();
         // Content
         callImpact.put("content", content);

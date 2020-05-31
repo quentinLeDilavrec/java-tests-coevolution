@@ -203,8 +203,8 @@ public class MyImpactsMiner implements ImpactsMiner {
             Object original = ast.getOriginal(descRange.getTarget());
             if (original != null) {
                 o.put("type", original.getClass().getSimpleName());
-                if (original instanceof CtMethod) {
-                    o.put("sig", ((CtMethod<?>) original).getSignature());
+                if (original instanceof CtExecutable) {
+                    o.put("sig", ((CtExecutable<?>) original).getSignature());
                 }
                 if (original instanceof CtElement) {
                     if (Utils.isTest((CtElement) original)) {
