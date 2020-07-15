@@ -33,6 +33,7 @@ import org.eclipse.jgit.transport.TrackingRefUpdate;
 import org.eclipse.jgit.transport.URIish;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.util.FileUtils;
 
 public class GitHelper {
 
@@ -43,11 +44,19 @@ public class GitHelper {
 	public static Repository cloneIfNotExists(String projectPath, String cloneUrl) throws Exception {
 		File folder = new File(projectPath);
 		Repository repository;
-		if (folder.exists()) {
+		if((new File(folder, ".git")).exists()){
 			RepositoryBuilder builder = new RepositoryBuilder();
 			repository = builder.setGitDir(new File(folder, ".git")).setMustExist(true).readEnvironment().findGitDir()
 					.build();
-
+		}else if (folder.exists()) {
+			// NOTE Safety purpose
+			if (projectPath.startsWith("/home/qledilav/resources/Repos")||projectPath.startsWith("/home/quentin/resources/Repos")) {
+				FileUtils.delete(folder,FileUtils.RECURSIVE);
+			}
+			Git git = Git.cloneRepository().setDirectory(folder).setURI(cloneUrl)
+					.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out))).setCloneAllBranches(true)
+					.call();
+			repository = git.getRepository();
 		} else {
 			Git git = Git.cloneRepository().setDirectory(folder).setURI(cloneUrl)
 					.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out))).setCloneAllBranches(true)

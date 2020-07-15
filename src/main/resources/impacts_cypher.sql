@@ -2,6 +2,8 @@
 FOREACH (l IN $rangesToType |
     MERGE (repoCause:Repository {url:l.repository})
     MERGE (commitIdCause:Commit {repo:l.repository, sha1:l.commitId})
+    ON CREATE SET commitIdCause.isParsed = true
+    ON MATCH SET commitIdCause.isParsed = true
     MERGE (commitIdCause)-[:IS_COMMIT_OF]->(repoCause)
     MERGE (commitIdCause)<-[:CONTAIN_COMMIT]-(repoCause)
     MERGE (cause:Range {range:[toInteger(l.start),toInteger(l.end)], start:toInteger(l.start), end:toInteger(l.end), 
@@ -22,6 +24,8 @@ FOREACH (l IN imp.causes |
     MERGE (repoCause:Repository {url:l.repository})
 
     MERGE (commitIdCause:Commit {repo:l.repository, sha1:l.commitId})
+    ON CREATE SET commitIdCause.isParsed = true
+    ON MATCH SET commitIdCause.isParsed = true
     MERGE (commitIdCause)-[:IS_COMMIT_OF]->(repoCause)
     MERGE (commitIdCause)<-[:CONTAIN_COMMIT]-(repoCause)
 
@@ -39,6 +43,8 @@ FOREACH (l IN imp.effects |
     MERGE (repoEffect:Repository {url:l.repository})
 
     MERGE (commitIdEffect:Commit {repo:l.repository, sha1:l.commitId})
+    ON CREATE SET commitIdEffect.isParsed = true
+    ON MATCH SET commitIdEffect.isParsed = true
     MERGE (commitIdEffect)-[:IS_COMMIT_OF]->(repoEffect)
     MERGE (commitIdEffect)<-[:CONTAIN_COMMIT]-(repoEffect)
 
