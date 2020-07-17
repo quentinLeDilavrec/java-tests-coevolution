@@ -169,6 +169,36 @@ public abstract class Sources {
             this.id = id;
         }
 
+        private Stats globalStats;
+
+        public Stats getGlobalStats() {
+            return globalStats;
+        }
+
+        public void setGlobalStats(String miner, Integer tests, Integer code, Integer testCoveredLoC, Integer loC) {
+            this.globalStats = new Stats(miner, tests, code, testCoveredLoC, loC);
+        }
+
+
+        /**
+         * Stats
+         */
+        public class Stats {
+            public final String miner;
+            public final Integer tests;
+            public final Integer code;
+            public final Integer testCoveredLoC;
+            public final Integer loC;
+
+            public Stats(String miner, Integer tests, Integer code, Integer testCoveredLoC, Integer loC) {
+                this.miner = miner;
+                this.tests = tests;
+                this.code = code;
+                this.testCoveredLoC = testCoveredLoC;
+                this.loC = loC;
+            }
+        }
+
         @Override
         public int hashCode() {
             final int prime = 31;
@@ -199,10 +229,9 @@ public abstract class Sources {
                 return false;
             return true;
         }
-
     }
 
-    public abstract Set<Commit> getCommitBetween(String commitIdBefore, String commitIdAfter) throws Exception;
+    public abstract Set<Commit> getCommitsBetween(String commitIdBefore, String commitIdAfter) throws Exception;
 
     // /*
     //  * Not sure, for example, it would be used to represent maven artefacts.

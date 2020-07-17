@@ -53,7 +53,7 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
         }
         List<Map<String, Object>> commits = new ArrayList<>();
         try {
-            for (Commit commit : value.getSources().getCommitBetween(evos_spec.commitIdBefore,
+            for (Commit commit : value.getSources().getCommitsBetween(evos_spec.commitIdBefore,
                     evos_spec.commitIdAfter)) {
                 Map<String,Object> o = new HashMap<>();
                 o.put("repository", commit.getRepository().getUrl());

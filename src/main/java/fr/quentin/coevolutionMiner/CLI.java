@@ -2,6 +2,7 @@ package fr.quentin.coevolutionMiner;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -12,11 +13,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 // import org.apache.commons.cli;
@@ -48,6 +51,8 @@ import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 import fr.quentin.coevolutionMiner.utils.ASTHelper;
 import fr.quentin.coevolutionMiner.utils.DiffHelper;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
+import fr.quentin.coevolutionMiner.utils.ThreadPrintStream;
+import fr.quentin.coevolutionMiner.v2.ast.AST;
 import fr.quentin.coevolutionMiner.v2.ast.ASTHandler;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
@@ -60,6 +65,7 @@ import gumtree.spoon.AstComparator;
 import gumtree.spoon.diff.Diff;
 import gumtree.spoon.diff.operations.Operation;
 import spoon.MavenLauncher;
+import spoon.reflect.CtModel;
 import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
 
 /**
@@ -94,6 +100,15 @@ public class CLI {
                             Integer.parseInt(line.getOptionValue("thread", "1")),
                             Integer.parseInt(line.getOptionValue("commitsMax", "1")));
                 }
+            } else if (Objects.equals(args[0], "batchPreEval")) {
+                if (line.getOptionValue("file") != null) {
+                    batchPreEval(
+                            Files.lines(Paths.get(line.getOptionValue("file")))
+                                    .skip(Integer.parseInt(line.getOptionValue("start", "0")))
+                                    .limit(Integer.parseInt(line.getOptionValue("limit", "1"))),
+                            Integer.parseInt(line.getOptionValue("thread", "1")),
+                            Integer.parseInt(line.getOptionValue("commitsMax", "1")));
+                }
             } else if (Objects.equals(args[0], "ast")) {
                 if (line.hasOption("repo")) {
                     System.out.println(ast(line.getOptionValue("repo"), line.getArgList().get(0)));
@@ -113,6 +128,117 @@ public class CLI {
         } catch (ParseException exp) {
             System.out.println("Unexpected exception:" + exp.getMessage());
         }
+    }
+
+    private static void batchPreEval(Stream<String> lines, int pool_size, int max_commits_impacts) {
+        ThreadPrintStream.replaceSystemOut();
+        ThreadPrintStream.replaceSystemErr();
+        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(pool_size);
+        SourcesHandler srcH = new SourcesHandler();
+        ASTHandler astH = new ASTHandler(srcH);
+        EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
+        ImpactHandler impactH = new ImpactHandler(srcH, astH, evoH);
+        CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH);
+        System.out.println("Starting");
+        lines.forEach(line -> {
+            logger.info("(laucher start) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                    + Integer.toString(executor.getActiveCount()) + " "
+                    + Long.toString(executor.getCompletedTaskCount()));
+            List<String> releases = Arrays.asList(line.split(" "));
+            if (releases.size() > 2) {
+                executor.submit(() -> {
+                    try {
+                        ThreadPrintStream.redirectThreadLogs(ThreadPrintStream.DEFAULT);
+                        Sources.Specifier srcSpec = srcH.buildSpec(releases.get(0), Integer.parseInt(releases.get(1)));
+                        String rawPath = SourcesHelper.parseAddress(srcSpec.repository);
+
+                        logger.info("(submit start) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                                + Integer.toString(executor.getActiveCount()) + " "
+                                + Long.toString(executor.getCompletedTaskCount()));
+
+                        String commitIdAfter = null;
+                        String commitIdBefore = null;
+                        int commit_index = 2;
+                        int impact_computed = 0;
+                        AST ast = null;
+                        for (; commit_index < releases.size() - 1; commit_index++) {
+                            commitIdAfter = releases.get(commit_index);
+                            commitIdBefore = releases.get(commit_index + 1);
+                            ThreadPrintStream.redirectThreadLogs(
+                                    Paths.get(SourcesHelper.RESOURCES_PATH, "Logs", rawPath, commitIdBefore));
+                            try {
+                                // evos = spoon compile + count tests/methods/class
+                                Sources src = srcH.handle(srcSpec, "JGit");
+                                src.getCommitsBetween(commitIdBefore, commitIdAfter);
+                                ast = astH.handle(astH.buildSpec(srcSpec, commitIdBefore), "Spoon");
+                                CtModel model = ast.launcher.getModel();
+                                logger.info("done statistics " + releases.get(0) + "/commit/" + commitIdBefore);
+                                logger.info("modules in pom: " + ast.launcher.getPomFile().getModel().getModules()
+                                        .stream().reduce("", (a, b) -> a + "," + b));
+                                logger.info("modules parsed: " + model.getAllModules().stream()
+                                        .map(x -> x.getSimpleName()).reduce("", (a, b) -> a + "," + b));
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                logger.info("failed statistics " + releases.get(0));
+                                break;
+                            } finally {
+                                System.out.flush();
+
+                                // Close System.out for this thread which will
+                                // flush and close this thread's text file.
+                                System.out.close();
+                                System.err.close();
+                            }
+                            if (ast != null) {
+                                break;
+                            }
+                        }
+
+                        logger.info("(submit end) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                                + Integer.toString(executor.getActiveCount()) + " "
+                                + Long.toString(executor.getCompletedTaskCount()));
+
+                        return 0;
+                    } catch (Exception e) {
+                        String tmp = e.getMessage();
+                        e.printStackTrace();
+                        return 1;
+                    } finally {
+                    }
+                });
+            } else {
+                System.out.println("no commits for " + releases.get(0));
+            }
+            logger.info("(launch end) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                    + Integer.toString(executor.getActiveCount()) + " "
+                    + Long.toString(executor.getCompletedTaskCount()));
+        });
+        System.out.println("Shutdown");
+        executor.shutdown();
+        try {
+            System.out.println("almost");
+            while (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+            }
+            System.out.println("done");
+            impactH.close();
+            evoH.close();
+            coevoH.close();
+            executor.shutdownNow();
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+        } catch (Exception e) {
+            executor.shutdownNow();
+        }
+        // try {
+        // System.out.println("wait");
+        // executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+        // System.out.println("done");
+        // executor.shutdownNow();
+        // Thread.currentThread().interrupt();
+        // } catch (InterruptedException e) {
+        // executor.shutdownNow();
+        // throw new RuntimeException(e);
+        // }
     }
 
     private static void batch(Stream<String> lines, int pool_size, int max_commits_impacts) {
@@ -163,7 +289,7 @@ public class CLI {
                         } else if (evos.toSet().size() <= 0) {
                             logger.info("no evolutions found for " + s.get(0));
                         } else {
-                            impact_computed+=1;
+                            impact_computed += 1;
                             logger.info(Integer.toString(evos.toSet().size()) + " evolutions found for " + s.get(0)
                                     + " from " + commitIdBefore + " to " + commitIdAfter);
                             try {

@@ -16,6 +16,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Logger;
 
 import com.google.gson.GsonBuilder;
@@ -30,7 +31,9 @@ import org.apache.maven.shared.invoker.DefaultInvoker;
 import org.apache.maven.shared.invoker.InvocationRequest;
 import org.apache.maven.shared.invoker.InvocationResult;
 import org.apache.maven.shared.invoker.Invoker;
+import org.apache.maven.shared.invoker.InvokerLogger;
 import org.apache.maven.shared.invoker.MavenInvocationException;
+import org.apache.maven.shared.invoker.PrintStreamHandler;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.NoHeadException;
@@ -70,8 +73,9 @@ public class SourcesHelper implements AutoCloseable {
 
 	static Logger logger = Logger.getLogger("ImpactAna");
 
-	static String VERSIONS_PATH = "/home/quentin/resources/Versions";
-	static String REPOS_PATH = "/home/quentin/resources/Repos";
+	public static final String RESOURCES_PATH = "/home/quentin/resources";
+	public static final String VERSIONS_PATH = RESOURCES_PATH+"/Versions";
+	public static final String REPOS_PATH = RESOURCES_PATH+"/Repos";
 
 	private Repository repo;
 	private String gitRepoAddress;
@@ -93,18 +97,27 @@ public class SourcesHelper implements AutoCloseable {
 
 	public SourcesHelper(String gitRepoAddress) throws Exception {
 		this.gitRepoAddress = gitRepoAddress;
-		URIish parsedRepoURI = new URIish(gitRepoAddress);
-		this.repoRawPath = parsedRepoURI.getRawPath();
-		System.out.println(repoRawPath);
-		if (repoRawPath.endsWith(".git")) {
-			this.repoRawPath = this.repoRawPath.substring(0, repoRawPath.length() - 4);
-		}
+		this.repoRawPath = parseAddress(gitRepoAddress);
 		this.repo = this.cloneIfNotExists();
 	}
 
+	public static String parseAddress(String gitRepoAddress) throws URISyntaxException {
+		URIish parsedRepoURI = new URIish(gitRepoAddress);
+		String repoRawPath = parsedRepoURI.getRawPath();
+		if (repoRawPath.endsWith(".git")) {
+			repoRawPath = repoRawPath.substring(0, repoRawPath.length() - 4);
+		}
+		return repoRawPath;
+	}
+	public final static ReentrantLock lock = new ReentrantLock();
 	private Repository cloneIfNotExists() throws Exception {
-		return GitHelper.cloneIfNotExists(REPOS_PATH + this.repoRawPath, // .substring(0, repoRawPath.length() - 4),
+		lock.lock();
+		try {
+			return GitHelper.cloneIfNotExists(REPOS_PATH + this.repoRawPath, // .substring(0, repoRawPath.length() - 4),
 				gitRepoAddress);
+		} finally {
+			lock.unlock();
+		}
 	}
 
 	public Path materialize(String commitId, FilePathFilter filter) throws IOException {
@@ -238,7 +251,16 @@ public class SourcesHelper implements AutoCloseable {
 		InvocationRequest request = new DefaultInvocationRequest();
 		request.setBaseDirectory(path.toFile());
 		request.setGoals(Arrays.asList("compile", "clean"));
+		request.setBatchMode(true);
+		// request.setErrorHandler(new PrintStreamHandler(System.err, false));
+		// request.setOutputHandler(new PrintStreamHandler(System.out, false));
+		request.setTimeoutInSeconds(60*10);
+		request.setShowErrors(true);
+		// request.setThreads("3");
 		Invoker invoker = new DefaultInvoker();
+		// invoker.setOutputHandler(new PrintStreamHandler(System.out, false));
+		// invoker.setErrorHandler(new PrintStreamHandler(System.err, false));
+		// invoker.getLogger().setThreshold(4);
 		invoker.setMavenHome(Paths.get("/usr").toFile());
 		try {
 			return invoker.execute(request);

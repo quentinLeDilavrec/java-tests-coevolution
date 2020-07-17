@@ -67,7 +67,7 @@ public class RefactoringMiner implements EvolutionsMiner {
     public Evolutions compute() {
         Sources src = srcHandler.handle(spec.sources, "jgit");
         try {
-            Set<Sources.Commit> commits = src.getCommitBetween(spec.commitIdBefore, spec.commitIdAfter);
+            Set<Sources.Commit> commits = src.getCommitsBetween(spec.commitIdBefore, spec.commitIdAfter);
         } catch (Exception e1) {
             e1.printStackTrace();
         }
