@@ -113,7 +113,7 @@ public class SourcesHelper implements AutoCloseable {
 	private Repository cloneIfNotExists() throws Exception {
 		lock.lock();
 		try {
-			return GitHelper.cloneIfNotExists(REPOS_PATH + this.repoRawPath, // .substring(0, repoRawPath.length() - 4),
+			return GitHelper.cloneIfNotExists(Paths.get(REPOS_PATH, this.repoRawPath).toString(), // .substring(0, repoRawPath.length() - 4),
 				gitRepoAddress);
 		} finally {
 			lock.unlock();
