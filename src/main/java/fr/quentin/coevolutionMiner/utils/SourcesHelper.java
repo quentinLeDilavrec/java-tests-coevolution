@@ -73,9 +73,9 @@ public class SourcesHelper implements AutoCloseable {
 
 	static Logger logger = Logger.getLogger("ImpactAna");
 
-	public static final String RESOURCES_PATH = "/home/quentin/resources";
-	public static final String VERSIONS_PATH = RESOURCES_PATH+"/Versions";
-	public static final String REPOS_PATH = RESOURCES_PATH+"/Repos";
+	public static final String RESOURCES_PATH = MyProperties.getPropValues().getProperty("resources");
+    static String VERSIONS_PATH = Paths.get(RESOURCES_PATH, "Versions").toString();
+    static String REPOS_PATH = Paths.get(RESOURCES_PATH, "Repos").toString();
 
 	private Repository repo;
 	private String gitRepoAddress;

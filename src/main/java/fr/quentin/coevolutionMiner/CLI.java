@@ -48,8 +48,6 @@ import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringHandler;
 import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 
-import fr.quentin.coevolutionMiner.utils.ASTHelper;
-import fr.quentin.coevolutionMiner.utils.DiffHelper;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.utils.ThreadPrintStream;
 import fr.quentin.coevolutionMiner.v2.ast.AST;

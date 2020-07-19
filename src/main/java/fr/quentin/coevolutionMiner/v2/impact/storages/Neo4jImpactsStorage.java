@@ -18,6 +18,7 @@ import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.TransactionWork;
 
+import fr.quentin.coevolutionMiner.utils.MyProperties;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactsStorage;
 
@@ -48,7 +49,7 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
     }
 
     public Neo4jImpactsStorage() {
-        this("bolt://localhost:7687", "neo4j", "password");
+        this(MyProperties.getPropValues().getProperty("neo4jAddress"), MyProperties.getPropValues().getProperty("neo4jId"), MyProperties.getPropValues().getProperty("neo4jPwd"));
     }
 
     @Override

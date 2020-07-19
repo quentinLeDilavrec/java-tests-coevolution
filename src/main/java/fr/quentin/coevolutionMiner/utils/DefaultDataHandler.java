@@ -24,7 +24,7 @@ import spark.Route;
 
 public class DefaultDataHandler implements Route {
 
-	static String VERSIONS_PATH = "/home/quentin/resources/Versions";
+    static String VERSIONS_PATH = Paths.get(MyProperties.getPropValues().getProperty("resources"), "Versions").toString();
 	static boolean materialized = false;
 
 	public class DataQuery {

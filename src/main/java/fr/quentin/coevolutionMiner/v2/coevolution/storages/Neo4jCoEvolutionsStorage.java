@@ -35,6 +35,7 @@ import org.neo4j.driver.types.Type;
 import org.neo4j.driver.types.Path.Segment;
 import org.refactoringminer.api.Refactoring;
 
+import fr.quentin.coevolutionMiner.utils.MyProperties;
 import fr.quentin.coevolutionMiner.v2.ast.AST;
 // import fr.quentin.impactMiner.ImpactAnalysis;
 // import fr.quentin.impactMiner.ImpactChain;
@@ -124,7 +125,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
     }
 
     public Neo4jCoEvolutionsStorage() {
-        this("bolt://localhost:7687", "neo4j", "password");
+        this(MyProperties.getPropValues().getProperty("neo4jAddress"), MyProperties.getPropValues().getProperty("neo4jId"), MyProperties.getPropValues().getProperty("neo4jPwd"));
     }
 
     @Override
