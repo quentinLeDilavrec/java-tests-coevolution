@@ -69,7 +69,7 @@ public abstract class Sources {
         }
     }
 
-    public Repository getRepository(){
+    public Repository getRepository() {
         return new Repository(spec.repository);
     }
 
@@ -111,8 +111,7 @@ public abstract class Sources {
         }
     }
 
-
-    protected final Map<String,Commit> commits = new HashMap<>();
+    protected final Map<String, Commit> commits = new HashMap<>();
 
     // TODO remove it when not used anymore i.e Evolution has bee refactored
     public final Commit temporaryCreateCommit(String id) {
@@ -140,7 +139,7 @@ public abstract class Sources {
         final Set<Commit> childrens = new HashSet<>();
         private final String id;
 
-        public Repository getRepository(){
+        public Repository getRepository() {
             return Sources.this.getRepository();
         }
 
@@ -169,33 +168,31 @@ public abstract class Sources {
             this.id = id;
         }
 
-        private Stats globalStats;
+        private Stats globalStats = new Stats();
 
         public Stats getGlobalStats() {
             return globalStats;
         }
 
-        public void setGlobalStats(String miner, Integer tests, Integer code, Integer testCoveredLoC, Integer loC) {
-            this.globalStats = new Stats(miner, tests, code, testCoveredLoC, loC);
-        }
-
-
         /**
          * Stats
          */
         public class Stats {
-            public final String miner;
-            public final Integer tests;
-            public final Integer code;
-            public final Integer testCoveredLoC;
-            public final Integer loC;
+            public Integer loC;
+			public Integer javaLoC;
+            public Integer testCoveredLoC;
+            public Integer compile;
+            public Integer testCompile;
+            public Integer testSuite;
+            public Integer classes;
+            public Integer executables;
+            public Integer tests;
 
-            public Stats(String miner, Integer tests, Integer code, Integer testCoveredLoC, Integer loC) {
-                this.miner = miner;
-                this.tests = tests;
-                this.code = code;
-                this.testCoveredLoC = testCoveredLoC;
-                this.loC = loC;
+            @Override
+            public String toString() {
+                return "Stats [classes=" + classes + ", compile=" + compile + ", executables=" + executables
+                        + ", javaLoC=" + javaLoC + ", loC=" + loC + ", testCompile=" + testCompile + ", testCoveredLoC="
+                        + testCoveredLoC + ", testSuite=" + testSuite + ", tests=" + tests + "]";
             }
         }
 
@@ -234,18 +231,18 @@ public abstract class Sources {
     public abstract Set<Commit> getCommitsBetween(String commitIdBefore, String commitIdAfter) throws Exception;
 
     // /*
-    //  * Not sure, for example, it would be used to represent maven artefacts.
-    //  */
+    // * Not sure, for example, it would be used to represent maven artefacts.
+    // */
     // public static class Artefact {
-    //     private String id;
-    //     private Repository repository;
-    //     private Commit commit;
+    // private String id;
+    // private Repository repository;
+    // private Commit commit;
 
-    //     public Artefact(String id, Repository repository, Commit commit) {
-    //         this.id = id;
-    //         this.repository = repository;
-    //         this.commit = commit;
-    //     }
+    // public Artefact(String id, Repository repository, Commit commit) {
+    // this.id = id;
+    // this.repository = repository;
+    // this.commit = commit;
+    // }
 
     // }
 }

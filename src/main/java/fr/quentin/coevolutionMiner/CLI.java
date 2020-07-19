@@ -72,7 +72,7 @@ import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
  * CLI
  */
 public class CLI {
-    static Logger logger = Logger.getLogger("ImpactRM commitHandler");
+    private static Logger logger = Logger.getLogger(CLI.class.getName());
 
     public static void main(String[] args) throws IOException {
         CommandLineParser parser = new DefaultParser();
@@ -177,6 +177,7 @@ public class CLI {
                                         .stream().reduce("", (a, b) -> a + "," + b));
                                 logger.info("modules parsed: " + model.getAllModules().stream()
                                         .map(x -> x.getSimpleName()).reduce("", (a, b) -> a + "," + b));
+                                logger.info("statistics: " + ast.commit.getGlobalStats().toString());
                             } catch (Exception e) {
                                 e.printStackTrace();
                                 logger.info("failed statistics " + releases.get(0));
