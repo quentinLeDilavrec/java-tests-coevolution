@@ -109,7 +109,17 @@ public class ThreadPrintStream extends PrintStream {
 
   public static void redirectThreadLogs(Path path) throws IOException {
     path.toFile().mkdirs();
-    Path logPath = Paths.get(path.toString(), Integer.toString(path.toFile().list().length) +".log");
+    Path logPath;
+    try {
+      String string = path.toString();
+      File file = path.toFile();
+      String[] list = file.list();
+      int length = list.length;
+      String string2 = Integer.toString(length);
+      logPath = Paths.get(string, string2 +".log");
+    } catch (NullPointerException e) {
+      throw new RuntimeException(e);
+    }
     File file = logPath.toFile();
     file.createNewFile();
     FileOutputStream fos = new FileOutputStream(file);
