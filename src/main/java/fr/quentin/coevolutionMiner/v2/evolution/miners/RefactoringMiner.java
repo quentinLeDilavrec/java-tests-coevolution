@@ -29,9 +29,9 @@ import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 import fr.quentin.impactMiner.Evolution;
 import fr.quentin.impactMiner.Position;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
-import fr.quentin.coevolutionMiner.v2.ast.AST;
+import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.ASTHandler;
-import fr.quentin.coevolutionMiner.v2.ast.AST.FileSnapshot.Range;
+import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionsMiner;
@@ -108,8 +108,8 @@ public class RefactoringMiner implements EvolutionsMiner {
         }
 
         for (Entry<ImmutablePair<String, String>, List<Refactoring>> entry : tmp.entrySet()) {
-            AST beforeAST = astHandler.handle(astHandler.buildSpec(spec.sources, entry.getKey().left), "Spoon");
-            AST afterAST = astHandler.handle(astHandler.buildSpec(spec.sources, entry.getKey().right), "Spoon");
+            Project beforeAST = astHandler.handle(astHandler.buildSpec(spec.sources, entry.getKey().left), "Spoon");
+            Project afterAST = astHandler.handle(astHandler.buildSpec(spec.sources, entry.getKey().right), "Spoon");
             for (Refactoring op : entry.getValue()) {
                 result.addEvolution(op, beforeAST, afterAST);
             }
@@ -129,7 +129,7 @@ public class RefactoringMiner implements EvolutionsMiner {
             evolutions.addAll(subSet);
         }
 
-        void addEvolution(Refactoring refact, AST astBefore, AST astAfter) {
+        void addEvolution(Refactoring refact, Project astBefore, Project astAfter) {
             List<ImmutablePair<Range, String>> before = new ArrayList<>();
             for (CodeRange range : refact.leftSide()) {
                 // Position pos = new Position(range.getFilePath(), range.getStartOffset(),
@@ -146,7 +146,7 @@ public class RefactoringMiner implements EvolutionsMiner {
             addEvolution(refact.getName(), before, after, astBefore.commit, astAfter.commit, refact);
         }
 
-        private ImmutablePair<Range, String> toRange(AST ast, CodeRange range) {
+        private ImmutablePair<Range, String> toRange(Project ast, CodeRange range) {
             return new ImmutablePair<>(ast.getRange(range.getFilePath(), range.getStartOffset(), range.getEndOffset()),
                     range.getDescription());
         }

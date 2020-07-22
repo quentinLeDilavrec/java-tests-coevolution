@@ -17,7 +17,7 @@ import org.refactoringminer.api.Refactoring;
 
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
-import fr.quentin.coevolutionMiner.v2.ast.AST.FileSnapshot.Range;
+import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 
 public class Evolutions {
 

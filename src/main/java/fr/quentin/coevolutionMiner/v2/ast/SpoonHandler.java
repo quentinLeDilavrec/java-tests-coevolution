@@ -4,7 +4,7 @@ import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 
 public class SpoonHandler {
 
-    public AST handle(SourcesHelper helper) {
+    public Project handle(SourcesHelper helper) {
         return null;
     }
 }

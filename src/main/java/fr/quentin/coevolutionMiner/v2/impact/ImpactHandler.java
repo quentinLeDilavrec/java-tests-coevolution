@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import fr.quentin.coevolutionMiner.v2.Data;
-import fr.quentin.coevolutionMiner.v2.ast.AST;
+import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.ASTHandler;
 
 public class ImpactHandler implements AutoCloseable {
@@ -29,11 +29,11 @@ public class ImpactHandler implements AutoCloseable {
         this.sourcesHandler = sourcesHandler;
     }
 
-    public Impacts.Specifier buildSpec(AST.Specifier ast_id, Evolutions.Specifier evo_id) {
+    public Impacts.Specifier buildSpec(Project.Specifier ast_id, Evolutions.Specifier evo_id) {
         return buildSpec(ast_id, evo_id, "myMiner");
     }
 
-    public Impacts.Specifier buildSpec(AST.Specifier ast_id, Evolutions.Specifier evo_id, String miner) {
+    public Impacts.Specifier buildSpec(Project.Specifier ast_id, Evolutions.Specifier evo_id, String miner) {
         return new Impacts.Specifier(ast_id, evo_id, miner);
     }
 

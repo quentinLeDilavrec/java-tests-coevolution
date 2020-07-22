@@ -36,13 +36,13 @@ import org.neo4j.driver.types.Path.Segment;
 import org.refactoringminer.api.Refactoring;
 
 import fr.quentin.coevolutionMiner.utils.MyProperties;
-import fr.quentin.coevolutionMiner.v2.ast.AST;
+import fr.quentin.coevolutionMiner.v2.ast.Project;
 // import fr.quentin.impactMiner.ImpactAnalysis;
 // import fr.quentin.impactMiner.ImpactChain;
 // import fr.quentin.impactMiner.ImpactElement;
 // import fr.quentin.impactMiner.Position;
 // import fr.quentin.impactMiner.Impacts.Relations;
-import fr.quentin.coevolutionMiner.v2.ast.AST.FileSnapshot.Range;
+import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.CoEvolution;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.Specifier;
@@ -205,8 +205,8 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
             return r;
         }).collect(Collectors.toList());
         Evolutions evolutions = coevoBuilder.getEvolutions();
-        AST astBefore = coevoBuilder.getAstBefore();
-        AST astAfter = coevoBuilder.getAstAfter();
+        Project astBefore = coevoBuilder.getAstBefore();
+        Project astAfter = coevoBuilder.getAstAfter();
         try (Session session = driver.session()) {
             List<CoEvolution> done = session.readTransaction(new TransactionWork<List<CoEvolution>>() {
                 @Override
@@ -214,7 +214,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                     Result queryResult = tx.run(getMinerCypher(), parameters("data", list));
                     return queryResult.list(x -> {
                         Value beforeTestRaw = x.get("test");
-                        AST.FileSnapshot.Range testBefore = astBefore.getRange(beforeTestRaw.get("path").asString(),
+                        Project.AST.FileSnapshot.Range testBefore = astBefore.getRange(beforeTestRaw.get("path").asString(),
                                 beforeTestRaw.get("start").asInt(), beforeTestRaw.get("end").asInt());
 
                         Set<Evolution> causes = new HashSet<>();
@@ -252,7 +252,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
     }
 
     // TODO use after ranges to make the match
-    protected Set<Evolution> getEvo(Value value, Evolutions evolutions, AST astBefore, AST astAfter) {
+    protected Set<Evolution> getEvo(Value value, Evolutions evolutions, Project astBefore, Project astAfter) {
         Set<Evolution> r = new HashSet<>();
         for (Value x : value.asList(x -> x)) {
             List<ImmutablePair<Range, String>> before = new ArrayList<>();
@@ -277,13 +277,13 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         return r;
     }
 
-    private ImmutablePair<Range, String> getEvoAux(String repoURL, String commitId, AST ast, Node curr, String type) {
+    private ImmutablePair<Range, String> getEvoAux(String repoURL, String commitId, Project ast, Node curr, String type) {
         if (!repoURL.equals(curr.get("repo").asString()))
             return null;
         if (!commitId.equals(curr.get("commitId").asString()))
             return null;
         Range range = ast.getRange(curr.get("path").asString(), curr.get("start").asInt(), curr.get("end").asInt());
-        return new ImmutablePair<AST.FileSnapshot.Range, String>(range, type);
+        return new ImmutablePair<Project.AST.FileSnapshot.Range, String>(range, type);
     }
 
     public static String getMinerCypher() {

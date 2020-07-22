@@ -3,55 +3,37 @@ package fr.quentin.coevolutionMiner.v2.impact.miners;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.logging.Logger;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.ImmutableTriple;
-import org.refactoringminer.api.Refactoring;
 
+import fr.quentin.coevolutionMiner.v2.ast.ASTHandler;
+import fr.quentin.coevolutionMiner.v2.ast.Project;
+import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts;
-import fr.quentin.coevolutionMiner.v2.impact.Impacts.Specifier;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts.Impact.DescRange;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactsMiner;
-import fr.quentin.coevolutionMiner.v2.impact.storages.Neo4jImpactsStorage;
-import fr.quentin.coevolutionMiner.v2.utils.Tuple;
 import fr.quentin.coevolutionMiner.v2.utils.Utils;
-import spoon.MavenLauncher;
-import spoon.reflect.code.CtInvocation;
-import spoon.reflect.declaration.CtConstructor;
-import spoon.reflect.declaration.CtElement;
-import spoon.reflect.declaration.CtExecutable;
-import spoon.reflect.declaration.CtMethod;
 import fr.quentin.impactMiner.ImpactAnalysis;
 import fr.quentin.impactMiner.ImpactChain;
 import fr.quentin.impactMiner.ImpactElement;
-import fr.quentin.impactMiner.JsonSerializable;
-import fr.quentin.impactMiner.Position;
-import fr.quentin.impactMiner.ToJson;
 import fr.quentin.impactMiner.Impacts.Relations;
-import fr.quentin.coevolutionMiner.v2.ast.AST;
-import fr.quentin.coevolutionMiner.v2.ast.ASTHandler;
-import fr.quentin.coevolutionMiner.v2.ast.AST.FileSnapshot.Range;
+import fr.quentin.impactMiner.Position;
+import spoon.MavenLauncher;
+import spoon.reflect.declaration.CtElement;
+import spoon.reflect.declaration.CtExecutable;
 
 // CAUTION only handle correctly evolution in consecutive commits, 
 // reson impact only computer on first commit 
@@ -72,7 +54,8 @@ public class MyImpactsMiner implements ImpactsMiner {
     @Override
     public Impacts compute() {
         boolean isOnBefore = spec.astSpec.commitId.equals(spec.evoSpec.commitIdBefore);
-        AST ast = astHandler.handle(spec.astSpec, "Spoon");
+        Project project = astHandler.handle(spec.astSpec, "Spoon");
+        Project.AST ast = project.getAst();
         Evolutions evo = null;
         if (spec.evoSpec != null) {
             evo = evoHandler.handle(spec.evoSpec);
@@ -90,8 +73,8 @@ public class MyImpactsMiner implements ImpactsMiner {
         try {
             Set<ImmutablePair<Object, Position>> tmp = new HashSet<>();
             for (Evolution aaa : evolutions) {
-                
-                for (Evolution.DescRange bef : isOnBefore?aaa.getBefore():aaa.getAfter()) {
+
+                for (Evolution.DescRange bef : isOnBefore ? aaa.getBefore() : aaa.getAfter()) {
                     final Range targ = bef.getTarget();
                     Position pos = new Position(targ.getFile().getPath(), targ.getStart(), targ.getEnd());
                     tmp.add(new ImmutablePair<>(bef, pos));
@@ -107,7 +90,7 @@ public class MyImpactsMiner implements ImpactsMiner {
         logger.info("Serializing Impacts");
         logger.info(Integer.toString(rawImpacts.getRoots().size()));
         logger.info(new GsonBuilder().setPrettyPrinting().create().toJson(rawImpacts.toJson()));
-        ImpactsExtension result = new ImpactsExtension(spec, ast, rootDir);
+        ImpactsExtension result = new ImpactsExtension(spec, project, rootDir);
         for (Entry<ImpactElement, Map<ImpactElement, Relations>> a : rawImpacts.getVerticesPerRoots().entrySet()) {
             ImpactElement root = a.getKey();
             Set<Object> roots = new HashSet<>();
@@ -200,7 +183,7 @@ public class MyImpactsMiner implements ImpactsMiner {
         @Override
         protected Map<String, Object> makeRange(DescRange descRange) {
             Map<String, Object> o = super.makeRange(descRange);
-            Object original = ast.getOriginal(descRange.getTarget());
+            Object original = ast.getAst().getOriginal(descRange.getTarget());
             if (original != null) {
                 o.put("type", original.getClass().getSimpleName());
                 if (original instanceof CtExecutable) {
@@ -219,7 +202,7 @@ public class MyImpactsMiner implements ImpactsMiner {
             return o;
         }
 
-        ImpactsExtension(Specifier spec, AST ast, Path root) {
+        ImpactsExtension(Specifier spec, Project ast, Path root) {
             super(spec, ast);
             this.root = root;
         }

@@ -3,7 +3,6 @@ package fr.quentin.coevolutionMiner.v2.coevolution;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
-import fr.quentin.coevolutionMiner.v2.impact.ImpactsStorage;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner;
 import fr.quentin.coevolutionMiner.v2.coevolution.storages.Neo4jCoEvolutionsStorage;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;

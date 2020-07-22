@@ -168,34 +168,6 @@ public abstract class Sources {
             this.id = id;
         }
 
-        private Stats globalStats = new Stats();
-
-        public Stats getGlobalStats() {
-            return globalStats;
-        }
-
-        /**
-         * Stats
-         */
-        public class Stats {
-            public Integer loC;
-			public Integer javaLoC;
-            public Integer testCoveredLoC;
-            public Integer compile;
-            public Integer testCompile;
-            public Integer testSuite;
-            public Integer classes;
-            public Integer executables;
-            public Integer tests;
-
-            @Override
-            public String toString() {
-                return "Stats [classes=" + classes + ", compile=" + compile + ", executables=" + executables
-                        + ", javaLoC=" + javaLoC + ", loC=" + loC + ", testCompile=" + testCompile + ", testCoveredLoC="
-                        + testCoveredLoC + ", testSuite=" + testSuite + ", tests=" + tests + "]";
-            }
-        }
-
         @Override
         public int hashCode() {
             final int prime = 31;

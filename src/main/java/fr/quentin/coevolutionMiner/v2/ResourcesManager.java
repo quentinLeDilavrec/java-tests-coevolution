@@ -7,7 +7,7 @@ import java.util.concurrent.locks.Lock;
 
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts;
-import fr.quentin.coevolutionMiner.v2.ast.AST;
+import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 
 public class ResourcesManager {
@@ -50,7 +50,7 @@ public class ResourcesManager {
         return null;
     }
 
-    public AST getAST(AST.Specifier id){
+    public Project getAST(Project.Specifier id){
         return null;
     }
 

@@ -43,9 +43,9 @@ import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.visitor.Filter;
 import fr.quentin.impactMiner.Position;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
-import fr.quentin.coevolutionMiner.v2.ast.AST;
+import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.ASTHandler;
-import fr.quentin.coevolutionMiner.v2.ast.AST.FileSnapshot.Range;
+import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 
 // CAUTION same limitation as MyImpactsMiner
 public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
@@ -163,20 +163,20 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             }
             Evolutions.Specifier currEvoSpec = EvolutionHandler.buildSpec(sourcesProvider.spec, currentCommit.getId(),
                     nextCommit.getId());
-            AST.Specifier before_ast_id = astHandler.buildSpec(spec.evoSpec.sources, currentCommit.getId());
-            AST before_ast = astHandler.handle(before_ast_id, "Spoon");
-            if (before_ast.compilerException != null) {
+            Project.Specifier before_ast_id = astHandler.buildSpec(spec.evoSpec.sources, currentCommit.getId());
+            Project before_ast = astHandler.handle(before_ast_id, "Spoon");
+            if (before_ast.getAst().compilerException != null) {
                 logger.info("Before Code Don't Build");
                 continue;
             }
-            Exception beforeTestsCompileException = compileAllTests(sourcesProvider, before_ast.rootDir);
+            Exception beforeTestsCompileException = compileAllTests(sourcesProvider, before_ast.getAst().rootDir);
             if (beforeTestsCompileException != null) {
                 logger.info("Before Tests Don't Build");
                 continue;
             }
-            AST.Specifier after_ast_id = astHandler.buildSpec(spec.evoSpec.sources, nextCommit.getId());
-            AST after_ast = astHandler.handle(after_ast_id, "Spoon");
-            if (after_ast.compilerException != null) {
+            Project.Specifier after_ast_id = astHandler.buildSpec(spec.evoSpec.sources, nextCommit.getId());
+            Project after_ast = astHandler.handle(after_ast_id, "Spoon");
+            if (after_ast.getAst().compilerException != null) {
                 logger.info("Code after evolutions Don't Build");
                 continue;
             }
@@ -192,7 +192,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             store.construct(coevoBuilder, currentImpacts.getImpactedTests());
 
             // TODO compile tests separately
-            Exception afterTestsCompileException = compileAllTests(sourcesProvider, after_ast.rootDir);
+            Exception afterTestsCompileException = compileAllTests(sourcesProvider, after_ast.getAst().rootDir);
             if (afterTestsCompileException != null) {
                 logger.info("Tests after evolutions Don't Build");
                 continue;
@@ -200,19 +200,19 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             Set<CoEvolution> toValidate = new HashSet<>();
             for (CoEvolution entry : currCoevolutions.getUnvalidated()) {
                 // TODO loop on tests before to make checks with multiple set of properties
-                AST.FileSnapshot.Range posBefore = null;
-                for (AST.FileSnapshot.Range aefgzf : entry.getTestsBefore()) {
+                Project.AST.FileSnapshot.Range posBefore = null;
+                for (Project.AST.FileSnapshot.Range aefgzf : entry.getTestsBefore()) {
                     posBefore = aefgzf;
                     break;
                 }
 
-                CtMethod<?> testsBefore = (CtMethod<?>) before_ast.getOriginal(posBefore);
-                Exception resultTestBefore = executeTest(sourcesProvider, before_ast.rootDir,
+                CtMethod<?> testsBefore = (CtMethod<?>) before_ast.getAst().getOriginal(posBefore);
+                Exception resultTestBefore = executeTest(sourcesProvider, before_ast.getAst().rootDir,
                         testsBefore.getDeclaringType().getQualifiedName(), testsBefore.getSimpleName());
 
                 // TODO idem
-                AST.FileSnapshot.Range posAfter = null;
-                for (AST.FileSnapshot.Range aefgzf : entry.getTestsAfter()) {
+                Project.AST.FileSnapshot.Range posAfter = null;
+                for (Project.AST.FileSnapshot.Range aefgzf : entry.getTestsAfter()) {
                     posAfter = aefgzf;
                     break;
                 }
@@ -224,11 +224,11 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     }
                     continue;
                 }
-                CtMethod<?> testsAfter = (CtMethod<?>) after_ast.getOriginal(posAfter);
+                CtMethod<?> testsAfter = (CtMethod<?>) after_ast.getAst().getOriginal(posAfter);
                 if (resultTestBefore != null) {
                     // TODO "mvn test "+ test.get(0).getDeclaringType() + "$" +
                     // test.get(0).getSimpleName();
-                    Exception resultTestAfter = executeTest(sourcesProvider, after_ast.rootDir,
+                    Exception resultTestAfter = executeTest(sourcesProvider, after_ast.getAst().rootDir,
                             testsAfter.getDeclaringType().getQualifiedName(), testsAfter.getSimpleName());
                     if (resultTestAfter != null) {
                         logger.info("TestStayedFailed");
@@ -241,7 +241,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     // Exception resultTestAfterWithoutResolutions =
                     // executeTestWithoutCoevo(sourcesProvider,nextCommit.id,entry.getValue(),resolutions);
                     if (testsAfter != null) {
-                        Exception resultTestAfter = executeTest(sourcesProvider, after_ast.rootDir,
+                        Exception resultTestAfter = executeTest(sourcesProvider, after_ast.getAst().rootDir,
                                 testsAfter.getDeclaringType().getQualifiedName(), testsAfter.getSimpleName());
                         if (resultTestAfter != null) {
                             logger.info("TestNowFail");
@@ -313,10 +313,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         private final Set<CoEvolution> validatedcoevolutions = new HashSet<>();
         private final Set<CoEvolution> unvalidatedCoevolutions = new HashSet<>();
         public final Evolutions evolutions;
-        public final AST astBefore;
-        public final AST astAfter;
+        public final Project astBefore;
+        public final Project astAfter;
 
-        private CoEvolutionsExtension(Specifier spec, Evolutions evolutions, AST astBefore, AST astAfter) {
+        private CoEvolutionsExtension(Specifier spec, Evolutions evolutions, Project astBefore, Project astAfter) {
             super(spec);
             this.evolutions = evolutions;
             this.astBefore = astBefore;
@@ -332,11 +332,11 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         class CoEvolutionExtension extends CoEvolution {
 
-            private Set<AST.FileSnapshot.Range> testsBefore;
-            private Set<AST.FileSnapshot.Range> testsAfter;
+            private Set<Project.AST.FileSnapshot.Range> testsBefore;
+            private Set<Project.AST.FileSnapshot.Range> testsAfter;
 
             public CoEvolutionExtension(Set<Evolution> causes, Set<Evolution> resolutions,
-                    Set<AST.FileSnapshot.Range> testsBefore, Set<Range> testsAfter) {
+                    Set<Project.AST.FileSnapshot.Range> testsBefore, Set<Range> testsAfter) {
                 super();
                 this.causes = causes;
                 this.resolutions = resolutions;
@@ -345,12 +345,12 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             }
 
             @Override
-            public Set<AST.FileSnapshot.Range> getTestsBefore() {
+            public Set<Project.AST.FileSnapshot.Range> getTestsBefore() {
                 return Collections.unmodifiableSet(testsBefore);
             }
 
             @Override
-            public Set<AST.FileSnapshot.Range> getTestsAfter() {
+            public Set<Project.AST.FileSnapshot.Range> getTestsAfter() {
                 return Collections.unmodifiableSet(testsAfter);
             }
         }
@@ -388,26 +388,26 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 return CoEvolutionsExtension.this.evolutions;
             }
 
-            public AST getAstBefore() {
+            public Project getAstBefore() {
                 return CoEvolutionsExtension.this.astBefore;
             }
 
-            public AST getAstAfter() {
+            public Project getAstAfter() {
                 return CoEvolutionsExtension.this.astAfter;
             }
 
-            private Set<AST.FileSnapshot.Range> adjustToTests(Impacts impacts, Evolution.DescRange desc) {
+            private Set<Project.AST.FileSnapshot.Range> adjustToTests(Impacts impacts, Evolution.DescRange desc) {
                 Set<Impact> tmp = impacts.getPerRootCause().get(desc);
-                Set<AST.FileSnapshot.Range> r = new HashSet<>();
+                Set<Project.AST.FileSnapshot.Range> r = new HashSet<>();
                 if (tmp != null) {
                     for (Impact impact : tmp) {
                         for (Impacts.Impact.DescRange eff : impact.getEffects()) {
-                            if (impacts.getAst().isTest(eff.getTarget())) {
+                            if (impacts.getAst().getAst().isTest(eff.getTarget())) {
                                 r.add(eff.getTarget());
                             }
                         }
                         for (Impacts.Impact.DescRange cau : impact.getCauses()) {
-                            if (impacts.getAst().isTest(cau.getTarget())) {
+                            if (impacts.getAst().getAst().isTest(cau.getTarget())) {
                                 r.add(cau.getTarget());
                             }
                         }
@@ -417,9 +417,9 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             }
 
             public void addCoevolution(Set<Evolution> throughCall, Set<Evolution> directLong,
-                    Set<Evolution> directShort, Set<Evolution> directShortAdjusted, AST.FileSnapshot.Range testBefore) {
+                    Set<Evolution> directShort, Set<Evolution> directShortAdjusted, Project.AST.FileSnapshot.Range testBefore) {
                 Set<Evolution> direct = new HashSet<>();
-                Set<AST.FileSnapshot.Range> testsAfter = new HashSet<>();
+                Set<Project.AST.FileSnapshot.Range> testsAfter = new HashSet<>();
                 direct.addAll(directLong);
                 for (Evolution evo : directLong) {
                     for (Evolution.DescRange desc : evo.getAfter()) {

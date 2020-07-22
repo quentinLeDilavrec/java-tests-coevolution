@@ -115,7 +115,9 @@ public class SourcesHelper implements AutoCloseable {
 		try {
 			return GitHelper.cloneIfNotExists(Paths.get(REPOS_PATH, this.repoRawPath).toString(), // .substring(0, repoRawPath.length() - 4),
 				gitRepoAddress);
-		} finally {
+		} catch(Exception e) {
+			throw new Exception(e);
+		}finally {
 			lock.unlock();
 		}
 	}
@@ -188,7 +190,7 @@ public class SourcesHelper implements AutoCloseable {
 			// runCommand(Paths.get(REPOS_PATH + this.repoRawPath),"git", "checkout","ede8888f9e23de3457e4e261e2337296b533a916");
 			// System.err.println("native git pull working?");
 			
-			cloneIfNotExists();
+			repo = cloneIfNotExists();
 			
 			try (RevWalk walk = new GitHelper().fetchAndCreateNewRevsWalk(repo)) {
 				// try (ObjectReader reader = repo.newObjectReader(); RevWalk walk = new

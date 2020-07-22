@@ -20,16 +20,17 @@ import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts.Impact.DescRange;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.impactMiner.Position;
-import fr.quentin.coevolutionMiner.v2.ast.AST;
-import fr.quentin.coevolutionMiner.v2.ast.AST.FileSnapshot;
-import fr.quentin.coevolutionMiner.v2.ast.AST.FileSnapshot.Range;
+import fr.quentin.coevolutionMiner.v2.ast.Project;
+import fr.quentin.coevolutionMiner.v2.ast.Project.AST;
+import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot;
+import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 
 public abstract class Impacts {
 
     public final Specifier spec;
-    protected final AST ast;
+    protected final Project ast;
 
-    public Impacts(Specifier spec, AST ast) {
+    public Impacts(Specifier spec, Project ast) {
         this.spec = spec;
         this.ast = ast;
     }
@@ -37,7 +38,7 @@ public abstract class Impacts {
     /**
      * @return the ast
      */
-    public AST getAst() {
+    public Project getAst() {
         return ast;
     }
 
@@ -63,7 +64,7 @@ public abstract class Impacts {
         res.put("tool", spec.miner);
         for (Impact impact : impacts.values()) {
 
-            Map<String, Object> content = makeContent(ast.rootDir, impact);
+            Map<String, Object> content = makeContent(ast.getAst().rootDir, impact);
             content.put("type", impact.getType());
             List<Object> causes = new ArrayList<>();
             for (Impact.DescRange aaa : impact.getCauses()) {
@@ -84,12 +85,12 @@ public abstract class Impacts {
         Map<String, Object> res = new HashMap<>();
         List<Map<String, Object>> serializedImpacts = new ArrayList<>();
         List<Map<String, Object>> serializedRanges = new ArrayList<>();
-        Map<AST.FileSnapshot.Range, Integer> serializedEvolutionsMap = new HashMap<>();
+        Map<Project.AST.FileSnapshot.Range, Integer> serializedEvolutionsMap = new HashMap<>();
         res.put("ranges", serializedRanges);
         res.put("impacts", serializedImpacts);
         res.put("tool", spec.miner);
         for (Impact impact : impacts.values()) {
-            Map<String, Object> content = makeContent(ast.rootDir, impact);
+            Map<String, Object> content = makeContent(ast.getAst().rootDir, impact);
             content.put("type", impact.getType());
             List<Object> causes = new ArrayList<>();
             for (Impact.DescRange aaa : impact.getCauses()) {
@@ -173,11 +174,11 @@ public abstract class Impacts {
     }
 
     public static class Specifier {
-        public final AST.Specifier astSpec;
+        public final Project.Specifier astSpec;
         public final Evolutions.Specifier evoSpec;
         public final String miner;
 
-        public Specifier(AST.Specifier astSpec, Evolutions.Specifier evoSpec, String miner) {
+        public Specifier(Project.Specifier astSpec, Evolutions.Specifier evoSpec, String miner) {
             this.astSpec = astSpec;
             this.evoSpec = evoSpec;
             this.miner = miner;

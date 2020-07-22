@@ -17,8 +17,8 @@ import fr.quentin.impactMiner.ImpactChain;
 import fr.quentin.impactMiner.ImpactElement;
 import fr.quentin.impactMiner.Impacts.Relations;
 import fr.quentin.impactMiner.Position;
-import fr.quentin.coevolutionMiner.v2.ast.AST;
-import fr.quentin.coevolutionMiner.v2.ast.AST.FileSnapshot.Range;
+import fr.quentin.coevolutionMiner.v2.ast.Project;
+import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 
 public class CoEvolutions {
 

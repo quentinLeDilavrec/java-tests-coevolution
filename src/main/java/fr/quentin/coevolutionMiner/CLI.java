@@ -50,7 +50,7 @@ import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.utils.ThreadPrintStream;
-import fr.quentin.coevolutionMiner.v2.ast.AST;
+import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.ASTHandler;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
@@ -158,24 +158,21 @@ public class CLI {
                         String commitIdBefore = null;
                         int commit_index = 2;
                         int impact_computed = 0;
-                        AST ast = null;
+                        Project project = null;
                         for (; commit_index < releases.size() - 1; commit_index++) {
                             commitIdAfter = releases.get(commit_index);
                             commitIdBefore = releases.get(commit_index + 1);
                             ThreadPrintStream.redirectThreadLogs(
                                     Paths.get(SourcesHelper.RESOURCES_PATH, "Logs", rawPath, commitIdBefore));
-                            try {
+                            try { // https://github.com/chrisbanes/Android-PullToRefresh/commit/1f7a7e1daf89167b11166180d96bac54a9306c80
                                 // evos = spoon compile + count tests/methods/class
                                 Sources src = srcH.handle(srcSpec, "JGit");
                                 src.getCommitsBetween(commitIdBefore, commitIdAfter);
-                                ast = astH.handle(astH.buildSpec(srcSpec, commitIdBefore), "Spoon");
-                                CtModel model = ast.launcher.getModel();
-                                logger.info("done statistics " + releases.get(0) + "/commit/" + commitIdBefore);
-                                logger.info("modules in pom: " + ast.launcher.getPomFile().getModel().getModules()
-                                        .stream().reduce("", (a, b) -> a + "," + b));
-                                logger.info("modules parsed: " + model.getAllModules().stream()
-                                        .map(x -> x.getSimpleName()).reduce("", (a, b) -> a + "," + b));
-                                logger.info("statistics: " + ast.commit.getGlobalStats().toString());
+                                project = astH.handle(astH.buildSpec(srcSpec, commitIdBefore), "Spoon");
+                                printThings(releases, commitIdBefore, project);
+                                for (Project x : project.getModules()) {
+                                    printThings(releases, commitIdBefore, x);
+                                }
                             } catch (Exception e) {
                                 e.printStackTrace();
                                 logger.info("failed statistics " + releases.get(0));
@@ -188,7 +185,7 @@ public class CLI {
                                 System.out.close();
                                 System.err.close();
                             }
-                            if (ast != null) {
+                            if (project != null) {
                                 break;
                             }
                         }
@@ -238,6 +235,16 @@ public class CLI {
         // executor.shutdownNow();
         // throw new RuntimeException(e);
         // }
+    }
+
+    private static void printThings(List<String> releases, String commitIdBefore, Project project) {
+        CtModel model = project.getAst().launcher.getModel();
+        logger.info("done statistics " + releases.get(0) + "/commit/" + commitIdBefore + "/"+ project.getAst().rootDir.toString());
+        logger.info("modules in pom: " + project.getAst().launcher.getPomFile().getModel().getModules()
+                .stream().reduce("", (a, b) -> a + "," + b));
+        logger.info("modules parsed: " + model.getAllModules().stream()
+                .map(x -> x.getSimpleName()).reduce("", (a, b) -> a + "," + b));
+        logger.info("statistics: " + project.getAst().getGlobalStats().toString());
     }
 
     private static void batch(Stream<String> lines, int pool_size, int max_commits_impacts) {
