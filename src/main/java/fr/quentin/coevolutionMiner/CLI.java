@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -18,6 +19,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -130,6 +133,7 @@ public class CLI {
     }
 
     private static void batchPreEval(Stream<String> lines, int pool_size, int max_commits_impacts) {
+        PrintStream saved_out = System.out;
         ThreadPrintStream.replaceSystemOut();
         ThreadPrintStream.replaceSystemErr();
         ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(pool_size);
@@ -138,7 +142,28 @@ public class CLI {
         EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
         ImpactHandler impactH = new ImpactHandler(srcH, astH, evoH);
         CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH);
-        System.out.println("Starting");
+        logger.info("Starting");
+        Logger logger2 = Logger.getLogger(CLI.class.getName() + "#batchPreEval");
+
+        logger2.addHandler(new Handler() {
+
+            @Override
+            public void close() throws SecurityException {
+                saved_out.close();
+            }
+
+            @Override
+            public void flush() {
+                saved_out.flush();
+            }
+
+            @Override
+            public void publish(LogRecord record) {
+                logger.log(record);
+                saved_out.println(record.getMessage());
+            }
+
+        });
         lines.forEach(line -> {
             logger.info("(laucher start) CLI status " + Long.toString(executor.getTaskCount()) + " "
                     + Integer.toString(executor.getActiveCount()) + " "
@@ -151,7 +176,7 @@ public class CLI {
                         Sources.Specifier srcSpec = srcH.buildSpec(releases.get(0), Integer.parseInt(releases.get(1)));
                         String rawPath = SourcesHelper.parseAddress(srcSpec.repository);
 
-                        logger.info("(submit start) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                        logger2.info("(submit start) CLI status " + Long.toString(executor.getTaskCount()) + " "
                                 + Integer.toString(executor.getActiveCount()) + " "
                                 + Long.toString(executor.getCompletedTaskCount()));
 
@@ -166,7 +191,7 @@ public class CLI {
                             ThreadPrintStream.redirectThreadLogs(
                                     Paths.get(SourcesHelper.RESOURCES_PATH, "Logs", rawPath, commitIdBefore));
                             try { // https://github.com/chrisbanes/Android-PullToRefresh/commit/1f7a7e1daf89167b11166180d96bac54a9306c80
-                                // evos = spoon compile + count tests/methods/class
+                                  // evos = spoon compile + count tests/methods/class
                                 Sources src = srcH.handle(srcSpec, "JGit");
                                 src.getCommitsBetween(commitIdBefore, commitIdAfter);
                                 project = astH.handle(astH.buildSpec(srcSpec, commitIdBefore), SpoonMiner.class);
@@ -190,8 +215,7 @@ public class CLI {
                                 break;
                             }
                         }
-
-                        logger.info("(submit end) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                        logger2.info("(submit end) CLI status " + Long.toString(executor.getTaskCount()) + " "
                                 + Integer.toString(executor.getActiveCount()) + " "
                                 + Long.toString(executor.getCompletedTaskCount()));
 
@@ -240,11 +264,12 @@ public class CLI {
 
     private static void printThings(List<String> releases, String commitIdBefore, Project project) {
         CtModel model = project.getAst().launcher.getModel();
-        logger.info("done statistics " + releases.get(0) + "/commit/" + commitIdBefore + "/"+ project.getAst().rootDir.toString());
-        logger.info("modules in pom: " + project.getAst().launcher.getPomFile().getModel().getModules()
-                .stream().reduce("", (a, b) -> a + "," + b));
-        logger.info("modules parsed: " + model.getAllModules().stream()
-                .map(x -> x.getSimpleName()).reduce("", (a, b) -> a + "," + b));
+        logger.info("done statistics " + releases.get(0) + "/commit/" + commitIdBefore + "/"
+                + project.getAst().rootDir.toString());
+        logger.info("modules in pom: " + project.getAst().launcher.getPomFile().getModel().getModules().stream()
+                .reduce("", (a, b) -> a + "," + b));
+        logger.info("modules parsed: "
+                + model.getAllModules().stream().map(x -> x.getSimpleName()).reduce("", (a, b) -> a + "," + b));
         logger.info("statistics: " + project.getAst().getGlobalStats().toString());
     }
 
