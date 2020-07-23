@@ -155,7 +155,7 @@ public class SpoonMiner implements ProjectMiner {
      */
     public static void computeLOC(Path path, Project<?> proj) throws IOException, InterruptedException {
         ProcessBuilder processBuilder = new ProcessBuilder();
-        String[] command = new String[] { "cloc", path.toAbsolutePath().toString(), "--md", "--hide-rate", "--quiet" };
+        String[] command = new String[] { "cloc", path.toAbsolutePath().toString(), "--md", "--quiet" };
         processBuilder.command(command);
         logger.info("executing subprocess: " + Arrays.asList(command).stream().reduce("", (a, b) -> a + " " + b));
         Process process = processBuilder.start();
