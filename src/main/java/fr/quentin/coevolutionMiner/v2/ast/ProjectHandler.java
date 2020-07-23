@@ -9,29 +9,33 @@ import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 
-public class ASTHandler {
+public class ProjectHandler {
 
-	private ASTHandler astHandler;
+	private ProjectHandler astHandler;
 	private SourcesHandler srcHandler;
 
-	private Map<Project.Specifier, Data<Project>> memoizedAST = new ConcurrentHashMap<>();
+	private Map<Project.Specifier, Data<Project<?>>> memoizedAST = new ConcurrentHashMap<>();
 
-	public ASTHandler(SourcesHandler srcHandler) {
+	public ProjectHandler(SourcesHandler srcHandler) {
 		this.srcHandler = srcHandler;
 	}
 
 	public Project.Specifier buildSpec(Sources.Specifier sources, String commitId) {
-		return buildSpec(sources, commitId, "Spoon");
+		return buildSpec(sources, commitId, SpoonMiner.class);
 	}
 
-	private Project.Specifier buildSpec(Sources.Specifier sources, String commitId, String miner) {
+	private Project.Specifier buildSpec(Sources.Specifier sources, String commitId, Class<? extends ProjectMiner> miner) {
 		return new Project.Specifier(sources, commitId, miner);
 	}
 
-	public Project handle(Project.Specifier spec, String miner) {
-		Project res = null;
+	enum Miners {
+		SpoonMiner
+	}
+
+	public Project<?> handle(Project.Specifier spec, Class<? extends ProjectMiner> miner) {
+		Project<?> res = null;
 		memoizedAST.putIfAbsent(spec, new Data<>());
-		Data<Project> tmp = memoizedAST.get(spec);
+		Data<Project<?>> tmp = memoizedAST.get(spec);
 		tmp.lock.lock();
 		try {
 			res = tmp.get();
@@ -39,8 +43,9 @@ public class ASTHandler {
 				return res;
 			}
 			// CAUTION miners should mind about circular deps of data given by handlers
-			switch (spec.miner) {
-				case "Spoon":
+			Miners z = Miners.valueOf(miner.getSimpleName());
+			switch (z) {
+				case SpoonMiner:
 					SpoonMiner minerInst = new SpoonMiner(spec, srcHandler);
 					res = minerInst.compute();
 					populate(res);
@@ -58,10 +63,10 @@ public class ASTHandler {
 	}
 
 
-	private void populate(Project evolutions) {
-		for (Project x : evolutions.getModules()) {
+	private void populate(Project<?> evolutions) {
+		for (Project<?> x : evolutions.getModules()) {
 			memoizedAST.putIfAbsent(x.spec, new Data<>());
-			Data<Project> tmp = memoizedAST.get(x.spec);
+			Data<Project<?>> tmp = memoizedAST.get(x.spec);
 			tmp.lock.lock();
 			try {
 				tmp.set(x);

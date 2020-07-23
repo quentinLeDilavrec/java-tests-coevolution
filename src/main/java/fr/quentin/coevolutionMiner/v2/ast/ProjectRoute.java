@@ -5,13 +5,13 @@ import spark.Request;
 import spark.Response;
 import spark.Route;
 
-public class ASTRoute implements Route {
+public class ProjectRoute implements Route {
 
     private SourcesHandler sourcesHandler;
-    private ASTHandler astHandler;
+    private ProjectHandler astHandler;
     private String minerId;
 
-    public ASTRoute(SourcesHandler sourcesHandler, ASTHandler astHandler, String minerId) {
+    public ProjectRoute(SourcesHandler sourcesHandler, ProjectHandler astHandler, String minerId) {
         this.sourcesHandler = sourcesHandler;
         this.astHandler = astHandler;
         this.minerId = minerId;

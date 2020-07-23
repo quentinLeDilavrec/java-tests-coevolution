@@ -1,5 +1,5 @@
 package fr.quentin.coevolutionMiner.v2.ast;
 
-public interface ASTMiner {
+public interface ProjectMiner {
     public Project compute();
 }

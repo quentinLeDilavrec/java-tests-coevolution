@@ -10,7 +10,7 @@ import com.google.gson.JsonObject;
 
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
-import fr.quentin.coevolutionMiner.v2.ast.ASTHandler;
+import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import spark.Request;
@@ -20,11 +20,11 @@ import spark.Route;
 public class EvolutionRoute implements Route {
 
     private SourcesHandler sourcesHandler;
-    private ASTHandler astHandler;
+    private ProjectHandler astHandler;
     private EvolutionHandler evoHandler;
     private String minerId;
 
-    public EvolutionRoute(SourcesHandler sourcesHandler, ASTHandler astHandler, EvolutionHandler evoHandler,
+    public EvolutionRoute(SourcesHandler sourcesHandler, ProjectHandler astHandler, EvolutionHandler evoHandler,
             String minerId) {
         this.sourcesHandler = sourcesHandler;
         this.astHandler = astHandler;

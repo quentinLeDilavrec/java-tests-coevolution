@@ -30,8 +30,9 @@ import fr.quentin.impactMiner.Evolution;
 import fr.quentin.impactMiner.Position;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
-import fr.quentin.coevolutionMiner.v2.ast.ASTHandler;
+import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
+import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionsMiner;
@@ -44,20 +45,20 @@ import gr.uom.java.xmi.diff.CodeRange;
 public class RefactoringMiner implements EvolutionsMiner {
     Logger LOGGER = Logger.getLogger("ImpactRM commitHandler");
 
-    private ASTHandler astHandler;
+    private ProjectHandler astHandler;
     private SourcesHandler srcHandler;
     private Evolutions.Specifier spec;
 
     // TODO instanciate filters correctly and make use of them
     private List<Object> filters;
 
-    public RefactoringMiner(Evolutions.Specifier spec, SourcesHandler srcHandler, ASTHandler astHandler) {
+    public RefactoringMiner(Evolutions.Specifier spec, SourcesHandler srcHandler, ProjectHandler astHandler) {
         this.spec = spec;
         this.astHandler = astHandler;
         this.srcHandler = srcHandler;
     }
 
-    public RefactoringMiner(Evolutions.Specifier spec, SourcesHandler srcHandler, ASTHandler astHandler,
+    public RefactoringMiner(Evolutions.Specifier spec, SourcesHandler srcHandler, ProjectHandler astHandler,
             List<Object> filters) {
         this(spec, srcHandler, astHandler);
         this.filters = filters;
@@ -108,8 +109,8 @@ public class RefactoringMiner implements EvolutionsMiner {
         }
 
         for (Entry<ImmutablePair<String, String>, List<Refactoring>> entry : tmp.entrySet()) {
-            Project beforeAST = astHandler.handle(astHandler.buildSpec(spec.sources, entry.getKey().left), "Spoon");
-            Project afterAST = astHandler.handle(astHandler.buildSpec(spec.sources, entry.getKey().right), "Spoon");
+            Project beforeAST = astHandler.handle(astHandler.buildSpec(spec.sources, entry.getKey().left), SpoonMiner.class);
+            Project afterAST = astHandler.handle(astHandler.buildSpec(spec.sources, entry.getKey().right), SpoonMiner.class);
             for (Refactoring op : entry.getValue()) {
                 result.addEvolution(op, beforeAST, afterAST);
             }

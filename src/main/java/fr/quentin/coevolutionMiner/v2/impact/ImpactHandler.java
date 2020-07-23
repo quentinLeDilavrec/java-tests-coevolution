@@ -11,18 +11,18 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import fr.quentin.coevolutionMiner.v2.Data;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
-import fr.quentin.coevolutionMiner.v2.ast.ASTHandler;
+import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 
 public class ImpactHandler implements AutoCloseable {
 
     private Neo4jImpactsStorage neo4jStore;
-    private ASTHandler astHandler;
+    private ProjectHandler astHandler;
     private EvolutionHandler evoHandler;
 
     private Map<Impacts.Specifier, Data<Impacts>> memoizedImpacts = new ConcurrentHashMap<>();
     private SourcesHandler sourcesHandler;
 
-    public ImpactHandler(SourcesHandler sourcesHandler, ASTHandler astHandler, EvolutionHandler evoHandler) {
+    public ImpactHandler(SourcesHandler sourcesHandler, ProjectHandler astHandler, EvolutionHandler evoHandler) {
         this.neo4jStore = new Neo4jImpactsStorage();
         this.astHandler = astHandler;
         this.evoHandler = evoHandler;

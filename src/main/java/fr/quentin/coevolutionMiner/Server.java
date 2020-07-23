@@ -17,8 +17,8 @@ import fr.quentin.coevolutionMiner.v1.differs.GumtreeSpoonHandler;
 import fr.quentin.coevolutionMiner.v1.impacts.ImpactGumtreeSpoonHandler;
 import fr.quentin.coevolutionMiner.v1.impacts.ImpactRMinerHandler;
 import fr.quentin.coevolutionMiner.v1.parsers.SpoonHandler;
-import fr.quentin.coevolutionMiner.v2.ast.ASTHandler;
-import fr.quentin.coevolutionMiner.v2.ast.ASTRoute;
+import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
+import fr.quentin.coevolutionMiner.v2.ast.ProjectRoute;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionRoute;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
@@ -128,9 +128,9 @@ public class Server {
 				put("/JGit", srcR);
 			});
 
-			ASTHandler astH = new ASTHandler(srcH);
+			ProjectHandler astH = new ProjectHandler(srcH);
 			path("/ast", () -> {
-				ASTRoute astR = new ASTRoute(srcH, astH, "Spoon");
+				ProjectRoute astR = new ProjectRoute(srcH, astH, "Spoon");
 				put("/Spoon", astR);
 				put("/default", astR);
 			});

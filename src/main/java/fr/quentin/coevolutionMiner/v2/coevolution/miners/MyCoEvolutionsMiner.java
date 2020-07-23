@@ -44,8 +44,9 @@ import spoon.reflect.visitor.Filter;
 import fr.quentin.impactMiner.Position;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
-import fr.quentin.coevolutionMiner.v2.ast.ASTHandler;
+import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
+import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
 
 // CAUTION same limitation as MyImpactsMiner
 public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
@@ -82,7 +83,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
     }
 
-    private ASTHandler astHandler;
+    private ProjectHandler astHandler;
     private EvolutionHandler evoHandler;
     private CoEvolutions.Specifier spec;
 
@@ -92,7 +93,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
     private ImpactHandler impactHandler;
 
-    public MyCoEvolutionsMiner(CoEvolutions.Specifier spec, SourcesHandler srcHandler, ASTHandler astHandler,
+    public MyCoEvolutionsMiner(CoEvolutions.Specifier spec, SourcesHandler srcHandler, ProjectHandler astHandler,
             EvolutionHandler evoHandler, ImpactHandler impactHandler, CoEvolutionsStorage store) {
         this.spec = spec;
         this.srcHandler = srcHandler;
@@ -164,7 +165,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             Evolutions.Specifier currEvoSpec = EvolutionHandler.buildSpec(sourcesProvider.spec, currentCommit.getId(),
                     nextCommit.getId());
             Project.Specifier before_ast_id = astHandler.buildSpec(spec.evoSpec.sources, currentCommit.getId());
-            Project before_ast = astHandler.handle(before_ast_id, "Spoon");
+            Project before_ast = astHandler.handle(before_ast_id, SpoonMiner.class);
             if (before_ast.getAst().compilerException != null) {
                 logger.info("Before Code Don't Build");
                 continue;
@@ -175,7 +176,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 continue;
             }
             Project.Specifier after_ast_id = astHandler.buildSpec(spec.evoSpec.sources, nextCommit.getId());
-            Project after_ast = astHandler.handle(after_ast_id, "Spoon");
+            Project after_ast = astHandler.handle(after_ast_id, SpoonMiner.class);
             if (after_ast.getAst().compilerException != null) {
                 logger.info("Code after evolutions Don't Build");
                 continue;

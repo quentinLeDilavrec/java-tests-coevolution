@@ -16,15 +16,17 @@ import com.google.gson.GsonBuilder;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
-import fr.quentin.coevolutionMiner.v2.ast.ASTHandler;
+import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
+import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts.Impact.DescRange;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactsMiner;
+import fr.quentin.coevolutionMiner.v2.utils.DbUtils;
 import fr.quentin.coevolutionMiner.v2.utils.Utils;
 import fr.quentin.impactMiner.ImpactAnalysis;
 import fr.quentin.impactMiner.ImpactChain;
@@ -41,11 +43,11 @@ import spoon.reflect.declaration.CtExecutable;
 public class MyImpactsMiner implements ImpactsMiner {
     Logger logger = Logger.getLogger(MyImpactsMiner.class.getName());
 
-    private ASTHandler astHandler;
+    private ProjectHandler astHandler;
     private EvolutionHandler evoHandler;
     private Impacts.Specifier spec;
 
-    public MyImpactsMiner(Impacts.Specifier spec, ASTHandler astHandler, EvolutionHandler evoHandler) {
+    public MyImpactsMiner(Impacts.Specifier spec, ProjectHandler astHandler, EvolutionHandler evoHandler) {
         this.spec = spec;
         this.astHandler = astHandler;
         this.evoHandler = evoHandler;
@@ -54,7 +56,7 @@ public class MyImpactsMiner implements ImpactsMiner {
     @Override
     public Impacts compute() {
         boolean isOnBefore = spec.astSpec.commitId.equals(spec.evoSpec.commitIdBefore);
-        Project project = astHandler.handle(spec.astSpec, "Spoon");
+        Project project = astHandler.handle(spec.astSpec, SpoonMiner.class);
         Project.AST ast = project.getAst();
         Evolutions evo = null;
         if (spec.evoSpec != null) {
@@ -183,7 +185,8 @@ public class MyImpactsMiner implements ImpactsMiner {
         @Override
         protected Map<String, Object> makeRange(DescRange descRange) {
             Map<String, Object> o = super.makeRange(descRange);
-            Object original = ast.getAst().getOriginal(descRange.getTarget());
+            Range target = descRange.getTarget();
+            Object original = ast.getAst().getOriginal(target);
             if (original != null) {
                 o.put("type", original.getClass().getSimpleName());
                 if (original instanceof CtExecutable) {

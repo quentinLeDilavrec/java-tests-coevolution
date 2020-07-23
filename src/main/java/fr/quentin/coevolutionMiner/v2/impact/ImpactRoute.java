@@ -17,17 +17,17 @@ import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
-import fr.quentin.coevolutionMiner.v2.ast.ASTHandler;
+import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 
 public class ImpactRoute implements Route {
 
     private ImpactHandler impactsHandler;
     private EvolutionHandler evoHandler;
-    private ASTHandler astHandler;
+    private ProjectHandler astHandler;
     private SourcesHandler sourcesHandler;
     private String minerId;
 
-    public ImpactRoute(SourcesHandler srcH, ASTHandler astH, EvolutionHandler evoH, ImpactHandler impactH,
+    public ImpactRoute(SourcesHandler srcH, ProjectHandler astH, EvolutionHandler evoH, ImpactHandler impactH,
             String minerId) {
         this.sourcesHandler = srcH;
         this.astHandler = astH;

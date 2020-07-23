@@ -19,6 +19,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts.Impact.DescRange;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
+import fr.quentin.coevolutionMiner.v2.utils.DbUtils;
 import fr.quentin.impactMiner.Position;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST;
@@ -64,19 +65,8 @@ public abstract class Impacts {
         res.put("tool", spec.miner);
         for (Impact impact : impacts.values()) {
 
-            Map<String, Object> content = makeContent(ast.getAst().rootDir, impact);
-            content.put("type", impact.getType());
-            List<Object> causes = new ArrayList<>();
-            for (Impact.DescRange aaa : impact.getCauses()) {
-                Map<String, Object> o = makeRange(aaa);
-                causes.add(o);
-            }
-            List<Object> effects = new ArrayList<>();
-            for (Impact.DescRange aaa : impact.getEffects()) {
-                Map<String, Object> o = makeRange(aaa);
-                effects.add(o);
-            }
-            json.add(makeImpact(content, causes, effects));
+            Map<String, Object> map = impact.toMap(this);
+            json.add(map);
         }
         return res;
     }
@@ -90,27 +80,26 @@ public abstract class Impacts {
         res.put("impacts", serializedImpacts);
         res.put("tool", spec.miner);
         for (Impact impact : impacts.values()) {
-            Map<String, Object> content = makeContent(ast.getAst().rootDir, impact);
+            Map<String, Object> content = makeImpactContent(ast.getAst().rootDir, impact);
             content.put("type", impact.getType());
             List<Object> causes = new ArrayList<>();
             for (Impact.DescRange aaa : impact.getCauses()) {
-                causes.add(compressRefToRange(aaa,serializedEvolutionsMap,serializedRanges));
+                causes.add(compressRefToRange(aaa, serializedEvolutionsMap, serializedRanges));
             }
             List<Object> effects = new ArrayList<>();
             for (Impact.DescRange aaa : impact.getEffects()) {
-                effects.add(compressRefToRange(aaa,serializedEvolutionsMap,serializedRanges));
+                effects.add(compressRefToRange(aaa, serializedEvolutionsMap, serializedRanges));
             }
             serializedImpacts.add(makeImpact(content, causes, effects));
         }
         return res;
     }
 
-    private Integer compressRefToRange(Impact.DescRange aaa, Map<Range, Integer> map,
-            List<Map<String, Object>> list) {
+    private Integer compressRefToRange(Impact.DescRange aaa, Map<Range, Integer> map, List<Map<String, Object>> list) {
         Integer r = map.get(aaa.getTarget());
         if (r == null) {
             r = list.size();
-            map.put(aaa.getTarget(),r);
+            map.put(aaa.getTarget(), r);
             Map<String, Object> o = makeRange(aaa);
             list.add(o);
         }
@@ -118,19 +107,10 @@ public abstract class Impacts {
     }
 
     protected Map<String, Object> makeRange(DescRange descRange) {
-        Range range = descRange.getTarget();
-        Map<String, Object> o = new HashMap<>();
-        FileSnapshot file = range.getFile();
-        o.put("repository", file.getCommit().getRepository().getUrl());
-        o.put("commitId", file.getCommit().getId());
-        o.put("file", file.getPath());
-        o.put("start", range.getStart());
-        o.put("end", range.getEnd());
-        o.put("description", descRange.getDescription());
-        return o;
+        return descRange.toMap();
     }
 
-    private Map<String, Object> makeContent(Path rootDir, Impact impact) {
+    private Map<String, Object> makeImpactContent(Path rootDir, Impact impact) {
         Map<String, Object> content = new HashMap<>();
         int i_cause = 0;
         for (Impact.DescRange cause : impact.idCauses) {
@@ -359,6 +339,12 @@ public abstract class Impacts {
                     return false;
                 return true;
             }
+
+            private Map<String, Object> toMap() {
+                Map<String, Object> o = getTarget().toMap();
+                o.put("description", getDescription());
+                return o;
+            }
         }
 
         @Override
@@ -404,6 +390,23 @@ public abstract class Impacts {
         private Impacts getEnclosingInstance() {
             return Impacts.this;
         }
+
+		public Map<String, Object> toMap(Impacts impacts) {
+		    Map<String, Object> content = impacts.makeImpactContent(impacts.ast.getAst().rootDir, this);
+		    content.put("type", getType());
+		    List<Object> causes = new ArrayList<>();
+		    for (DescRange aaa : getCauses()) {
+		        Map<String, Object> o = impacts.makeRange(aaa);
+		        causes.add(o);
+		    }
+		    List<Object> effects = new ArrayList<>();
+		    for (DescRange aaa : getEffects()) {
+		        Map<String, Object> o = impacts.makeRange(aaa);
+		        effects.add(o);
+		    }
+		    Map<String, Object> map = impacts.makeImpact(content, causes, effects);
+		    return map;
+		}
     }
 
 }

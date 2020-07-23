@@ -18,18 +18,18 @@ import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
-import fr.quentin.coevolutionMiner.v2.ast.ASTHandler;
+import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 
 public class CoEvolutionRoute implements Route {
 
     private CoEvolutionHandler coevoHandler;
     private ImpactHandler impactsHandler;
     private EvolutionHandler evoHandler;
-    private ASTHandler astHandler;
+    private ProjectHandler astHandler;
     private SourcesHandler sourcesHandler;
     private String minerId;
 
-    public CoEvolutionRoute(SourcesHandler srcH, ASTHandler astH, EvolutionHandler evoH, ImpactHandler impactH,
+    public CoEvolutionRoute(SourcesHandler srcH, ProjectHandler astH, EvolutionHandler evoH, ImpactHandler impactH,
             CoEvolutionHandler coevoH, String minerId) {
         this.sourcesHandler = srcH;
         this.astHandler = astH;

@@ -17,32 +17,31 @@ import fr.quentin.coevolutionMiner.v2.utils.Utils;
 import spoon.MavenLauncher;
 import spoon.reflect.declaration.CtElement;
 
-public class Project {
+public class Project<T> {
     public final Specifier spec;
     public final Commit commit;
 
-    public Project(Specifier spec, Set<Project> modules, Commit commit, Path rootDir, MavenLauncher launcher,
-            Exception compilerException) {
+    public Project(Specifier spec, Set<Project<?>> modules, Commit commit, Path rootDir) {
         this.spec = spec;
         this.commit = commit;
-        this.ast = new AST(rootDir, launcher, compilerException);
+        this.ast = null;
         this.modules = modules;
     }
 
     public static class Specifier {
         public final Sources.Specifier sources;
-        public final String miner;
+        public final Class<? extends ProjectMiner> miner;
         public final String commitId;
-        public final String relPath;
+        public final Path relPath;
 
-        public Specifier(Sources.Specifier sources, String commitId, String miner) {
+        public Specifier(Sources.Specifier sources, String commitId, Class<? extends ProjectMiner> miner) {
             this.sources = sources;
-            this.relPath = "";
+            this.relPath = Paths.get("");
             this.commitId = commitId;
             this.miner = miner;
         }
 
-        public Specifier(Sources.Specifier sources, String relPath, String commitId, String miner) {
+        public Specifier(Sources.Specifier sources, Path relPath, String commitId, Class<? extends ProjectMiner> miner) {
             this.sources = sources;
             this.relPath = relPath;
             this.commitId = commitId;
@@ -88,15 +87,15 @@ public class Project {
         }
     }
 
-    private AST ast;
+    protected AST ast;
 
     public AST getAst() {
         return ast;
     }
 
-    private final Set<Project> modules;
+    private final Set<Project<?>> modules;
 
-    public Collection<Project> getModules() {
+    public Collection<Project<?>> getModules() {
         return Collections.unmodifiableSet(modules);
     }
 
@@ -115,12 +114,16 @@ public class Project {
         } else {
             for (Project project : modules) {
                 Range tmp = project.getRangeAux(path, start, end);
-                if(tmp!=null){
+                if (tmp != null) {
                     return tmp;
                 }
             }
         }
         return null;
+    }
+
+    protected AST makeAST(Path rootDir, MavenLauncher launcher, Exception compilerException){
+        return new AST(rootDir,launcher,compilerException);
     }
 
     public class AST {
@@ -134,13 +137,13 @@ public class Project {
             this.compilerException = compilerException;
         }
 
-        private Map<FileSnapshot.Range, Object> originals = new HashMap<>();
+        private Map<FileSnapshot.Range, T> originals = new HashMap<>();
 
-        public Object getOriginal(FileSnapshot.Range range) {
+        public T getOriginal(FileSnapshot.Range range) {
             return originals.get(range);
         }
 
-        Object putOriginal(FileSnapshot.Range range, Object original) {
+        Object putOriginal(FileSnapshot.Range range, T original) {
             return originals.put(range, original);
         }
 
@@ -158,7 +161,7 @@ public class Project {
             return s.getRange(start, end);
         }
 
-        public FileSnapshot.Range getRange(String path, Integer start, Integer end, Object original) {
+        public FileSnapshot.Range getRange(String path, Integer start, Integer end, T original) {
             FileSnapshot.Range range = getRange(path, start, end);
             Object old = putOriginal(range, original);
             if (old != null && old != original) {
@@ -264,6 +267,17 @@ public class Project {
 
                 private FileSnapshot getEnclosingInstance() {
                     return FileSnapshot.this;
+                }
+
+                public Map<String, Object> toMap() {
+                    Map<String, Object> r = new HashMap<>();
+                    FileSnapshot file = getFile();
+                    r.put("repository", file.getCommit().getRepository().getUrl());
+                    r.put("commitId", file.getCommit().getId());
+                    r.put("file", file.getPath());
+                    r.put("start", getStart());
+                    r.put("end", getEnd());
+                    return r;
                 }
             }
 

@@ -18,7 +18,7 @@ import org.eclipse.jdt.core.compiler.CategorizedProblem;
 
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
-import fr.quentin.coevolutionMiner.v2.ast.ASTMiner;
+import fr.quentin.coevolutionMiner.v2.ast.ProjectMiner;
 import fr.quentin.coevolutionMiner.v2.ast.Project.Specifier;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
@@ -29,6 +29,7 @@ import spoon.Launcher;
 import spoon.MavenLauncher;
 import spoon.SpoonException;
 import spoon.reflect.CtModel;
+import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtExecutable;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.visitor.Filter;
@@ -40,7 +41,15 @@ import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class SpoonMiner implements ASTMiner {
+public class SpoonMiner implements ProjectMiner {
+    public class ProjectSpoon extends Project<CtElement> {
+        private ProjectSpoon(Specifier spec, Set<Project<?>> modules, Commit commit, Path rootDir,
+                MavenLauncher launcher, Exception compilerException) {
+            super(spec, modules, commit, rootDir);
+            this.ast = makeAST(rootDir, launcher, compilerException);
+        }
+    }
+
     private static Logger logger = Logger.getLogger(SpoonMiner.class.getName());
 
     private Specifier spec;
@@ -51,7 +60,7 @@ public class SpoonMiner implements ASTMiner {
         this.srcHandler = srcHandler;
     }
 
-    public Project compute() {
+    public ProjectSpoon compute() {
         Sources src = srcHandler.handle(spec.sources, "JGit");
         try (SourcesHelper helper = src.open();) {
             Path root = helper.materialize(spec.commitId);
@@ -68,8 +77,8 @@ public class SpoonMiner implements ASTMiner {
         }
     }
 
-    private Project extracted(Sources src, Path path, Path root, CommandLineException compilerException, SpoonPom spoonPom)
-            throws IOException, InterruptedException {
+    private ProjectSpoon extracted(Sources src, Path path, Path root, CommandLineException compilerException,
+            SpoonPom spoonPom) throws IOException, InterruptedException {
         MavenLauncher launcher = spoonPom != null ? new MavenLauncher(spoonPom, MavenLauncher.SOURCE_TYPE.ALL_SOURCE)
                 : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
         // FilteringFolder resources = new FilteringFolder();
@@ -92,17 +101,19 @@ public class SpoonMiner implements ASTMiner {
             throw new RuntimeException(e);
         }
         // TODO compute stats
-        Set<Project> modules = new HashSet<>();
+        Set<Project<?>> modules = new HashSet<>();
         Commit commit = src.getCommit(spec.commitId);
-        String efwrsgw = root.relativize(path).toString();
-        Project r = new Project(new Specifier(spec.sources,efwrsgw,spec.commitId,spec.miner), modules, commit, path, launcher, compilerException);
+        Path efwrsgw = root.relativize(path);
+        ProjectSpoon r = new ProjectSpoon(new Specifier(spec.sources, efwrsgw, spec.commitId, spec.miner), modules,
+                commit, path, launcher, compilerException);
         computeCounts(launcher, r);
         computeLOC(path, r);
 
         List<SpoonPom> x = launcher.getPomFile().getModules();
         System.out.println(x);
         for (SpoonPom qq : x) {
-            modules.add(extracted(src, Paths.get(qq.getFileSystemParent().getAbsolutePath()),root, compilerException, qq));
+            modules.add(
+                    extracted(src, Paths.get(qq.getFileSystemParent().getAbsolutePath()), root, compilerException, qq));
         }
 
         return r;
@@ -113,7 +124,7 @@ public class SpoonMiner implements ASTMiner {
      * @param launcher model must have been built
      * @param proj
      */
-    public static void computeCounts(Launcher launcher, Project proj) {
+    public static void computeCounts(Launcher launcher, Project<CtElement> proj) {
         fr.quentin.coevolutionMiner.v2.ast.Stats g = proj.getAst().getGlobalStats();
         CtModel model = launcher.getModel();
         List<CtType> classes = model.getElements(new Filter<CtType>() {
@@ -136,13 +147,13 @@ public class SpoonMiner implements ASTMiner {
 
     /**
      * 
-     * @param path   code must be present as files (no git checkout is done by this
-     *               method)
+     * @param path code must be present as files (no git checkout is done by this
+     *             method)
      * @param proj
      * @throws IOException
      * @throws InterruptedException
      */
-    public static void computeLOC(Path path, Project proj) throws IOException, InterruptedException {
+    public static void computeLOC(Path path, Project<?> proj) throws IOException, InterruptedException {
         ProcessBuilder processBuilder = new ProcessBuilder();
         String[] command = new String[] { "cloc", path.toAbsolutePath().toString(), "--md", "--hide-rate", "--quiet" };
         processBuilder.command(command);

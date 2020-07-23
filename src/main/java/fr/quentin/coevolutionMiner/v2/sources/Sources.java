@@ -198,6 +198,14 @@ public abstract class Sources {
                 return false;
             return true;
         }
+
+        public Map<String,Object> toMap() {
+            Map<String,Object> r = new HashMap<>();
+            // repo:e.content.repository, sha1:e.content.commitIdBefore
+            r.put("repository",getRepository().getUrl());
+            r.put("commitId",getId());
+            return r;
+        }
     }
 
     public abstract Set<Commit> getCommitsBetween(String commitIdBefore, String commitIdAfter) throws Exception;

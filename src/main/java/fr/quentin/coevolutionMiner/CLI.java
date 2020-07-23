@@ -51,7 +51,8 @@ import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.utils.ThreadPrintStream;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
-import fr.quentin.coevolutionMiner.v2.ast.ASTHandler;
+import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
+import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
@@ -133,7 +134,7 @@ public class CLI {
         ThreadPrintStream.replaceSystemErr();
         ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(pool_size);
         SourcesHandler srcH = new SourcesHandler();
-        ASTHandler astH = new ASTHandler(srcH);
+        ProjectHandler astH = new ProjectHandler(srcH);
         EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
         ImpactHandler impactH = new ImpactHandler(srcH, astH, evoH);
         CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH);
@@ -158,7 +159,7 @@ public class CLI {
                         String commitIdBefore = null;
                         int commit_index = 2;
                         int impact_computed = 0;
-                        Project project = null;
+                        Project<?> project = null;
                         for (; commit_index < releases.size() - 1; commit_index++) {
                             commitIdAfter = releases.get(commit_index);
                             commitIdBefore = releases.get(commit_index + 1);
@@ -168,9 +169,9 @@ public class CLI {
                                 // evos = spoon compile + count tests/methods/class
                                 Sources src = srcH.handle(srcSpec, "JGit");
                                 src.getCommitsBetween(commitIdBefore, commitIdAfter);
-                                project = astH.handle(astH.buildSpec(srcSpec, commitIdBefore), "Spoon");
+                                project = astH.handle(astH.buildSpec(srcSpec, commitIdBefore), SpoonMiner.class);
                                 printThings(releases, commitIdBefore, project);
-                                for (Project x : project.getModules()) {
+                                for (Project<?> x : project.getModules()) {
                                     printThings(releases, commitIdBefore, x);
                                 }
                             } catch (Exception e) {
@@ -250,7 +251,7 @@ public class CLI {
     private static void batch(Stream<String> lines, int pool_size, int max_commits_impacts) {
         ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(pool_size);
         SourcesHandler srcH = new SourcesHandler();
-        ASTHandler astH = new ASTHandler(srcH);
+        ProjectHandler astH = new ProjectHandler(srcH);
         EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
         ImpactHandler impactH = new ImpactHandler(srcH, astH, evoH);
         CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH);

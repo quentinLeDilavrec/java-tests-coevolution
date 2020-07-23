@@ -12,19 +12,19 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import fr.quentin.coevolutionMiner.v2.Data;
-import fr.quentin.coevolutionMiner.v2.ast.ASTHandler;
+import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 
 public class CoEvolutionHandler implements AutoCloseable {
 
     private Neo4jCoEvolutionsStorage neo4jStore;
-    private ASTHandler astHandler;
+    private ProjectHandler astHandler;
     private EvolutionHandler evoHandler;
 
     private Map<CoEvolutions.Specifier, Data<CoEvolutions>> memoizedImpacts = new ConcurrentHashMap<>();
     private SourcesHandler sourcesHandler;
     private ImpactHandler impactHandler;
 
-    public CoEvolutionHandler(SourcesHandler sourcesHandler, ASTHandler astHandler, EvolutionHandler evoHandler, ImpactHandler impactHandler) {
+    public CoEvolutionHandler(SourcesHandler sourcesHandler, ProjectHandler astHandler, EvolutionHandler evoHandler, ImpactHandler impactHandler) {
         this.neo4jStore = new Neo4jCoEvolutionsStorage();
         this.astHandler = astHandler;
         this.evoHandler = evoHandler;

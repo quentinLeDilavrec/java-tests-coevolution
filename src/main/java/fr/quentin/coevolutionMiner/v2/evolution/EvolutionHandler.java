@@ -13,7 +13,7 @@ import org.refactoringminer.api.Refactoring;
 
 import fr.quentin.impactMiner.Evolution;
 import fr.quentin.coevolutionMiner.v2.Data;
-import fr.quentin.coevolutionMiner.v2.ast.ASTHandler;
+import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
@@ -24,12 +24,12 @@ import fr.quentin.coevolutionMiner.v2.impact.ImpactsStorage;
 public class EvolutionHandler implements AutoCloseable {
 
 	private Neo4jEvolutionsStorage neo4jStore;
-	private ASTHandler astHandler;
+	private ProjectHandler astHandler;
 	private SourcesHandler srcHandler;
 
 	private Map<Evolutions.Specifier, Data<Evolutions>> memoizedEvolutions = new ConcurrentHashMap<>();
 
-	public EvolutionHandler(SourcesHandler srcHandler, ASTHandler astHandler) {
+	public EvolutionHandler(SourcesHandler srcHandler, ProjectHandler astHandler) {
 		this.neo4jStore = new Neo4jEvolutionsStorage();
 		this.srcHandler = srcHandler;
 		this.astHandler = astHandler;
