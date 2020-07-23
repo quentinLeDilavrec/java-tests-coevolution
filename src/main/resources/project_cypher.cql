@@ -19,16 +19,53 @@ MERGE (project)-[rel:RELEASED_FROM {
 }]->(commit)
 ON MATCH SET 
     rel.path = e.content.path,
-    rel.srcs = e.content.srcs
+    rel.srcs = e.content.srcs,
+	rel.loC = e.stats.loC,
+	rel.javaLoC = e.stats.javaLoC,
+	rel.testCoveredLoC = e.stats.testCoveredLoC,
+	rel.compile = e.stats.compile,
+	rel.testCompile = e.stats.testCompile,
+	rel.testSuite = e.stats.testSuite,
+	rel.classes = e.stats.classes,
+	rel.executables = e.stats.executables,
+	rel.tests = e.stats.tests
+ON CREATE SET 
+    rel.path = e.content.path,
+    rel.srcs = e.content.srcs,
+	rel.loC = e.stats.loC,
+	rel.javaLoC = e.stats.javaLoC,
+	rel.testCoveredLoC = e.stats.testCoveredLoC,
+	rel.compile = e.stats.compile,
+	rel.testCompile = e.stats.testCompile,
+	rel.testSuite = e.stats.testSuite,
+	rel.classes = e.stats.classes,
+	rel.executables = e.stats.executables,
+	rel.tests = e.stats.tests
 
+MERGE (parent:Project {
+		groupId: e.parent.groupId,
+		artifactId: e.parent.artifactId
+	})
+MERGE (commit)-[:PARENT {
+	groupId:e.content.groupId,// relative to project not dependency
+	artifactId:e.content.artifactId,// relative to project not dependency
+	version: e.parent.version,
+	id: e.parent.id,
+}]->(parent)
 FOREACH (l IN e.dependencies |
-	MERGE (snap:FileSnapshot {path:l.filePath, repo:e.content.repository, commitId:e.content.commitIdBefore})
-	MERGE (snap)-[:IS_SNAPSHOT_IN]->(commit)
-	MERGE (r:Range {range:[toInteger(l.start),toInteger(l.end)], start:toInteger(l.start), end:toInteger(l.end), path:l.filePath, repo:e.content.repository, commitId:e.content.commitIdBefore})
-	ON MATCH SET r.type = l.type
-	ON CREATE SET r.type = l.type
-	MERGE (r)-[:IS_RANGE_IN]->(snap)
-	MERGE (desc:Kind {desc:l.description})
-	MERGE (evo)-[:BEFORE {desc:l.description}]->(r)
-	MERGE (r)-[:DESC]->(desc)
+	MERGE (dependency:Project {
+    		groupId: l.groupId,
+    		artifactId: l.artifactId
+		})
+	MERGE (commit)-[:DEPENDENCY {
+		groupId:e.content.groupId,// relative to project not dependency
+		artifactId:e.content.artifactId,// relative to project not dependency
+		version: l.version,
+		scope: l.scope,
+		type: l.type,
+		classifier: l.classifier,
+		managementKey: l.managementKey,
+		optional: l.optional,
+		exclusions: l.exclusions
+	}]->(dependency)
 )
