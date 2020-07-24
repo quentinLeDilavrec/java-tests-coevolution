@@ -78,7 +78,7 @@ public class SpoonMiner implements ProjectMiner {
     }
 
     private ProjectSpoon extracted(Sources src, Path path, Path root, SpoonPom spoonPom)
-            throws IOException, InterruptedException {
+            throws IOException, InterruptedException, Exception {
         MavenLauncher launcher = spoonPom != null ? new MavenLauncher(spoonPom, MavenLauncher.SOURCE_TYPE.ALL_SOURCE)
                 : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
         // FilteringFolder resources = new FilteringFolder();
