@@ -254,6 +254,33 @@ public class SourcesHelper implements AutoCloseable {
 		request.setBaseDirectory(path.toFile());
 		request.setGoals(Arrays.asList("compile", "clean"));
 		request.setBatchMode(true);
+		request.setReactorFailureBehavior(InvocationRequest.ReactorFailureBehavior.FailAtEnd);
+		// request.setErrorHandler(new PrintStreamHandler(System.err, false));
+		// request.setOutputHandler(new PrintStreamHandler(System.out, false));
+		request.setTimeoutInSeconds(60*10);
+		request.setShowErrors(true);
+		// request.setThreads("3");
+		Invoker invoker = new DefaultInvoker();
+		// invoker.setOutputHandler(new PrintStreamHandler(System.out, false));
+		// invoker.setErrorHandler(new PrintStreamHandler(System.err, false));
+		// invoker.getLogger().setThreshold(4);
+		invoker.setMavenHome(Paths.get("/usr").toFile());
+		try {
+			return invoker.execute(request);
+		} catch (MavenInvocationException e) {
+			throw new Exception("Error while compiling project with maven", e);
+		}
+	}
+
+
+	public static InvocationResult prepare(Path path, String project) throws Exception {
+		InvocationRequest request = new DefaultInvocationRequest();
+		request.setBaseDirectory(path.toFile());
+		request.setGoals(Arrays.asList("compile", "clean"));
+		request.setAlsoMake(true);
+		request.setProjects(Arrays.asList("project"));
+		request.setBatchMode(true);
+		request.setReactorFailureBehavior(InvocationRequest.ReactorFailureBehavior.FailAtEnd);
 		// request.setErrorHandler(new PrintStreamHandler(System.err, false));
 		// request.setOutputHandler(new PrintStreamHandler(System.out, false));
 		request.setTimeoutInSeconds(60*10);

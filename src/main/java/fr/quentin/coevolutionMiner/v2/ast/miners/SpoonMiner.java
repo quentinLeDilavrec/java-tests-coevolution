@@ -64,12 +64,12 @@ public class SpoonMiner implements ProjectMiner {
         Sources src = srcHandler.handle(spec.sources, "JGit");
         try (SourcesHelper helper = src.open();) {
             Path root = helper.materialize(spec.commitId);
-            // Compile with maven to get deps
-            CommandLineException compilerException = SourcesHelper.prepare(root).getExecutionException();
-            if (compilerException != null) {
-                compilerException.printStackTrace();
+            // Compile with maven
+            CommandLineException compilerException0 = SourcesHelper.prepare(root).getExecutionException();
+            if (compilerException0 != null) {
+                compilerException0.printStackTrace();
             }
-            return extracted(src, root, root, compilerException, null);
+            return extracted(src, root, root, null);
         } catch (SpoonException e) {
             throw new RuntimeException(e);
         } catch (Exception e) {
@@ -77,8 +77,8 @@ public class SpoonMiner implements ProjectMiner {
         }
     }
 
-    private ProjectSpoon extracted(Sources src, Path path, Path root, CommandLineException compilerException,
-            SpoonPom spoonPom) throws IOException, InterruptedException {
+    private ProjectSpoon extracted(Sources src, Path path, Path root, SpoonPom spoonPom)
+            throws IOException, InterruptedException {
         MavenLauncher launcher = spoonPom != null ? new MavenLauncher(spoonPom, MavenLauncher.SOURCE_TYPE.ALL_SOURCE)
                 : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
         // FilteringFolder resources = new FilteringFolder();
@@ -91,6 +91,15 @@ public class SpoonMiner implements ProjectMiner {
         launcher.getFactory().getEnvironment().setLevel("INFO");
         // List<String> modules = launcher.getPomFile().getModel().getModules();
         // System.out.println(modules.get(0));
+
+
+        InvocationResult prepared = SourcesHelper.prepare(path,".");
+        
+        CommandLineException compilerException = prepared.getExecutionException();
+        if (compilerException != null) {
+            compilerException.printStackTrace();
+        }
+
         try {
             launcher.buildModel();
         } catch (Exception e) {
@@ -108,12 +117,12 @@ public class SpoonMiner implements ProjectMiner {
                 commit, path, launcher, compilerException);
         computeCounts(launcher, r);
         computeLOC(path, r);
+        r.getAst().getGlobalStats().compile=prepared.getExitCode();
 
         List<SpoonPom> x = launcher.getPomFile().getModules();
         System.out.println(x);
         for (SpoonPom qq : x) {
-            modules.add(
-                    extracted(src, Paths.get(qq.getFileSystemParent().getAbsolutePath()), root, compilerException, qq));
+            modules.add(extracted(src, Paths.get(qq.getFileSystemParent().getAbsolutePath()), root, qq));
         }
 
         return r;
