@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import fr.quentin.coevolutionMiner.v2.Data;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
+import fr.quentin.coevolutionMiner.v2.ast.storages.Neo4jProjectStorage;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 
@@ -15,8 +16,10 @@ public class ProjectHandler {
 	private SourcesHandler srcHandler;
 
 	private Map<Project.Specifier, Data<Project<?>>> memoizedAST = new ConcurrentHashMap<>();
+	private Neo4jProjectStorage neo4jStore;
 
 	public ProjectHandler(SourcesHandler srcHandler) {
+        this.neo4jStore = new Neo4jProjectStorage();
 		this.srcHandler = srcHandler;
 	}
 
@@ -32,6 +35,8 @@ public class ProjectHandler {
 		SpoonMiner
 	}
 
+	public static String storeName = "Neo4j";
+
 	public Project<?> handle(Project.Specifier spec, Class<? extends ProjectMiner> miner) {
 		Project<?> res = null;
 		memoizedAST.putIfAbsent(spec, new Data<>());
@@ -42,6 +47,19 @@ public class ProjectHandler {
 			if (res != null) {
 				return res;
 			}
+            ProjectStorage db = null;
+            switch (storeName) {
+                case "Neo4j":
+                    res = neo4jStore.get(spec);
+                    db = neo4jStore;
+                    break;
+                default:
+                    break;
+            }
+            if (res != null) {
+                tmp.set(res);
+                return res;
+            }
 			// CAUTION miners should mind about circular deps of data given by handlers
 			Miners z = Miners.valueOf(miner.getSimpleName());
 			switch (z) {
@@ -53,6 +71,9 @@ public class ProjectHandler {
 				default:
 					throw new RuntimeException(spec.miner + " is not a registered AST miner.");
 			}
+            if (db != null) {
+                db.put(spec, res);
+            }
 			tmp.set(res);
 			return res;
 		} catch (Exception e) {

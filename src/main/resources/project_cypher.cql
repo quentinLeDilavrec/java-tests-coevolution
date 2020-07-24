@@ -8,16 +8,16 @@ MERGE (commit)-[:IS_COMMIT_OF]->(repo)
 MERGE (commit)<-[:CONTAIN_COMMIT]-(repo)
 
 MERGE (project:Project {
-    groupId:e.content.groupId,
-    artifactId:e.content.artifactId
+    groupId:coalesce(e.content.groupId, ""),
+    artifactId:coalesce(e.content.artifactId, "")
 })
 
 MERGE (project)-[rel:RELEASED_FROM {
-    version:e.version,
-    packaging:e.packaging,
-    id:e.id
+    version: coalesce(e.version, ""),
+    packaging:coalesce(e.packaging, ""),
+    id:coalesce(e.id, "")
 }]->(commit)
-ON MATCH SET 
+ON CREATE SET 
     rel.path = e.content.path,
     rel.srcs = e.content.srcs,
 	rel.loC = e.stats.loC,
@@ -29,7 +29,7 @@ ON MATCH SET
 	rel.classes = e.stats.classes,
 	rel.executables = e.stats.executables,
 	rel.tests = e.stats.tests
-ON CREATE SET 
+ON MATCH SET 
     rel.path = e.content.path,
     rel.srcs = e.content.srcs,
 	rel.loC = e.stats.loC,
@@ -43,29 +43,45 @@ ON CREATE SET
 	rel.tests = e.stats.tests
 
 MERGE (parent:Project {
-		groupId: e.parent.groupId,
-		artifactId: e.parent.artifactId
+		groupId: coalesce(e.parent.groupId, ""),
+		artifactId: coalesce(e.parent.artifactId, "")
 	})
-MERGE (commit)-[:PARENT {
-	groupId:e.content.groupId,// relative to project not dependency
-	artifactId:e.content.artifactId,// relative to project not dependency
-	version: e.parent.version,
-	id: e.parent.id,
-}]->(parent)
+
+MERGE (commit)-[par:PARENT]->(parent)
+ON CREATE SET 
+	par.groupId=e.content.groupId,// relative to project not dependency
+	par.artifactId=e.content.artifactId,// relative to project not dependency
+	par.id= e.parent.id,
+	par.relativePath= e.parent.relativePath,
+    par.version = e.parent.version
+ON MATCH SET 
+	par.groupId=e.content.groupId,// relative to project not dependency
+	par.artifactId=e.content.artifactId,// relative to project not dependency
+	par.id= e.parent.id,
+	par.relativePath= e.parent.relativePath,
+    par.version = e.parent.version
 FOREACH (l IN e.dependencies |
 	MERGE (dependency:Project {
-    		groupId: l.groupId,
-    		artifactId: l.artifactId
+    		groupId: coalesce(l.groupId, ""),
+    		artifactId: coalesce(l.artifactId, "")
 		})
-	MERGE (commit)-[:DEPENDENCY {
-		groupId:e.content.groupId,// relative to project not dependency
-		artifactId:e.content.artifactId,// relative to project not dependency
-		version: l.version,
-		scope: l.scope,
-		type: l.type,
-		classifier: l.classifier,
-		managementKey: l.managementKey,
-		optional: l.optional,
-		exclusions: l.exclusions
+	MERGE (commit)-[dep:DEPENDENCY {
+		groupId:coalesce(e.content.groupId, ""),// relative to project not dependency
+		artifactId:coalesce(e.content.artifactId, ""),// relative to project not dependency
+		version: coalesce(l.version, "")
 	}]->(dependency)
+    ON CREATE SET
+		dep.scope= l.scope,
+		dep.type= l.type,
+		dep.classifier= l.classifier,
+		dep.managementKey= l.managementKey,
+		dep.optional= l.optional,
+		dep.exclusions= l.exclusions
+    ON MATCH SET
+		dep.scope= l.scope,
+		dep.type= l.type,
+		dep.classifier= l.classifier,
+		dep.managementKey= l.managementKey,
+		dep.optional= l.optional,
+		dep.exclusions= l.exclusions
 )

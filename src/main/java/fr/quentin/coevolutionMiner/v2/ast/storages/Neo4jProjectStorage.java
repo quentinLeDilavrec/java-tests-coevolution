@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
+import org.apache.maven.model.Parent;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
@@ -20,6 +21,7 @@ import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.TransactionWork;
+import org.neo4j.driver.exceptions.TransientException;
 
 import fr.quentin.coevolutionMiner.utils.MyProperties;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
@@ -43,7 +45,7 @@ public class Neo4jProjectStorage implements ProjectStorage {
             String done = session.writeTransaction(new TransactionWork<String>() {
                 @Override
                 public String execute(Transaction tx) {
-                    Result result = tx.run(getCypher(), parameters("json", tmp, "tool", value.spec.miner));
+                    Result result = tx.run(getCypher(), parameters("json", tmp, "tool", value.spec.miner.toString()));
                     result.consume();
                     // Result result2 = tx.run(getCommitCypher(), parameters("commits", commits));
                     // result2.consume();
@@ -51,6 +53,8 @@ public class Neo4jProjectStorage implements ProjectStorage {
                 }
             });
             System.out.println(done);
+        } catch (TransientException e) {
+            e.printStackTrace();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -80,24 +84,30 @@ public class Neo4jProjectStorage implements ProjectStorage {
 
         content.putAll(commitMap);
         content.put("path", project.spec.relPath.toString());
-        content.put("srcs", ast.launcher.getPomFile().getSourceDirectories().stream().map(x -> x.getPath())
-                .collect(Collectors.toList()));
+        List<String> srcs = ast.launcher.getPomFile().getSourceDirectories().stream().map(x -> x.getPath())
+                .collect(Collectors.toList());
+        srcs.add("src/main/java");
+        content.put("srcs", srcs);
         Model pom = ast.launcher.getPomFile().getModel();
         content.put("groupId", pom.getGroupId());
         content.put("artifactId", pom.getArtifactId());
 
-        Map<String, Object> parent = new HashMap<>();
-        r.put("parent", parent);
-        parent.put("groupId", pom.getParent().getGroupId());
-        parent.put("artifactId", pom.getParent().getArtifactId());
-        parent.put("version", pom.getParent().getVersion());
-        parent.put("id", pom.getParent().getId());
-        parent.put("relativePath", pom.getParent().getRelativePath());
+        Parent parentRaw = pom.getParent();
+        if (parentRaw != null) {
+            Map<String, Object> parent = new HashMap<>();
+            r.put("parent", parent);
+            parent.put("groupId", parentRaw.getGroupId());
+            parent.put("artifactId", parentRaw.getArtifactId());
+            parent.put("version", parentRaw.getVersion());
+            parent.put("id", parentRaw.getId());
+            parent.put("relativePath", parentRaw.getRelativePath());
+        }
 
         List<Map<String, Object>> dependencies = new ArrayList<>();
         r.put("dependencies", dependencies);
         for (Dependency dep : pom.getDependencies()) {
             Map<String, Object> dependency = new HashMap<>();
+            dependencies.add(dependency);
             dependency.put("artifactId", dep.getArtifactId());
             dependency.put("groupId", dep.getGroupId());
             dependency.put("version", dep.getVersion());
@@ -106,7 +116,8 @@ public class Neo4jProjectStorage implements ProjectStorage {
             dependency.put("classifier", dep.getClassifier());
             dependency.put("managementKey", dep.getManagementKey());
             dependency.put("optional", dep.getOptional());
-            dependency.put("exclusions", dep.getExclusions().stream().map(x->x.getGroupId()+"."+x.getArtifactId()).collect(Collectors.toList()));
+            dependency.put("exclusions", dep.getExclusions().stream().map(x -> x.getGroupId() + "." + x.getArtifactId())
+                    .collect(Collectors.toList()));
         }
 
         r.put("version", pom.getVersion());

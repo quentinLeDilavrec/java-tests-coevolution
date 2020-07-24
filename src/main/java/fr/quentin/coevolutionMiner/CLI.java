@@ -132,10 +132,14 @@ public class CLI {
         }
     }
 
+    static boolean splitedOut = true;
+
     private static void batchPreEval(Stream<String> lines, int pool_size, int max_commits_impacts) {
         PrintStream saved_out = System.out;
-        ThreadPrintStream.replaceSystemOut();
-        ThreadPrintStream.replaceSystemErr();
+        if (splitedOut) {
+            ThreadPrintStream.replaceSystemOut();
+            ThreadPrintStream.replaceSystemErr();
+        }
         ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(pool_size);
         SourcesHandler srcH = new SourcesHandler();
         ProjectHandler astH = new ProjectHandler(srcH);
@@ -172,7 +176,9 @@ public class CLI {
             if (releases.size() > 2) {
                 executor.submit(() -> {
                     try {
-                        ThreadPrintStream.redirectThreadLogs(ThreadPrintStream.DEFAULT);
+                        if (splitedOut) {
+                            ThreadPrintStream.redirectThreadLogs(ThreadPrintStream.DEFAULT);
+                        }
                         Sources.Specifier srcSpec = srcH.buildSpec(releases.get(0), Integer.parseInt(releases.get(1)));
                         String rawPath = SourcesHelper.parseAddress(srcSpec.repository);
 
@@ -188,8 +194,10 @@ public class CLI {
                         for (; commit_index < releases.size() - 1; commit_index++) {
                             commitIdAfter = releases.get(commit_index);
                             commitIdBefore = releases.get(commit_index + 1);
-                            ThreadPrintStream.redirectThreadLogs(
-                                    Paths.get(SourcesHelper.RESOURCES_PATH, "Logs", rawPath, commitIdBefore));
+                            if (splitedOut) {
+                                ThreadPrintStream.redirectThreadLogs(
+                                        Paths.get(SourcesHelper.RESOURCES_PATH, "Logs", rawPath, commitIdBefore));
+                            }
                             try { // https://github.com/chrisbanes/Android-PullToRefresh/commit/1f7a7e1daf89167b11166180d96bac54a9306c80
                                   // evos = spoon compile + count tests/methods/class
                                 Sources src = srcH.handle(srcSpec, "JGit");
