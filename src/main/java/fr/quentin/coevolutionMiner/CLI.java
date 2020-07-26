@@ -54,8 +54,10 @@ import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.utils.ThreadPrintStream;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
+import fr.quentin.coevolutionMiner.v2.ast.Project.AST;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
+import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon.SpoonAST;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
@@ -270,15 +272,20 @@ public class CLI {
         // }
     }
 
-    private static void printThings(List<String> releases, String commitIdBefore, Project project) {
-        CtModel model = project.getAst().launcher.getModel();
-        logger.info("done statistics " + releases.get(0) + "/commit/" + commitIdBefore + "/"
-                + project.getAst().rootDir.toString());
-        logger.info("modules in pom: " + project.getAst().launcher.getPomFile().getModel().getModules().stream()
-                .reduce("", (a, b) -> a + "," + b));
-        logger.info("modules parsed: "
-                + model.getAllModules().stream().map(x -> x.getSimpleName()).reduce("", (a, b) -> a + "," + b));
-        logger.info("statistics: " + project.getAst().getGlobalStats().toString());
+    private static void printThings(List<String> releases, String commitIdBefore, Project<?> project) {
+        Project<?>.AST ast = project.getAst();
+        if (ast instanceof SpoonAST && ((SpoonAST) ast).launcher == null) {
+            logger.info("Spoon failed to analyize " + releases.get(0));
+        } else if (ast instanceof SpoonAST) {
+            CtModel model = ((SpoonAST) ast).launcher.getModel();
+            logger.info(
+                    "done statistics " + releases.get(0) + "/commit/" + commitIdBefore + "/" + ast.rootDir.toString());
+            logger.info("modules in pom: " + ((SpoonAST) ast).launcher.getPomFile().getModel().getModules().stream()
+                    .reduce("", (a, b) -> a + "," + b));
+            logger.info("modules parsed: "
+                    + model.getAllModules().stream().map(x -> x.getSimpleName()).reduce("", (a, b) -> a + "," + b));
+            logger.info("statistics: " + ast.getGlobalStats().toString());
+        }
     }
 
     private static void batch(Stream<String> lines, int pool_size, int max_commits_impacts) {

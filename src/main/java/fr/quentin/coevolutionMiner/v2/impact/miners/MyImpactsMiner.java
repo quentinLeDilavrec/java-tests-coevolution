@@ -20,6 +20,7 @@ import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
+import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon.SpoonAST;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
@@ -65,7 +66,7 @@ public class MyImpactsMiner implements ImpactsMiner {
         // return res;
 
         Path rootDir = ast.rootDir;
-        MavenLauncher launcher = ast.launcher; // TODO clone model and/or launcher
+        MavenLauncher launcher = ((SpoonAST)ast).launcher; // TODO clone model and/or launcher
         Set<Evolution> evolutions = evo.toSet();
 
         ImpactAnalysis l = new ImpactAnalysis(launcher, 1);
