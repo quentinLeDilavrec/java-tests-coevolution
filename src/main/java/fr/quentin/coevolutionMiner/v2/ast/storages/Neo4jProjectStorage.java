@@ -65,16 +65,17 @@ public class Neo4jProjectStorage implements ProjectStorage {
     private <T> Map<String, Object> extracted(Project.Specifier proj_spec, Project<T> project,
             List<Map<String, Object>> result) {
         if (project instanceof ProjectSpoon) {
+            Map<String, Object> r = projectToMap((ProjectSpoon) project);
+
+            result.add(r);
+            for (Project<?> module : project.getModules()) {
+                Map<String, Object> aaa = extracted(project.spec, module, result);
+                // aaa.put("parent", r);
+            }
+            return r;
+        } else {
             throw new RuntimeException(project + " is not a SpoonProject");
         }
-        Map<String, Object> r = projectToMap((ProjectSpoon) project);
-
-        result.add(r);
-        for (Project<?> module : project.getModules()) {
-            Map<String, Object> aaa = extracted(project.spec, module, result);
-            // aaa.put("parent", r);
-        }
-        return r;
     }
 
     private <T> Map<String, Object> projectToMap(ProjectSpoon project) {
