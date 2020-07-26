@@ -281,46 +281,46 @@ public class SourcesHelper implements AutoCloseable {
 		}
 	}
 
-	public static class MavenResult {
+	// public static class MavenResult {
 
-		private int build;
-		private int exitCode;
-		private CommandLineException executionException;
+	// 	private int build;
+	// 	private int exitCode;
+	// 	private CommandLineException executionException;
 
-		public int getBuildStatus() {
-			return build;
-		}
+	// 	public int getBuildStatus() {
+	// 		return build;
+	// 	}
 
-		void setBuild(int build) {
-			this.build = build;
-		}
+	// 	void setBuild(int build) {
+	// 		this.build = build;
+	// 	}
 
-		public int getExitCode() {
-			return exitCode;
-		}
+	// 	public int getExitCode() {
+	// 		return exitCode;
+	// 	}
 
-		void setExitCode(int exitCode) {
-			this.exitCode = exitCode;
-		}
+	// 	void setExitCode(int exitCode) {
+	// 		this.exitCode = exitCode;
+	// 	}
 
-		public CommandLineException getExecutionException() {
-			return executionException;
-		}
+	// 	public CommandLineException getExecutionException() {
+	// 		return executionException;
+	// 	}
 
-		void setExecutionException(CommandLineException executionException) {
-			this.executionException = executionException;
-		}
+	// 	void setExecutionException(CommandLineException executionException) {
+	// 		this.executionException = executionException;
+	// 	}
 
-		// public MavenResult(int build, int exitCode, CommandLineException
-		// executionException) {
-		// this.build = build;
-		// this.exitCode = exitCode;
-		// this.executionException = executionException;
-		// }
+	// 	// public MavenResult(int build, int exitCode, CommandLineException
+	// 	// executionException) {
+	// 	// this.build = build;
+	// 	// this.exitCode = exitCode;
+	// 	// this.executionException = executionException;
+	// 	// }
 
-	}
+	// }
 
-	public static MavenResult prepare(Path path, String project) throws Exception {
+	public static InvocationResult prepare(Path path, String project) throws Exception {
 		InvocationRequest request = new DefaultInvocationRequest();
 		request.setGoals(Arrays.asList("compile", "clean"));
 		request.setBaseDirectory(path.toFile());
@@ -329,7 +329,7 @@ public class SourcesHelper implements AutoCloseable {
 	}
 
 
-	public static MavenResult prepareAll(Path path, String project) throws Exception {
+	public static InvocationResult prepareAll(Path path, String project) throws Exception {
 		InvocationRequest request = new DefaultInvocationRequest();
 		request.setGoals(Arrays.asList("test-compile", "clean"));
 		request.setBaseDirectory(path.toFile());
@@ -337,7 +337,7 @@ public class SourcesHelper implements AutoCloseable {
 		return prepareAux(request);
 	}
 
-	private static MavenResult prepareAux(InvocationRequest request) throws Exception {
+	private static InvocationResult prepareAux(InvocationRequest request) throws Exception {
 		request.setAlsoMake(true);
 		request.setBatchMode(true);
 		request.setReactorFailureBehavior(InvocationRequest.ReactorFailureBehavior.FailAtEnd);
@@ -352,23 +352,24 @@ public class SourcesHelper implements AutoCloseable {
 		// invoker.getLogger().setThreshold(4);
 		invoker.setMavenHome(Paths.get("/usr").toFile());
 		try {
-			final MavenResult r = new MavenResult();
-			InvocationResult res = invoker.setOutputHandler(new InvocationOutputHandler() {
+			// final MavenResult r = new MavenResult();
+			// InvocationResult res = invoker.setOutputHandler(new InvocationOutputHandler() {
 
-				@Override
-				public void consumeLine(String line) throws IOException {
-					if (line.equals("[INFO] BUILD SUCCESS")) {
-						r.build = 1;
-					} else if (line.equals("[INFO] BUILD FAILURE")) {
-						r.build = 0;
-					}
-					System.out.println(line);
-				}
+			// 	@Override
+			// 	public void consumeLine(String line) throws IOException {
+			// 		if (line.equals("[INFO] BUILD SUCCESS")) {
+			// 			r.build = 1;
+			// 		} else if (line.equals("[INFO] BUILD FAILURE")) {
+			// 			r.build = 0;
+			// 		}
+			// 		System.out.println(line);
+			// 	}
 
-			}).execute(request);
-			r.executionException = res.getExecutionException();
-			r.exitCode = res.getExitCode();
-			return r;
+			// }).execute(request);
+			// r.executionException = res.getExecutionException();
+			// r.exitCode = res.getExitCode();
+			// return r;
+			return invoker.execute(request);
 		} catch (MavenInvocationException e) {
 			throw new Exception("Error while compiling project with maven", e);
 		}
