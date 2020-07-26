@@ -129,6 +129,9 @@ public class SpoonMiner implements ProjectMiner {
 
     private ProjectSpoon extractedPrecise(Sources src, Path path, Path root, SpoonPom spoonPom)
             throws IOException, InterruptedException, Exception {
+        Set<Project<?>> modules = new HashSet<>();
+        Commit commit = src.getCommit(spec.commitId);
+        Path relPath = root.relativize(path);
         // APP_SOURCE
         MavenLauncher launcherCode = spoonPom != null
                 ? new MavenLauncher(spoonPom, MavenLauncher.SOURCE_TYPE.APP_SOURCE)
@@ -141,16 +144,6 @@ public class SpoonMiner implements ProjectMiner {
         if (compilerExceptionCode != null) {
             compilerExceptionCode.printStackTrace();
         }
-
-        try {
-            launcherCode.buildModel();
-        } catch (Exception e) {
-            for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcherCode.getModelBuilder()).getProblems()) {
-                logger.log(Level.FINE, pb.toString());
-            }
-            throw new RuntimeException(e);
-        }
-
         // ALL_SOURCE
         MavenLauncher launcherAll = spoonPom != null ? new MavenLauncher(spoonPom, MavenLauncher.SOURCE_TYPE.ALL_SOURCE)
                 : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
@@ -162,31 +155,53 @@ public class SpoonMiner implements ProjectMiner {
         if (compilerExceptionAll != null) {
             compilerExceptionAll.printStackTrace();
         }
-
+        ProjectSpoon r = null;
         try {
-            launcherAll.buildModel();
+            launcherCode.buildModel();
         } catch (Exception e) {
-            for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcherAll.getModelBuilder()).getProblems()) {
+            for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcherCode.getModelBuilder()).getProblems()) {
                 logger.log(Level.FINE, pb.toString());
-                // System.err.println(pb.toString());
             }
-            throw new RuntimeException(e);
-        }
-        Set<Project<?>> modules = new HashSet<>();
-        Commit commit = src.getCommit(spec.commitId);
-        Path relPath = root.relativize(path);
-        ProjectSpoon r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules,
-                commit, path, launcherAll, compilerExceptionAll);
 
-        computeCounts(launcherAll, r);
+            r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules, commit, path,
+                    launcherAll, compilerExceptionAll);
+            r.getAst().getGlobalStats().codeAST = 1;
+            r.getAst().getGlobalStats().testsAST = 1;
+        }
+
+        if (r != null) {
+            try {
+                launcherAll.buildModel();
+            } catch (Exception e) {
+                for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcherAll.getModelBuilder()).getProblems()) {
+                    logger.log(Level.FINE, pb.toString());
+                    // System.err.println(pb.toString());
+                }
+                // throw new RuntimeException(e);
+                r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules, commit,
+                        path, launcherCode, compilerExceptionAll);
+                computeCounts(launcherCode, r);
+                r.getAst().getGlobalStats().codeAST = 1;
+                r.getAst().getGlobalStats().testsAST = 0;
+            }
+        }
+
+        if (r != null) {
+            r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules, commit, path,
+                    launcherAll, compilerExceptionCode);
+            computeCounts(launcherAll, r);
+            r.getAst().getGlobalStats().codeAST = 0;
+            r.getAst().getGlobalStats().testsAST = 0;
+        }
+
         computeLOC(path, r);
         r.getAst().getGlobalStats().codeCompile = preparedCode.getExitCode();
-        r.getAst().getGlobalStats().testCompile = preparedAll.getExitCode();
+        r.getAst().getGlobalStats().testsCompile = preparedAll.getExitCode();
 
-        List<SpoonPom> x = launcherAll.getPomFile().getModules();
-        System.out.println(x);
-        for (SpoonPom qq : x) {
-            modules.add(extractedPrecise(src, Paths.get(qq.getFileSystemParent().getAbsolutePath()), root, qq));
+        List<SpoonPom> modulesPoms = launcherCode.getPomFile().getModules();
+        System.out.println(modulesPoms);
+        for (SpoonPom pom : modulesPoms) {
+            modules.add(extractedPrecise(src, Paths.get(pom.getFileSystemParent().getAbsolutePath()), root, pom));
         }
         return r;
     }

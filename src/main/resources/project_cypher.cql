@@ -24,11 +24,13 @@ ON CREATE SET
 	rel.javaLoC = e.stats.javaLoC,
 	rel.testCoveredLoC = e.stats.testCoveredLoC,
 	rel.codeCompile = e.stats.codeCompile,
-	rel.testCompile = e.stats.testCompile,
+	rel.testsCompile = e.stats.testsCompile,
 	rel.testSuite = e.stats.testSuite,
 	rel.classes = e.stats.classes,
 	rel.executables = e.stats.executables,
-	rel.tests = e.stats.tests
+	rel.tests = e.stats.tests,
+	rel.codeAST = e.stats.codeAST,
+	rel.testsAST = e.stats.codeAST
 ON MATCH SET 
     rel.path = e.content.path,
     rel.srcs = e.content.srcs,
@@ -36,11 +38,13 @@ ON MATCH SET
 	rel.javaLoC = e.stats.javaLoC,
 	rel.testCoveredLoC = e.stats.testCoveredLoC,
 	rel.codeCompile = e.stats.codeCompile,
-	rel.testCompile = e.stats.testCompile,
+	rel.testsCompile = e.stats.testsCompile,
 	rel.testSuite = e.stats.testSuite,
 	rel.classes = e.stats.classes,
 	rel.executables = e.stats.executables,
-	rel.tests = e.stats.tests
+	rel.tests = e.stats.tests,
+	rel.codeAST = e.stats.codeAST,
+	rel.testsAST = e.stats.codeAST
 
 MERGE (parent:Project {
 		groupId: coalesce(e.parent.groupId, ""),
