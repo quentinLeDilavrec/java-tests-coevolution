@@ -181,8 +181,8 @@ public class SpoonMiner implements ProjectMiner {
                 r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules, commit,
                         root, launcherCode, compilerExceptionAll);
                 computeCounts(launcherCode, r);
-                r.getAst().getGlobalStats().codeAST = 1;
-                r.getAst().getGlobalStats().testsAST = 0;
+                r.getAst().getGlobalStats().codeAST = 0;
+                r.getAst().getGlobalStats().testsAST = 1;
             }
         }
 
