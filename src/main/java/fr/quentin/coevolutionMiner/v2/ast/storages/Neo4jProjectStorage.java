@@ -29,6 +29,7 @@ import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectStorage;
 import fr.quentin.coevolutionMiner.v2.ast.Stats;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST;
+import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.coevolutionMiner.v2.utils.DbUtils;
 
@@ -63,7 +64,10 @@ public class Neo4jProjectStorage implements ProjectStorage {
 
     private <T> Map<String, Object> extracted(Project.Specifier proj_spec, Project<T> project,
             List<Map<String, Object>> result) {
-        Map<String, Object> r = projectToMap(project);
+        if (project instanceof ProjectSpoon) {
+            throw new RuntimeException(project + " is not a SpoonProject");
+        }
+        Map<String, Object> r = projectToMap((ProjectSpoon) project);
 
         result.add(r);
         for (Project<?> module : project.getModules()) {
@@ -73,9 +77,9 @@ public class Neo4jProjectStorage implements ProjectStorage {
         return r;
     }
 
-    private <T> Map<String, Object> projectToMap(Project<T> project) {
+    private <T> Map<String, Object> projectToMap(ProjectSpoon project) {
         Map<String, Object> r = new HashMap<>();
-        Project<T>.AST ast = project.getAst();
+        ProjectSpoon.SpoonAST ast = project.getAst();
         Stats stats = ast.getGlobalStats();
         r.put("stats", stats.toMap());
         Commit commit = project.commit;
@@ -86,6 +90,13 @@ public class Neo4jProjectStorage implements ProjectStorage {
         content.putAll(commitMap);
         content.put("path", project.spec.relPath.toString());
         Path rootDir = ast.getRootDir();
+
+        if (ast.launcher == null) {
+            Exception exc = ast.compilerException;
+            r.put("exception", exc == null ? "Spoon failed the analysis" : exc.getMessage());
+            return r;
+        }
+
         List<String> srcs = ast.launcher.getPomFile().getSourceDirectories().stream()
                 .map(x -> rootDir.relativize(x.toPath()).toString()).collect(Collectors.toList());
         srcs.add(Paths.get(project.spec.relPath.toString(), "src/main/java").toString());

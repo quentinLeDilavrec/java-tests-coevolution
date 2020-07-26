@@ -1,6 +1,7 @@
 package fr.quentin.coevolutionMiner.v2.ast.miners;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -47,7 +48,32 @@ public class SpoonMiner implements ProjectMiner {
         private ProjectSpoon(Specifier spec, Set<Project<?>> modules, Commit commit, Path rootDir,
                 MavenLauncher launcher, Exception compilerException) {
             super(spec, modules, commit, rootDir);
-            this.ast = makeAST(rootDir, launcher, compilerException);
+            this.ast = new SpoonAST(rootDir, launcher, compilerException);
+        }
+
+        public ProjectSpoon(Specifier spec, Commit commit, Path rootDir, Exception compilerException) {
+            super(spec, new HashSet<>(), commit, rootDir);
+            this.ast = new SpoonAST(rootDir, null, compilerException);
+        }
+
+        protected ProjectSpoon.SpoonAST ast;
+        public ProjectSpoon.SpoonAST getAst() {
+            return ast;
+        }
+
+        public class SpoonAST extends Project<CtElement>.AST {
+            public final MavenLauncher launcher;
+
+            SpoonAST(Path rootDir, MavenLauncher launcher, Exception compilerException) {
+                super(rootDir, compilerException);
+                this.launcher = launcher;
+            }
+
+            @Override
+            public boolean contains(File x) {
+                return launcher.getModelBuilder().getInputSources().contains(x);
+            }
+
         }
     }
 
@@ -127,83 +153,92 @@ public class SpoonMiner implements ProjectMiner {
         return r;
     }
 
-    private ProjectSpoon extractedPrecise(Sources src, Path path, Path root, SpoonPom spoonPom)
+    private SpoonMiner.ProjectSpoon extractedPrecise(Sources src, Path path, Path root, SpoonPom spoonPom)
             throws IOException, InterruptedException, Exception {
-        Set<Project<?>> modules = new HashSet<>();
         Commit commit = src.getCommit(spec.commitId);
-        Path relPath = root.relativize(path);
-        // APP_SOURCE
-        MavenLauncher launcherCode = spoonPom != null
-                ? new MavenLauncher(spoonPom, MavenLauncher.SOURCE_TYPE.APP_SOURCE)
-                : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.APP_SOURCE);
-        launcherCode.getEnvironment().setLevel("INFO");
-        launcherCode.getFactory().getEnvironment().setLevel("INFO");
-
-        InvocationResult preparedCode = SourcesHelper.prepare(path, ".");
-        CommandLineException compilerExceptionCode = preparedCode.getExecutionException();
-        if (compilerExceptionCode != null) {
-            compilerExceptionCode.printStackTrace();
-        }
-        // ALL_SOURCE
-        MavenLauncher launcherAll = spoonPom != null ? new MavenLauncher(spoonPom, MavenLauncher.SOURCE_TYPE.ALL_SOURCE)
-                : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
-        launcherAll.getEnvironment().setLevel("INFO");
-        launcherAll.getFactory().getEnvironment().setLevel("INFO");
-
-        InvocationResult preparedAll = SourcesHelper.prepareAll(path, ".");
-        CommandLineException compilerExceptionAll = preparedAll.getExecutionException();
-        if (compilerExceptionAll != null) {
-            compilerExceptionAll.printStackTrace();
-        }
         ProjectSpoon r = null;
         try {
-            launcherCode.buildModel();
-        } catch (Exception e) {
-            for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcherCode.getModelBuilder()).getProblems()) {
-                logger.log(Level.FINE, pb.toString());
+            Set<Project<?>> modules = new HashSet<>();
+            Path relPath = root.relativize(path);
+            // APP_SOURCE
+            MavenLauncher launcherCode = spoonPom != null
+                    ? new MavenLauncher(spoonPom, MavenLauncher.SOURCE_TYPE.APP_SOURCE)
+                    : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.APP_SOURCE);
+            launcherCode.getEnvironment().setLevel("INFO");
+            launcherCode.getFactory().getEnvironment().setLevel("INFO");
+
+            InvocationResult preparedCode = SourcesHelper.prepare(path, ".");
+            CommandLineException compilerExceptionCode = preparedCode.getExecutionException();
+            if (compilerExceptionCode != null) {
+                compilerExceptionCode.printStackTrace();
             }
+            // ALL_SOURCE
+            MavenLauncher launcherAll = spoonPom != null
+                    ? new MavenLauncher(spoonPom, MavenLauncher.SOURCE_TYPE.ALL_SOURCE)
+                    : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
+            launcherAll.getEnvironment().setLevel("INFO");
+            launcherAll.getFactory().getEnvironment().setLevel("INFO");
 
-            r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules, commit, root,
-                    launcherAll, compilerExceptionAll);
-            r.getAst().getGlobalStats().codeAST = 1;
-            r.getAst().getGlobalStats().testsAST = 1;
-        }
-
-        if (r != null) {
+            InvocationResult preparedAll = SourcesHelper.prepareAll(path, ".");
+            CommandLineException compilerExceptionAll = preparedAll.getExecutionException();
+            if (compilerExceptionAll != null) {
+                compilerExceptionAll.printStackTrace();
+            }
             try {
-                launcherAll.buildModel();
+                launcherCode.buildModel();
             } catch (Exception e) {
-                for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcherAll.getModelBuilder()).getProblems()) {
+                for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcherCode.getModelBuilder()).getProblems()) {
                     logger.log(Level.FINE, pb.toString());
-                    // System.err.println(pb.toString());
                 }
-                // throw new RuntimeException(e);
+
                 r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules, commit,
-                        root, launcherCode, compilerExceptionAll);
-                computeCounts(launcherCode, r);
-                r.getAst().getGlobalStats().codeAST = 0;
+                        root, launcherAll, compilerExceptionAll);
+                r.getAst().getGlobalStats().codeAST = 1;
                 r.getAst().getGlobalStats().testsAST = 1;
             }
-        }
 
-        if (r == null) {
-            r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules, commit, root,
-                    launcherAll, compilerExceptionCode);
-            computeCounts(launcherAll, r);
-            r.getAst().getGlobalStats().codeAST = 0;
-            r.getAst().getGlobalStats().testsAST = 0;
-        }
+            if (r != null) {
+                try {
+                    launcherAll.buildModel();
+                } catch (Exception e) {
+                    for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcherAll.getModelBuilder())
+                            .getProblems()) {
+                        logger.log(Level.FINE, pb.toString());
+                        // System.err.println(pb.toString());
+                    }
+                    // throw new RuntimeException(e);
+                    r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules,
+                            commit, root, launcherCode, compilerExceptionAll);
+                    computeCounts(launcherCode, r);
+                    r.getAst().getGlobalStats().codeAST = 0;
+                    r.getAst().getGlobalStats().testsAST = 1;
+                }
+            }
 
-        computeLOC(path, r);
-        r.getAst().getGlobalStats().codeCompile = preparedCode.getExitCode();
-        r.getAst().getGlobalStats().testsCompile = preparedAll.getExitCode();
+            if (r == null) {
+                r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules, commit,
+                        root, launcherAll, compilerExceptionCode);
+                computeCounts(launcherAll, r);
+                r.getAst().getGlobalStats().codeAST = 0;
+                r.getAst().getGlobalStats().testsAST = 0;
+            }
 
-        List<SpoonPom> modulesPoms = launcherCode.getPomFile().getModules();
-        System.out.println(modulesPoms);
-        for (SpoonPom pom : modulesPoms) {
-            modules.add(extractedPrecise(src, Paths.get(pom.getFileSystemParent().getAbsolutePath()), root, pom));
+            computeLOC(path, r);
+            r.getAst().getGlobalStats().codeCompile = preparedCode.getExitCode();
+            r.getAst().getGlobalStats().testsCompile = preparedAll.getExitCode();
+
+            List<SpoonPom> modulesPoms = launcherCode.getPomFile().getModules();
+            System.out.println(modulesPoms);
+            for (SpoonPom pom : modulesPoms) {
+                modules.add(extractedPrecise(src, Paths.get(pom.getFileSystemParent().getAbsolutePath()), root, pom));
+            }
+            return r;
+
+        } catch (Exception e) {
+            r = new ProjectSpoon(new Specifier(spec.sources, spec.commitId, spec.miner), commit, root, e);
+            computeLOC(path, r);
+            return r;
         }
-        return r;
     }
 
     /**

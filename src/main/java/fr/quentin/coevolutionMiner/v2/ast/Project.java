@@ -88,9 +88,9 @@ public class Project<T> {
         }
     }
 
-    protected AST ast;
+    protected Project<T>.AST ast;
 
-    public AST getAst() {
+    public Project<T>.AST getAst() {
         return ast;
     }
 
@@ -110,7 +110,7 @@ public class Project<T> {
 
     private AST.FileSnapshot.Range getRangeAux(String path, Integer start, Integer end) {
         File x = Paths.get(path).toFile();
-        if (ast.launcher.getModelBuilder().getInputSources().contains(x)) {
+        if (ast.contains(x)) {
             return ast.getRange(path, start, end);
         } else {
             for (Project project : modules) {
@@ -123,23 +123,21 @@ public class Project<T> {
         return null;
     }
 
-    protected AST makeAST(Path rootDir, MavenLauncher launcher, Exception compilerException) {
-        return new AST(rootDir, launcher, compilerException);
-    }
-
     public class AST {
-        public final MavenLauncher launcher;
         public final Path rootDir;
 
         public Path getRootDir() {
             return rootDir;
         }
 
+        protected boolean contains(File x) {
+            return true;
+        }
+
         public final Exception compilerException;
 
-        AST(Path rootDir, MavenLauncher launcher, Exception compilerException) {
+        protected AST(Path rootDir, Exception compilerException) {
             this.rootDir = rootDir;
-            this.launcher = launcher;
             this.compilerException = compilerException;
         }
 
