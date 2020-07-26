@@ -4,6 +4,7 @@ import static org.neo4j.driver.Values.parameters;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -84,9 +85,10 @@ public class Neo4jProjectStorage implements ProjectStorage {
 
         content.putAll(commitMap);
         content.put("path", project.spec.relPath.toString());
-        List<String> srcs = ast.launcher.getPomFile().getSourceDirectories().stream().map(x -> x.getPath())
-                .collect(Collectors.toList());
-        srcs.add("src/main/java");
+        Path rootDir = ast.getRootDir();
+        List<String> srcs = ast.launcher.getPomFile().getSourceDirectories().stream()
+                .map(x -> rootDir.relativize(x.toPath()).toString()).collect(Collectors.toList());
+        srcs.add(Paths.get(project.spec.relPath.toString(), "src/main/java").toString());
         content.put("srcs", srcs);
         Model pom = ast.launcher.getPomFile().getModel();
         content.put("groupId", pom.getGroupId());

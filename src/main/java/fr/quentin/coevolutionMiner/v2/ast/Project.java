@@ -41,7 +41,8 @@ public class Project<T> {
             this.miner = miner;
         }
 
-        public Specifier(Sources.Specifier sources, Path relPath, String commitId, Class<? extends ProjectMiner> miner) {
+        public Specifier(Sources.Specifier sources, Path relPath, String commitId,
+                Class<? extends ProjectMiner> miner) {
             this.sources = sources;
             this.relPath = relPath;
             this.commitId = commitId;
@@ -122,13 +123,18 @@ public class Project<T> {
         return null;
     }
 
-    protected AST makeAST(Path rootDir, MavenLauncher launcher, Exception compilerException){
-        return new AST(rootDir,launcher,compilerException);
+    protected AST makeAST(Path rootDir, MavenLauncher launcher, Exception compilerException) {
+        return new AST(rootDir, launcher, compilerException);
     }
 
     public class AST {
         public final MavenLauncher launcher;
         public final Path rootDir;
+
+        public Path getRootDir() {
+            return rootDir;
+        }
+
         public final Exception compilerException;
 
         AST(Path rootDir, MavenLauncher launcher, Exception compilerException) {
@@ -188,7 +194,7 @@ public class Project<T> {
              * @return the path
              */
             public String getAbsolutePath() {
-                return rootDir + "/" + path;
+                return Paths.get(rootDir.toString(), path).toString();
             }
 
             /**

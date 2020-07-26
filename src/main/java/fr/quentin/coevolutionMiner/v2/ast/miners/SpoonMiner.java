@@ -163,7 +163,7 @@ public class SpoonMiner implements ProjectMiner {
                 logger.log(Level.FINE, pb.toString());
             }
 
-            r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules, commit, path,
+            r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules, commit, root,
                     launcherAll, compilerExceptionAll);
             r.getAst().getGlobalStats().codeAST = 1;
             r.getAst().getGlobalStats().testsAST = 1;
@@ -179,7 +179,7 @@ public class SpoonMiner implements ProjectMiner {
                 }
                 // throw new RuntimeException(e);
                 r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules, commit,
-                        path, launcherCode, compilerExceptionAll);
+                        root, launcherCode, compilerExceptionAll);
                 computeCounts(launcherCode, r);
                 r.getAst().getGlobalStats().codeAST = 1;
                 r.getAst().getGlobalStats().testsAST = 0;
@@ -187,7 +187,7 @@ public class SpoonMiner implements ProjectMiner {
         }
 
         if (r != null) {
-            r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules, commit, path,
+            r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules, commit, root,
                     launcherAll, compilerExceptionCode);
             computeCounts(launcherAll, r);
             r.getAst().getGlobalStats().codeAST = 0;
