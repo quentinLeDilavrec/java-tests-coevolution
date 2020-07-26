@@ -186,7 +186,7 @@ public class SpoonMiner implements ProjectMiner {
             }
         }
 
-        if (r != null) {
+        if (r == null) {
             r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules, commit, root,
                     launcherAll, compilerExceptionCode);
             computeCounts(launcherAll, r);
