@@ -10,7 +10,7 @@ public class Stats {
     public Integer loC;
     public Integer javaLoC;
     public Integer testCoveredLoC;
-    public Integer compile;
+    public Integer codeCompile;
     public Integer testCompile;
     public Integer testSuite;
     public Integer classes;
@@ -19,7 +19,7 @@ public class Stats {
 
     @Override
     public String toString() {
-        return "Stats [classes=" + classes + ", compile=" + compile + ", executables=" + executables + ", javaLoC="
+        return "Stats [classes=" + classes + ", CodeCompile=" + codeCompile + ", executables=" + executables + ", javaLoC="
                 + javaLoC + ", loC=" + loC + ", testCompile=" + testCompile + ", testCoveredLoC=" + testCoveredLoC
                 + ", testSuite=" + testSuite + ", tests=" + tests + "]";
     }
@@ -29,7 +29,7 @@ public class Stats {
         r.put("loC", loC);
         r.put("javaLoC", javaLoC);
         r.put("testCoveredLoC", testCoveredLoC);
-        r.put("compile", compile);
+        r.put("codeCompile", codeCompile);
         r.put("testCompile", testCompile);
         r.put("testSuite", testSuite);
         r.put("classes", classes);

@@ -17,6 +17,7 @@ import org.apache.maven.shared.utils.cli.CommandLineException;
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
 
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
+import fr.quentin.coevolutionMiner.utils.SourcesHelper.MavenResult;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectMiner;
 import fr.quentin.coevolutionMiner.v2.ast.Project.Specifier;
@@ -69,7 +70,7 @@ public class SpoonMiner implements ProjectMiner {
             if (compilerException0 != null) {
                 compilerException0.printStackTrace();
             }
-            return extracted(src, root, root, null);
+            return extractedPrecise(src, root, root, null);
         } catch (SpoonException e) {
             throw new RuntimeException(e);
         } catch (Exception e) {
@@ -92,9 +93,8 @@ public class SpoonMiner implements ProjectMiner {
         // List<String> modules = launcher.getPomFile().getModel().getModules();
         // System.out.println(modules.get(0));
 
+        MavenResult prepared = SourcesHelper.prepare(path, ".");
 
-        InvocationResult prepared = SourcesHelper.prepare(path,".");
-        
         CommandLineException compilerException = prepared.getExecutionException();
         if (compilerException != null) {
             compilerException.printStackTrace();
@@ -117,14 +117,77 @@ public class SpoonMiner implements ProjectMiner {
                 commit, path, launcher, compilerException);
         computeCounts(launcher, r);
         computeLOC(path, r);
-        r.getAst().getGlobalStats().compile=prepared.getExitCode();
+        r.getAst().getGlobalStats().codeCompile = prepared.getBuildStatus();
 
         List<SpoonPom> x = launcher.getPomFile().getModules();
         System.out.println(x);
         for (SpoonPom qq : x) {
             modules.add(extracted(src, Paths.get(qq.getFileSystemParent().getAbsolutePath()), root, qq));
         }
+        return r;
+    }
 
+    private ProjectSpoon extractedPrecise(Sources src, Path path, Path root, SpoonPom spoonPom)
+            throws IOException, InterruptedException, Exception {
+        // APP_SOURCE
+        MavenLauncher launcherCode = spoonPom != null ? new MavenLauncher(spoonPom, MavenLauncher.SOURCE_TYPE.APP_SOURCE)
+                : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.APP_SOURCE);
+        launcherCode.getEnvironment().setLevel("INFO");
+        launcherCode.getFactory().getEnvironment().setLevel("INFO");
+
+        MavenResult preparedCode = SourcesHelper.prepare(path, ".");
+        CommandLineException compilerExceptionCode = preparedCode.getExecutionException();
+        if (compilerExceptionCode != null) {
+            compilerExceptionCode.printStackTrace();
+        }
+
+        try {
+            launcherCode.buildModel();
+        } catch (Exception e) {
+            for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcherCode.getModelBuilder()).getProblems()) {
+                logger.log(Level.FINE, pb.toString());
+            }
+            throw new RuntimeException(e);
+        }
+
+        // ALL_SOURCE
+        MavenLauncher launcherAll = spoonPom != null ? new MavenLauncher(spoonPom, MavenLauncher.SOURCE_TYPE.ALL_SOURCE)
+                : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
+        launcherAll.getEnvironment().setLevel("INFO");
+        launcherAll.getFactory().getEnvironment().setLevel("INFO");
+
+        MavenResult preparedAll = SourcesHelper.prepareAll(path, ".");
+        CommandLineException compilerExceptionAll = preparedAll.getExecutionException();
+        if (compilerExceptionAll != null) {
+            compilerExceptionAll.printStackTrace();
+        }
+
+        try {
+            launcherAll.buildModel();
+        } catch (Exception e) {
+            for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcherAll.getModelBuilder()).getProblems()) {
+                logger.log(Level.FINE, pb.toString());
+                // System.err.println(pb.toString());
+            }
+            throw new RuntimeException(e);
+        }
+        Set<Project<?>> modules = new HashSet<>();
+        Commit commit = src.getCommit(spec.commitId);
+        Path relPath = root.relativize(path);
+        ProjectSpoon r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules,
+                commit, path, launcherAll, compilerExceptionAll);
+
+        computeCounts(launcherAll, r);
+        computeLOC(path, r);
+        r.getAst().getGlobalStats().codeCompile = preparedCode.getBuildStatus();
+        r.getAst().getGlobalStats().testSuite = preparedCode.getExitCode();
+        r.getAst().getGlobalStats().testCompile = preparedAll.getBuildStatus();
+
+        List<SpoonPom> x = launcherAll.getPomFile().getModules();
+        System.out.println(x);
+        for (SpoonPom qq : x) {
+            modules.add(extractedPrecise(src, Paths.get(qq.getFileSystemParent().getAbsolutePath()), root, qq));
+        }
         return r;
     }
 
@@ -178,6 +241,24 @@ public class SpoonMiner implements ProjectMiner {
                     g.javaLoC = Integer.parseInt(line.substring(line.lastIndexOf("|") + 1));
                 } else if (line.startsWith("SUM:|")) {
                     g.loC = Integer.parseInt(line.substring(line.lastIndexOf("|") + 1));
+                // } else if (line.startsWith("XML|")) {
+                //     g.loC = Integer.parseInt(line.substring(line.lastIndexOf("|") + 1));
+                // } else if (line.startsWith("HTML|")) {
+                //     g.loC = Integer.parseInt(line.substring(line.lastIndexOf("|") + 1));
+                // } else if (line.startsWith("Maven|")) {
+                //     g.loC = Integer.parseInt(line.substring(line.lastIndexOf("|") + 1));
+                // } else if (line.startsWith("Python|")) {
+                //     g.loC = Integer.parseInt(line.substring(line.lastIndexOf("|") + 1));
+                // } else if (line.startsWith("Ant|")) {
+                //     g.loC = Integer.parseInt(line.substring(line.lastIndexOf("|") + 1));
+                // } else if (line.startsWith("Bourne Again Shell|")) {
+                //     g.loC = Integer.parseInt(line.substring(line.lastIndexOf("|") + 1));
+                // } else if (line.startsWith("Bourne Shell|")) {
+                //     g.loC = Integer.parseInt(line.substring(line.lastIndexOf("|") + 1));
+                // } else if (line.startsWith("DOS Batch|")) {
+                //     g.loC = Integer.parseInt(line.substring(line.lastIndexOf("|") + 1));
+                // } else if (line.startsWith("Objective C++|")) {
+                //     g.loC = Integer.parseInt(line.substring(line.lastIndexOf("|") + 1));
                 } else {
 
                 }
