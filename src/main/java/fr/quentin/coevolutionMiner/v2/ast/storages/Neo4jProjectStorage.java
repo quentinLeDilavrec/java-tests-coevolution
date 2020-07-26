@@ -94,7 +94,8 @@ public class Neo4jProjectStorage implements ProjectStorage {
 
         if (ast.launcher == null) {
             Exception exc = ast.compilerException;
-            r.put("exception", exc == null ? "Spoon failed the analysis" : exc.getMessage());
+            String msg = exc == null ? "Spoon failed the analysis" : exc.getMessage();
+            r.put("exception", msg == null ? "Spoon failed the analysis" : exc.getClass().getName());
             return r;
         }
 

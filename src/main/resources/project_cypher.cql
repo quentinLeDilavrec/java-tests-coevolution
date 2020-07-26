@@ -4,6 +4,10 @@ UNWIND data as e
 MERGE (repo:Repository {url:e.content.repository})
 
 MERGE (commit:Commit {repo:e.content.repository, sha1:e.content.commitId})
+ON CREATE SET 
+	commit.exception = e.exception
+ON MATCH SET 
+	commit.exception = e.exception
 MERGE (commit)-[:IS_COMMIT_OF]->(repo)
 MERGE (commit)<-[:CONTAIN_COMMIT]-(repo)
 
