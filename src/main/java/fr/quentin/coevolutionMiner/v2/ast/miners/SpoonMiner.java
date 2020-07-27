@@ -200,6 +200,7 @@ public class SpoonMiner implements ProjectMiner {
             if (r != null) {
                 try {
                     launcherAll.buildModel();
+                    r = null;
                 } catch (Exception e) {
                     for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcherAll.getModelBuilder())
                             .getProblems()) {

@@ -221,9 +221,9 @@ public class CLI {
                                 System.out.close();
                                 System.err.close();
                             }
-                            if (project != null) {
-                                break;
-                            }
+                            // if (project != null) {
+                            //     break;
+                            // }
                         }
                         logger2.info("(submit end) CLI status " + Long.toString(executor.getTaskCount()) + " "
                                 + Integer.toString(executor.getActiveCount()) + " "
