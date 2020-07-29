@@ -20,6 +20,7 @@ import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
+import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon.SpoonAST;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
@@ -57,8 +58,8 @@ public class MyImpactsMiner implements ImpactsMiner {
     @Override
     public Impacts compute() {
         boolean isOnBefore = spec.astSpec.commitId.equals(spec.evoSpec.commitIdBefore);
-        Project project = astHandler.handle(spec.astSpec, SpoonMiner.class);
-        Project.AST ast = project.getAst();
+        ProjectSpoon project = (ProjectSpoon)astHandler.handle(spec.astSpec, SpoonMiner.class);
+        ProjectSpoon.SpoonAST ast = project.getAst();
         Evolutions evo = null;
         if (spec.evoSpec != null) {
             evo = evoHandler.handle(spec.evoSpec);
@@ -66,7 +67,7 @@ public class MyImpactsMiner implements ImpactsMiner {
         // return res;
 
         Path rootDir = ast.rootDir;
-        MavenLauncher launcher = ((SpoonAST)ast).launcher; // TODO clone model and/or launcher
+        MavenLauncher launcher = ((ProjectSpoon.SpoonAST)ast).launcher; // TODO clone model and/or launcher
         Set<Evolution> evolutions = evo.toSet();
 
         ImpactAnalysis l = new ImpactAnalysis(launcher, 1);
@@ -101,10 +102,10 @@ public class MyImpactsMiner implements ImpactsMiner {
                 roots.add(b.getKey());
                 Position rootPosition = root.getPosition();
                 String relPath = ast.rootDir.relativize(Paths.get(rootPosition.getFilePath())).toString();
-                Range source = ast.getRange(relPath, rootPosition.getStart(), rootPosition.getEnd() + 1,
+                ProjectSpoon.SpoonAST.FileSnapshot.Range source = ast.getRange(relPath, rootPosition.getStart(), rootPosition.getEnd() + 1,
                         root.getContent());
                 Evolutions.Evolution.DescRange impactingDescRange = (Evolutions.Evolution.DescRange) b.getKey();
-                Range target = impactingDescRange.getTarget();
+                ProjectSpoon.SpoonAST.FileSnapshot.Range target = impactingDescRange.getTarget();
                 if (!source.equals(target)) {
                     result.addAdjusment(b.getKey(), target, source);
                 }
@@ -113,7 +114,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                 ImpactElement currIE = rel.getVertice();
                 Position currIEPos = currIE.getPosition();
                 String relPath = ast.rootDir.relativize(Paths.get(currIEPos.getFilePath())).toString();
-                Range currRange = ast.getRange(relPath, currIEPos.getStart(), currIEPos.getEnd() + 1);
+                ProjectSpoon.SpoonAST.FileSnapshot.Range currRange = ast.getRange(relPath, currIEPos.getStart(), currIEPos.getEnd() + 1);
                 Set<ImpactElement> calls = rel.getEffects().get("call");
                 if (calls != null && calls.size() > 0) {
                     result.addCalls(roots, currRange,

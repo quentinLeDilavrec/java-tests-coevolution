@@ -20,6 +20,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Handler;
+import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -63,6 +64,7 @@ import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
+import fr.quentin.coevolutionMiner.v2.impact.Impacts;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import gumtree.spoon.AstComparator;
@@ -101,6 +103,15 @@ public class CLI {
                     batch(Files.lines(Paths.get(line.getOptionValue("file")))
                             .skip(Integer.parseInt(line.getOptionValue("start", "0")))
                             .limit(Integer.parseInt(line.getOptionValue("limit", "1"))),
+                            Integer.parseInt(line.getOptionValue("thread", "1")),
+                            Integer.parseInt(line.getOptionValue("commitsMax", "1")));
+                }
+            } else if (Objects.equals(args[0], "simpleBatch")) {
+                if (line.getOptionValue("file") != null) {
+                    SimpleBatch(
+                            Files.lines(Paths.get(line.getOptionValue("file")))
+                                    .skip(Integer.parseInt(line.getOptionValue("start", "0")))
+                                    .limit(Integer.parseInt(line.getOptionValue("limit", "1"))),
                             Integer.parseInt(line.getOptionValue("thread", "1")),
                             Integer.parseInt(line.getOptionValue("commitsMax", "1")));
                 }
@@ -222,7 +233,7 @@ public class CLI {
                                 System.err.close();
                             }
                             // if (project != null) {
-                            //     break;
+                            // break;
                             // }
                         }
                         logger2.info("(submit end) CLI status " + Long.toString(executor.getTaskCount()) + " "
@@ -397,6 +408,101 @@ public class CLI {
         // executor.shutdownNow();
         // throw new RuntimeException(e);
         // }
+    }
+
+    private static void SimpleBatch(Stream<String> lines, int pool_size, int max_commits_impacts) {
+        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(pool_size);
+        SourcesHandler srcH = new SourcesHandler();
+        ProjectHandler astH = new ProjectHandler(srcH);
+        EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
+        ImpactHandler impactH = new ImpactHandler(srcH, astH, evoH);
+        CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH);
+        System.out.println("Starting");
+        lines.forEach(line -> {
+            logger.info("(laucher start) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                    + Integer.toString(executor.getActiveCount()) + " "
+                    + Long.toString(executor.getCompletedTaskCount()));
+            List<String> s = Arrays.asList(line.split(" "));
+            if (s.size() > 2) {
+                executor.submit(() -> {
+                    logger.info("(submit start) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                            + Integer.toString(executor.getActiveCount()) + " "
+                            + Long.toString(executor.getCompletedTaskCount()));
+                    Sources.Specifier srcSpec = srcH.buildSpec(s.get(0), Integer.parseInt(s.get(1)));
+
+                    Evolutions evos = null;
+                    String commitIdAfter = null;
+                    String commitIdBefore = null;
+                    int commit_index = 2;
+                    int impact_computed = 0;
+                    for (; commit_index < s.size() && impact_computed < max_commits_impacts;) {
+
+                        for (; commit_index < s.size(); commit_index++) {
+                            commitIdAfter = s.get(commit_index);
+                            commitIdBefore = s.get(commit_index + 1);
+                            try {
+                                evos = evoH.handle(evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter));
+                                logger.info("done evolution analysis " + s.get(0));
+                            } catch (Exception e) {
+                                logger.log(Level.INFO,"failed evolution analysis on" + s.get(0),e);
+                                break;
+                            }
+                            if (evos != null && evos.toSet().size() > 0) {
+                                break;
+                            }
+                        }
+                        if (s.size() < 3) {
+                            logger.info("no commits for " + s.get(0));
+                        } else if (evos == null) {
+                            logger.info("evolution miner not working for " + s.get(0));
+                        } else if (evos.toSet().size() <= 0) {
+                            logger.info("no evolutions found for " + s.get(0));
+                        } else {
+                            impact_computed += 1;
+                            logger.info(Integer.toString(evos.toSet().size()) + " evolutions found for " + s.get(0)
+                                    + " from " + commitIdBefore + " to " + commitIdAfter);
+                            try {
+                                Impacts impacts = impactH
+                                        .handle(impactH.buildSpec(astH.buildSpec(srcSpec, commitIdBefore),
+                                                EvolutionHandler.buildSpec(srcSpec, commitIdBefore, commitIdAfter)));
+                                System.out.println(
+                                        Integer.toString(impacts.getPerRootCause().size()) + " impacts found for "
+                                                + s.get(0) + " from " + commitIdBefore + " to " + commitIdAfter);
+                            } catch (Exception e) {
+                                logger.info("failed impacts analysis for " + s.get(0));
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+
+                    logger.info("(submit end) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                            + Integer.toString(executor.getActiveCount()) + " "
+                            + Long.toString(executor.getCompletedTaskCount()));
+                    return 0;
+                });
+            } else {
+                System.out.println("no commits for " + s.get(0));
+            }
+            logger.info("(launch end) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                    + Integer.toString(executor.getActiveCount()) + " "
+                    + Long.toString(executor.getCompletedTaskCount()));
+        });
+        System.out.println("Shutdown");
+        executor.shutdown();
+        try {
+            System.out.println("almost");
+            while (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+            }
+            System.out.println("done");
+            impactH.close();
+            evoH.close();
+            coevoH.close();
+            executor.shutdownNow();
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+        } catch (Exception e) {
+            executor.shutdownNow();
+        }
     }
 
     public static String ast(String path) {

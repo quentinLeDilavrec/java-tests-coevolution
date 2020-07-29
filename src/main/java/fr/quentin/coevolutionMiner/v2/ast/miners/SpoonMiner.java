@@ -179,11 +179,6 @@ public class SpoonMiner implements ProjectMiner {
             launcherAll.getEnvironment().setLevel("INFO");
             launcherAll.getFactory().getEnvironment().setLevel("INFO");
 
-            InvocationResult preparedAll = SourcesHelper.prepareAll(path, ".");
-            CommandLineException compilerExceptionAll = preparedAll.getExecutionException();
-            if (compilerExceptionAll != null) {
-                compilerExceptionAll.printStackTrace();
-            }
             try {
                 launcherCode.buildModel();
             } catch (Exception e) {
@@ -192,15 +187,20 @@ public class SpoonMiner implements ProjectMiner {
                 }
 
                 r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules, commit,
-                        root, launcherAll, compilerExceptionAll);
+                        root, launcherAll, compilerExceptionCode);
                 r.getAst().getGlobalStats().codeAST = 1;
                 r.getAst().getGlobalStats().testsAST = 1;
             }
 
-            if (r != null) {
+            InvocationResult preparedAll = SourcesHelper.prepareAll(path, ".");
+            CommandLineException compilerExceptionAll = preparedAll.getExecutionException();
+            if (compilerExceptionAll != null) {
+                compilerExceptionAll.printStackTrace();
+            }
+            
+            if (r == null) {
                 try {
                     launcherAll.buildModel();
-                    r = null;
                 } catch (Exception e) {
                     for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcherAll.getModelBuilder())
                             .getProblems()) {
