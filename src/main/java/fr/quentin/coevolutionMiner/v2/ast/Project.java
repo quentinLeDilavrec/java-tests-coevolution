@@ -109,6 +109,7 @@ public class Project<T> {
     }
 
     private AST.FileSnapshot.Range getRangeAux(String path, Integer start, Integer end) {
+        assert !Paths.get(path).isAbsolute(): path;
         File x = Paths.get(path).toFile();
         if (ast.contains(x)) {
             return ast.getRange(path, start, end);
