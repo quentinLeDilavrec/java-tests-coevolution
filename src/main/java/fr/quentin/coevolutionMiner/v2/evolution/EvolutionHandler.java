@@ -17,6 +17,7 @@ import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.storages.Neo4jEvolutionsStorage;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactsStorage;
@@ -37,16 +38,20 @@ public class EvolutionHandler implements AutoCloseable {
 
 	public static Evolutions.Specifier buildSpec(Sources.Specifier sources, String commitIdBefore,
 			String commitIdAfter) {
-		return buildSpec(sources, commitIdBefore, commitIdAfter, "RefactoringMiner");
+		return buildSpec(sources, commitIdBefore, commitIdAfter, RefactoringMiner.class);
 	}
 
-	public static Evolutions.Specifier buildSpec(Sources.Specifier sources, String commitIdBefore, String commitIdAfter,
-			String miner) {
+	public static Evolutions.Specifier buildSpec(Sources.Specifier sources, String commitIdBefore, String commitIdAfter, Class<? extends EvolutionsMiner> miner) {
 		return new Evolutions.Specifier(sources, commitIdBefore, commitIdAfter, miner);
 	}
 
 	public Evolutions handle(Evolutions.Specifier spec) {
 		return handle(spec, "Neo4j");
+	}
+
+	enum Miners {
+		RefactoringMiner,
+		GumtreeSpoon
 	}
 
 	private Evolutions handle(Evolutions.Specifier spec, String storeName) {
@@ -73,11 +78,17 @@ public class EvolutionHandler implements AutoCloseable {
 				return res;
 			}
 
+			Miners z = Miners.valueOf(spec.miner.getSimpleName());
 			// CAUTION miners should mind about circular deps of data given by handlers
-			switch (spec.miner) {
-				case "RefactoringMiner":
-					RefactoringMiner minerInst = new RefactoringMiner(spec, srcHandler, astHandler);
-					res = minerInst.compute();
+			switch (z) {
+				case RefactoringMiner:
+					RefactoringMiner minerInstRM = new RefactoringMiner(spec, srcHandler, astHandler);
+					res = minerInstRM.compute();
+					populate(res);
+					break;
+				case GumtreeSpoon:
+					GumTreeSpoonMiner minerInstGTS = new GumTreeSpoonMiner(spec, srcHandler, astHandler);
+					res = minerInstGTS.compute();
 					populate(res);
 					break;
 				default:

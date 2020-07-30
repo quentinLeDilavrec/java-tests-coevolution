@@ -15,7 +15,7 @@ public class ProjectHandler {
 	private ProjectHandler astHandler;
 	private SourcesHandler srcHandler;
 
-	private Map<Project.Specifier, Data<Project<?>>> memoizedAST = new ConcurrentHashMap<>();
+	private Map<Project.Specifier<?>, Data<Project<?>>> memoizedAST = new ConcurrentHashMap<>();
 	private Neo4jProjectStorage neo4jStore;
 
 	public ProjectHandler(SourcesHandler srcHandler) {
@@ -23,12 +23,12 @@ public class ProjectHandler {
 		this.srcHandler = srcHandler;
 	}
 
-	public Project.Specifier buildSpec(Sources.Specifier sources, String commitId) {
+	public Project.Specifier<SpoonMiner> buildSpec(Sources.Specifier sources, String commitId) {
 		return buildSpec(sources, commitId, SpoonMiner.class);
 	}
 
-	private Project.Specifier buildSpec(Sources.Specifier sources, String commitId, Class<? extends ProjectMiner> miner) {
-		return new Project.Specifier(sources, commitId, miner);
+	private <U,T extends ProjectMiner<U>> Project.Specifier<T> buildSpec(Sources.Specifier sources, String commitId, Class<T> miner) {
+		return new Project.Specifier<>(sources, commitId, miner);
 	}
 
 	enum Miners {
@@ -37,13 +37,13 @@ public class ProjectHandler {
 
 	public static String storeName = "Neo4j";
 
-	public Project<?> handle(Project.Specifier spec, Class<? extends ProjectMiner> miner) {
-		Project<?> res = null;
+	public <U,T extends ProjectMiner<U>> Project<U> handle(Project.Specifier<T> spec) {
+		Project<U> res = null;
 		memoizedAST.putIfAbsent(spec, new Data<>());
 		Data<Project<?>> tmp = memoizedAST.get(spec);
 		tmp.lock.lock();
 		try {
-			res = tmp.get();
+			res = (Project<U>) tmp.get();
 			if (res != null) {
 				return res;
 			}
@@ -61,11 +61,11 @@ public class ProjectHandler {
                 return res;
             }
 			// CAUTION miners should mind about circular deps of data given by handlers
-			Miners z = Miners.valueOf(miner.getSimpleName());
+			Miners z = Miners.valueOf(spec.miner.getSimpleName());
 			switch (z) {
 				case SpoonMiner:
 					SpoonMiner minerInst = new SpoonMiner(spec, srcHandler);
-					res = minerInst.compute();
+					res = (Project<U>) minerInst.compute();
 					populate(res);
 					break;
 				default:

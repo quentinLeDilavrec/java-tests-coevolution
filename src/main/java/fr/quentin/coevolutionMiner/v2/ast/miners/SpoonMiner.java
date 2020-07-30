@@ -43,7 +43,7 @@ import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class SpoonMiner implements ProjectMiner {
+public class SpoonMiner implements ProjectMiner<CtElement> {
     public class ProjectSpoon extends Project<CtElement> {
         private ProjectSpoon(Specifier spec, Set<Project<?>> modules, Commit commit, Path rootDir,
                 MavenLauncher launcher, Exception compilerException) {
@@ -210,7 +210,7 @@ public class SpoonMiner implements ProjectMiner {
                     // throw new RuntimeException(e);
                     r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules,
                             commit, root, launcherAll, compilerExceptionAll);
-                    computeCounts(launcherCode, r);
+                    computeCounts(launcherAll, r);
                     r.getAst().getGlobalStats().codeAST = 0;
                     r.getAst().getGlobalStats().testsAST = 1;
                 }

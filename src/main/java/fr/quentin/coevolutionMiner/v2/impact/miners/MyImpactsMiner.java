@@ -58,7 +58,7 @@ public class MyImpactsMiner implements ImpactsMiner {
     @Override
     public Impacts compute() {
         boolean isOnBefore = spec.astSpec.commitId.equals(spec.evoSpec.commitIdBefore);
-        ProjectSpoon project = (ProjectSpoon)astHandler.handle(spec.astSpec, SpoonMiner.class);
+        ProjectSpoon project = (ProjectSpoon)astHandler.handle(spec.astSpec);
         ProjectSpoon.SpoonAST ast = project.getAst();
         Evolutions evo = null;
         if (spec.evoSpec != null) {

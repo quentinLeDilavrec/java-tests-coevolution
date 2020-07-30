@@ -19,8 +19,11 @@ import fr.quentin.coevolutionMiner.v1.impacts.ImpactRMinerHandler;
 import fr.quentin.coevolutionMiner.v1.parsers.SpoonHandler;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectRoute;
+import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionRoute;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactRoute;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
@@ -130,14 +133,16 @@ public class Server {
 
 			ProjectHandler astH = new ProjectHandler(srcH);
 			path("/ast", () -> {
-				ProjectRoute astR = new ProjectRoute(srcH, astH, "Spoon");
+				ProjectRoute astR = new ProjectRoute(srcH, astH, SpoonMiner.class);
 				put("/Spoon", astR);
 				put("/default", astR);
 			});
 
 			EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
 			path("/evolution", () -> {
-				EvolutionRoute evoR = new EvolutionRoute(srcH, astH, evoH, "RefactoringMiner");
+				EvolutionRoute evoG = new EvolutionRoute(srcH, astH, evoH, GumTreeSpoonMiner.class);
+				put("/GumtreeSpoon", evoG);
+				EvolutionRoute evoR = new EvolutionRoute(srcH, astH, evoH, RefactoringMiner.class);
 				put("/RefactoringMiner", evoR);
 				put("/default", evoR);
 			});

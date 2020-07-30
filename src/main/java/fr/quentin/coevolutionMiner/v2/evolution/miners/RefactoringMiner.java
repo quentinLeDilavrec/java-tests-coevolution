@@ -1,45 +1,36 @@
 package fr.quentin.coevolutionMiner.v2.evolution.miners;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.refactoringminer.api.GitHistoryRefactoringMiner;
 import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringHandler;
 import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 
-import fr.quentin.impactMiner.Evolution;
-import fr.quentin.impactMiner.Position;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
-import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
+import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionsMiner;
-import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Specifier;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
-import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import gr.uom.java.xmi.diff.CodeRange;
 
 public class RefactoringMiner implements EvolutionsMiner {
@@ -79,13 +70,12 @@ public class RefactoringMiner implements EvolutionsMiner {
         // ArrayList<Evolutions.Evolution>();
 
         EvolutionsExtension result = new EvolutionsExtension(spec, src);
-        Map<ImmutablePair<String, String>, List<Refactoring>> tmp = new HashMap<>();
+        Map<ImmutablePair<String, String>, List<Refactoring>> mapOpByCommit = new HashMap<>();
         try (SourcesHelper helper = src.open()) {
             miner.detectBetweenCommits(helper.getRepo(), spec.commitIdBefore, spec.commitIdAfter,
                     new RefactoringHandler() {
                         @Override
                         public void handle(String commitId, List<Refactoring> refactorings) {
-                            // detectedRefactorings.addAll(refactorings);
                             for (Refactoring op : refactorings) {
                                 String before;
                                 try {
@@ -93,12 +83,10 @@ public class RefactoringMiner implements EvolutionsMiner {
                                 } catch (IOException e) {
                                     throw new RuntimeException(e);
                                 }
-                                // OtherEvolution tmp = new OtherEvolution(op, before, commitId);
-                                // evolutions.add(tmp);
                                 ImmutablePair<String, String> tmp1 = new ImmutablePair<String, String>(before,
                                         commitId);
-                                tmp.putIfAbsent(tmp1, new ArrayList<>());
-                                tmp.get(tmp1).add(op);
+                                mapOpByCommit.putIfAbsent(tmp1, new ArrayList<>());
+                                mapOpByCommit.get(tmp1).add(op);
                                 LOGGER.info("O- " + op + "\n");
                             }
                         }
@@ -108,9 +96,11 @@ public class RefactoringMiner implements EvolutionsMiner {
             throw new RuntimeException(e);
         }
 
-        for (Entry<ImmutablePair<String, String>, List<Refactoring>> entry : tmp.entrySet()) {
-            Project beforeAST = astHandler.handle(astHandler.buildSpec(spec.sources, entry.getKey().left), SpoonMiner.class);
-            Project afterAST = astHandler.handle(astHandler.buildSpec(spec.sources, entry.getKey().right), SpoonMiner.class);
+        for (Entry<ImmutablePair<String, String>, List<Refactoring>> entry : mapOpByCommit.entrySet()) {
+            Project beforeAST = astHandler.handle(astHandler.buildSpec(spec.sources, entry.getKey().left));
+            assert beforeAST != null;
+            Project afterAST = astHandler.handle(astHandler.buildSpec(spec.sources, entry.getKey().right));
+            assert afterAST != null;
             for (Refactoring op : entry.getValue()) {
                 result.addEvolution(op, beforeAST, afterAST);
             }
@@ -126,29 +116,25 @@ public class RefactoringMiner implements EvolutionsMiner {
         }
 
         private EvolutionsExtension(Specifier spec, Sources sources, Set<Evolution> subSet) {
-            this(spec,sources);
+            this(spec, sources);
             evolutions.addAll(subSet);
         }
 
-        void addEvolution(Refactoring refact, Project astBefore, Project astAfter) {
+        void addEvolution(Refactoring refact, Project<?> astBefore, Project<?> astAfter) {
             List<ImmutablePair<Range, String>> before = new ArrayList<>();
             for (CodeRange range : refact.leftSide()) {
-                // Position pos = new Position(range.getFilePath(), range.getStartOffset(),
-                // range.getEndOffset());
                 before.add(toRange(astBefore, range));
 
             }
             List<ImmutablePair<Range, String>> after = new ArrayList<>();
             for (CodeRange range : refact.rightSide()) {
-                // Position pos = new Position(range.getFilePath(), range.getStartOffset(),
-                // range.getEndOffset());
                 after.add(toRange(astAfter, range));
             }
             addEvolution(refact.getName(), before, after, astBefore.commit, astAfter.commit, refact);
         }
 
-        private ImmutablePair<Range, String> toRange(Project ast, CodeRange range) {
-            return new ImmutablePair<>(ast.getRange(range.getFilePath(), range.getStartOffset(), range.getEndOffset()),
+        private ImmutablePair<Range, String> toRange(Project proj, CodeRange range) {
+            return new ImmutablePair<>(proj.getRange(range.getFilePath(), range.getStartOffset(), range.getEndOffset()),
                     range.getDescription());
         }
 
@@ -181,9 +167,11 @@ public class RefactoringMiner implements EvolutionsMiner {
                 if (evolutionsSubSet.size() == 0) {
                     continue;
                 }
-                Evolutions newEvo = new EvolutionsExtension(EvolutionHandler.buildSpec(spec.sources,
-                        evolutionsSubSet.iterator().next().getCommitBefore().getId(),
-                        evolutionsSubSet.iterator().next().getCommitAfter().getId()),getSources(), evolutionsSubSet);
+                Evolutions newEvo = new EvolutionsExtension(
+                        EvolutionHandler.buildSpec(spec.sources,
+                                evolutionsSubSet.iterator().next().getCommitBefore().getId(),
+                                evolutionsSubSet.iterator().next().getCommitAfter().getId()),
+                        getSources(), evolutionsSubSet);
                 r.add(newEvo);
             }
             return r;
