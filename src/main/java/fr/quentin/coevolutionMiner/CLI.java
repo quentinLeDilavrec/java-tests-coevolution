@@ -63,6 +63,7 @@ import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
@@ -143,6 +144,7 @@ public class CLI {
         } catch (ParseException exp) {
             System.out.println("Unexpected exception:" + exp.getMessage());
         }
+        System.exit(0);
     }
 
     static boolean splitedOut = true;
@@ -444,7 +446,7 @@ public class CLI {
                                 evos = evoH.handle(evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter));
                                 logger.info("done evolution analysis " + s.get(0));
                             } catch (Exception e) {
-                                logger.log(Level.INFO,"failed evolution analysis on" + s.get(0),e);
+                                logger.log(Level.INFO, "failed evolution analysis on" + s.get(0), e);
                                 break;
                             }
                             if (evos != null && evos.toSet().size() > 0) {
@@ -462,9 +464,9 @@ public class CLI {
                             logger.info(Integer.toString(evos.toSet().size()) + " evolutions found for " + s.get(0)
                                     + " from " + commitIdBefore + " to " + commitIdAfter);
                             try {
-                                Impacts impacts = impactH
-                                        .handle(impactH.buildSpec(astH.buildSpec(srcSpec, commitIdBefore),
-                                                EvolutionHandler.buildSpec(srcSpec, commitIdBefore, commitIdAfter)));
+                                Impacts impacts = impactH.handle(impactH.buildSpec(
+                                        astH.buildSpec(srcSpec, commitIdBefore), EvolutionHandler.buildSpec(srcSpec,
+                                                commitIdBefore, commitIdAfter, GumTreeSpoonMiner.class)));
                                 System.out.println(
                                         Integer.toString(impacts.getPerRootCause().size()) + " impacts found for "
                                                 + s.get(0) + " from " + commitIdBefore + " to " + commitIdAfter);
@@ -490,10 +492,10 @@ public class CLI {
         System.out.println("Shutdown");
         executor.shutdown();
         try {
-            System.out.println("almost");
-            while (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+            System.out.println("almost done submittings");
+            while (!executor.awaitTermination(1, TimeUnit.MINUTES)) {
             }
-            System.out.println("done");
+            System.out.println("done submitting");
             impactH.close();
             evoH.close();
             coevoH.close();

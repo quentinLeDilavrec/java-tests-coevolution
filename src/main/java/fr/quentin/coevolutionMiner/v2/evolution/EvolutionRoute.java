@@ -9,7 +9,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
-import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
@@ -22,14 +21,14 @@ public class EvolutionRoute implements Route {
     private SourcesHandler sourcesHandler;
     private ProjectHandler astHandler;
     private EvolutionHandler evoHandler;
-    private String minerId;
+    private Class<? extends EvolutionsMiner> minerId;
 
     public EvolutionRoute(SourcesHandler sourcesHandler, ProjectHandler astHandler, EvolutionHandler evoHandler,
-            String minerId) {
+            Class<? extends EvolutionsMiner> miner) {
         this.sourcesHandler = sourcesHandler;
         this.astHandler = astHandler;
         this.evoHandler = evoHandler;
-        this.minerId = minerId;
+        this.minerId = miner;
     }
 
     public class Range {
@@ -75,7 +74,7 @@ public class EvolutionRoute implements Route {
         } else if (body.repo != null && body.commitIdAfter != null) {
             Sources.Specifier srcSpec = sourcesHandler.buildSpec(body.repo);
             System.out.println(body.commitIdBefore);
-            if( body.commitIdBefore == null) {
+            if (body.commitIdBefore == null) {
                 try (SourcesHelper helper = sourcesHandler.handle(srcSpec, "JGit").open();) {
                     body.commitIdBefore = helper.getBeforeCommit(body.commitIdAfter);
                 } catch (Exception e) {

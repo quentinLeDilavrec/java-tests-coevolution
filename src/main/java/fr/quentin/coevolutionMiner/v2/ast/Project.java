@@ -28,13 +28,13 @@ public class Project<T> {
         this.modules = modules;
     }
 
-    public static class Specifier {
+    public static class Specifier<U extends ProjectMiner> {
         public final Sources.Specifier sources;
-        public final Class<? extends ProjectMiner> miner;
+        public final Class<U> miner;
         public final String commitId;
         public final Path relPath;
 
-        public Specifier(Sources.Specifier sources, String commitId, Class<? extends ProjectMiner> miner) {
+        public Specifier(Sources.Specifier sources, String commitId, Class<U> miner) {
             this.sources = sources;
             this.relPath = Paths.get("");
             this.commitId = commitId;
@@ -42,7 +42,7 @@ public class Project<T> {
         }
 
         public Specifier(Sources.Specifier sources, Path relPath, String commitId,
-                Class<? extends ProjectMiner> miner) {
+                Class<U> miner) {
             this.sources = sources;
             this.relPath = relPath;
             this.commitId = commitId;
@@ -110,6 +110,7 @@ public class Project<T> {
 
     private AST.FileSnapshot.Range getRangeAux(String path, Integer start, Integer end) {
         assert !Paths.get(path).isAbsolute(): path;
+        assert ast!=null;
         File x = Paths.get(path).toFile();
         if (ast.contains(x)) {
             return ast.getRange(path, start, end);

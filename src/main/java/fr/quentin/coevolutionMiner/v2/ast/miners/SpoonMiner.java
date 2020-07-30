@@ -43,7 +43,7 @@ import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class SpoonMiner implements ProjectMiner {
+public class SpoonMiner implements ProjectMiner<CtElement> {
     public class ProjectSpoon extends Project<CtElement> {
         private ProjectSpoon(Specifier spec, Set<Project<?>> modules, Commit commit, Path rootDir,
                 MavenLauncher launcher, Exception compilerException) {

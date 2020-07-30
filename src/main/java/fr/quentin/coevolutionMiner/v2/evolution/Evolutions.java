@@ -23,11 +23,11 @@ public class Evolutions {
 
     public static class Specifier {
         public final Sources.Specifier sources;
-        public final String miner;
+        public final Class<? extends EvolutionsMiner> miner;
         public final String commitIdBefore;
         public final String commitIdAfter;
 
-        public Specifier(Sources.Specifier sources, String commitIdBefore, String commitIdAfter, String miner) {
+        public Specifier(Sources.Specifier sources, String commitIdBefore, String commitIdAfter, Class<? extends EvolutionsMiner> miner) {
             this.sources = sources;
             this.commitIdBefore = commitIdBefore;
             this.commitIdAfter = commitIdAfter;
@@ -136,6 +136,10 @@ public class Evolutions {
         if (old != null && evo.equals(old))
             throw new RuntimeException("evo sharing same type and before");
         return evo;
+    }
+
+    public <T> T map(String before, String after, T element, boolean fromSource) {
+        return null;
     }
 
     // @uniq // (also put relations as attributs)

@@ -9,9 +9,9 @@ public class ProjectRoute implements Route {
 
     private SourcesHandler sourcesHandler;
     private ProjectHandler astHandler;
-    private String minerId;
+    private Class<? extends ProjectMiner> minerId;
 
-    public ProjectRoute(SourcesHandler sourcesHandler, ProjectHandler astHandler, String minerId) {
+    public ProjectRoute(SourcesHandler sourcesHandler, ProjectHandler astHandler, Class<? extends ProjectMiner> minerId) {
         this.sourcesHandler = sourcesHandler;
         this.astHandler = astHandler;
         this.minerId = minerId;
@@ -19,8 +19,8 @@ public class ProjectRoute implements Route {
 
     @Override
     public Object handle(Request request, Response response) throws Exception {
-        // TODO Auto-generated method stub
-        return null;
+        // TODO
+        throw new UnsupportedOperationException("Need to be implemented");
     }
 
 }
