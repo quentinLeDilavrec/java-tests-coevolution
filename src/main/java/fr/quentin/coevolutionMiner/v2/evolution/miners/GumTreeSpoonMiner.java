@@ -83,7 +83,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     Diff diff = comp.compare(((ProjectSpoon) beforeAST).getAst().launcher.getModel().getRootPackage(),
                             ((ProjectSpoon) afterAST).getAst().launcher.getModel().getRootPackage());
 
-                    for (Operation<?> op : diff.getAllOperations()) {
+                    for (Operation<?> op : diff.getRootOperations()) {
                         ImmutablePair<Project<?>, Project<?>> tmp1 = new ImmutablePair<>(beforeAST, afterAST);
                         mapOpByCommit.putIfAbsent(tmp1, new ImmutablePair<>(diff, new ArrayList<>()));
                         mapOpByCommit.get(tmp1).right.add(op);
@@ -119,14 +119,14 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             evolutions.addAll(subSet);
         }
 
-        Map<ImmutablePair<String, String>, Diff> diffs = new HashMap<>();
+        Map<ImmutablePair<Commit, Commit>, Diff> diffs = new HashMap<>();
 
         void addDiff(Diff diff, Project<?> astBefore, Project<?> astAfter) {
-            diffs.put(new ImmutablePair<>(astBefore.commit.getId(), astAfter.commit.getId()), diff);
+            diffs.put(new ImmutablePair<>(astBefore.commit, astAfter.commit), diff);
         }
 
         @Override
-        public <T> T map(String before, String after, T element, boolean fromSource) {
+        public <T> T map(Commit before, Commit after, T element, boolean fromSource) {
             // MAPPING !!!
             if (element instanceof CtElement) {
                 CtElement aaa = new SpoonSupport().getMappedElement(diffs.get(new ImmutablePair<>(before, after)),

@@ -1,6 +1,7 @@
 package fr.quentin.coevolutionMiner.v2.coevolution.miners;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -22,6 +23,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
+import org.eclipse.core.internal.resources.File;
+import org.eclipse.jdt.internal.core.nd.util.MathUtils;
 import org.refactoringminer.api.Refactoring;
 
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
@@ -51,6 +54,7 @@ import fr.quentin.impactMiner.Position;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
+import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
 
@@ -175,6 +179,11 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
     }
 
+    // fact with Stirling's approximation
+    double factApprox(double n) {
+        return n <= 1 ? 1 : Math.sqrt(2 * Math.PI * n) * Math.pow(n / Math.E, n);
+    }
+
     private CoEvolutionsExtension computeDirectCoevolutions(Sources sourcesProvider, Commit currentCommit,
             Commit nextCommit) throws SmallMiningException, SeverMiningException {
         // List<Evolution> currEvolutions = perBeforeCommit.get(currentCommit);
@@ -193,28 +202,43 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             throw new SmallMiningException("Before Code Don't Build");
         }
 
+        Map<Evolution, Set<Evolution>> explainedTopLevels = decompose(currentEvolutions, currentDiff);
+
         Impacts currentImpacts = impactHandler.handle(impactHandler.buildSpec(before_ast_id, currEvoSpecRM));
 
         Project.Specifier after_ast_id = astHandler.buildSpec(spec.evoSpec.sources, nextCommit.getId());
         Project<?> after_ast = astHandler.handle(after_ast_id);
 
+        logNaiveCost(currentEvolutions);
+        Map<FileSnapshot, Set<Evolution>> byFileBefore = new HashMap<>();
+        Map<FileSnapshot, Set<Evolution>> byFileAfter = new HashMap<>();
+        Map<Evolution, Set<Evolution>> byEvo = new HashMap<>();
+        Set<Set<Evolution>> smallestGroups = groupEvoByCommonFiles(currentEvolutions, byFileBefore, byFileAfter, byEvo);
+
+        System.out.println(smallestGroups);
         for (Project.AST.FileSnapshot.Range testBefore : currentImpacts.getImpactedTests()) {
             CtElement originalImpactedTest = before_ast.getAst().getOriginal(testBefore);
-            CtElement nextStateImpactedTest = currentDiff.map(currentCommit.getId(), nextCommit.getId(),
+            CtElement nextStateImpactedTest = currentDiff.map(currentCommit, nextCommit,
                     originalImpactedTest, true);
             SourcePosition position = nextStateImpactedTest.getPosition();
-            Range testAfter = after_ast.getRange(position.getFile().getPath(),
-                    position.getSourceStart(), position.getSourceEnd()); // TODO add original is not here
-            Set<File> reqBefore = testBefore.getNeededFiles();
-            Set<File> reqAfter = testAfter.getNeededFiles();
+            Range testAfter = after_ast.getRange(position.getFile().getPath(), position.getSourceStart(),
+                    position.getSourceEnd()); // TODO add original is not here
+            Set<String> reqBefore = testBefore.getNeededFiles();
+            Set<String> reqAfter = testAfter.getNeededFiles();
+            Set<String> reqChanged = new HashSet<>(reqAfter);
+            reqChanged.removeAll(reqBefore);
             // set TMP DIR for test
-            // put all non .java from currentCommit and all from reqBefore+current file of test
-            // compile code -> compile tests -> execute test
-            //  put all non .java from nextCommit
+            // put all non .java from currentCommit and all from reqBefore+current file of
+            // test
+            // compile code ? compile tests ? execute test ? good : half : bad ;
+            // apply all non .java from nextCommit
+            // compile code ? compile tests ? execute test ? good : half : bad ;
+            // apply all from subsets of reqAfter +testAfter file of test
+
         }
 
         // Compile needed code and tests for each test potentially containing coevos
-        Exception beforeTestsCompileException = compileAllTests(sourcesProvider, before_ast.getAst().rootDir); 
+        Exception beforeTestsCompileException = compileAllTests(sourcesProvider, before_ast.getAst().rootDir);
         if (beforeTestsCompileException != null) {
             throw new SmallMiningException("Before Tests Don't Build");
         }
@@ -299,6 +323,76 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         CoEvolutionsExtension currCoevolutions = currCoevolutions1;
         return currCoevolutions;
+    }
+
+    private Map<Evolution, Set<Evolution>> decompose(Evolutions from, Evolutions by) {
+        assert from!=null;
+        assert by!=null;
+        Map<Evolution, Set<Evolution>> result = new HashMap<>();
+
+        Set<Evolution> fromL = from.toSet();
+        Set<Evolution> byL = by.toSet();
+        Map<FileSnapshot,Map<Range,Set<Evolution>>> fromLByFile = new HashMap<>();
+        for (Evolution evolution : fromL) {
+            for (DescRange descRange : evolution.getBefore()) {
+                fromLByFile.putIfAbsent(descRange.getTarget().getFile(), new HashMap<>());
+                fromLByFile.get(descRange.getTarget().getFile()).putIfAbsent(descRange.getTarget(), new HashSet<>());
+                fromLByFile.get(descRange.getTarget().getFile()).get(descRange.getTarget()).add(evolution);
+            }
+            for (DescRange descRange : evolution.getAfter()) {
+                fromLByFile.putIfAbsent(descRange.getTarget().getFile(), new HashMap<>());
+                fromLByFile.get(descRange.getTarget().getFile()).putIfAbsent(descRange.getTarget(), new HashSet<>());
+                fromLByFile.get(descRange.getTarget().getFile()).get(descRange.getTarget()).add(evolution);
+            }
+        }
+        Map<FileSnapshot,Map<Range,Set<Evolution>>> nonUsedByLByFile = new HashMap<>();
+        for (Evolution evolution : byL) {
+            for (DescRange descRange : evolution.getBefore()) {
+                nonUsedByLByFile.putIfAbsent(descRange.getTarget().getFile(), new HashMap<>());
+                nonUsedByLByFile.get(descRange.getTarget().getFile()).putIfAbsent(descRange.getTarget(), new HashSet<>());
+                nonUsedByLByFile.get(descRange.getTarget().getFile()).get(descRange.getTarget()).add(evolution);
+            }
+            for (DescRange descRange : evolution.getAfter()) {
+                nonUsedByLByFile.putIfAbsent(descRange.getTarget().getFile(), new HashMap<>());
+                nonUsedByLByFile.get(descRange.getTarget().getFile()).putIfAbsent(descRange.getTarget(), new HashSet<>());
+                nonUsedByLByFile.get(descRange.getTarget().getFile()).get(descRange.getTarget()).add(evolution);
+            }
+        }
+
+
+
+        return null;
+    }
+
+    private Set<Set<Evolution>> groupEvoByCommonFiles(Evolutions currentEvolutions,
+            Map<FileSnapshot, Set<Evolution>> byFileBefore, Map<FileSnapshot, Set<Evolution>> byFileAfter,
+            Map<Evolution, Set<Evolution>> byEvo) {
+        for (Evolution evo : currentEvolutions.toSet()) {
+            for (DescRange descRange : evo.getBefore()) {
+                FileSnapshot f = descRange.getTarget().getFile();
+                Set<Evolution> s = byEvo.get(evo);
+                s = s == null ? byFileBefore.get(f) : new HashSet<>();
+                byEvo.putIfAbsent(evo, s);
+                byFileBefore.putIfAbsent(f, s);
+                s.add(evo);
+            }
+            for (DescRange descRange : evo.getAfter()) {
+                FileSnapshot f = descRange.getTarget().getFile();
+                Set<Evolution> s = byEvo.get(evo);
+                s = s == null ? byFileAfter.get(f) : new HashSet<>();
+                byEvo.putIfAbsent(evo, s);
+                byFileAfter.putIfAbsent(f, s);
+                s.add(evo);
+            }
+        }
+        Set<Set<Evolution>> smallestGroups = new HashSet<>();
+        smallestGroups.addAll(byEvo.values());
+        return smallestGroups;
+    }
+
+    private void logNaiveCost(Evolutions currentEvolutions) {
+        int size = currentEvolutions.toSet().size();
+        logger.info("naive: " + size + " evolution ->" + factApprox(size));
     }
 
     public class SmallMiningException extends Exception {

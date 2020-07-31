@@ -217,7 +217,7 @@ public class CLI {
                                   // evos = spoon compile + count tests/methods/class
                                 Sources src = srcH.handle(srcSpec, "JGit");
                                 src.getCommitsBetween(commitIdBefore, commitIdAfter);
-                                project = astH.handle(astH.buildSpec(srcSpec, commitIdBefore), SpoonMiner.class);
+                                project = astH.handle(astH.buildSpec(srcSpec, commitIdBefore));
                                 printThings(releases, commitIdBefore, project);
                                 for (Project<?> x : project.getModules()) {
                                     printThings(releases, commitIdBefore, x);

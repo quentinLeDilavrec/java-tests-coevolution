@@ -138,7 +138,7 @@ public class Evolutions {
         return evo;
     }
 
-    public <T> T map(String before, String after, T element, boolean fromSource) {
+    public <T> T map(Commit before, Commit after, T element, boolean fromSource) {
         return null;
     }
 
