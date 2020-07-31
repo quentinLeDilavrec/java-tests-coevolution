@@ -29,6 +29,7 @@ import org.refactoringminer.api.Refactoring;
 
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
+import fr.quentin.coevolutionMiner.v2.evolution.EvolutionsMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution.DescRange;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner;
@@ -184,6 +185,17 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         return n <= 1 ? 1 : Math.sqrt(2 * Math.PI * n) * Math.pow(n / Math.E, n);
     }
 
+    private void augment(DescRange dr) {
+        CtElement ori = (CtElement) dr.getTarget().getOriginal();
+        assert ori != null;
+        HashSet<DescRange> md = (HashSet<DescRange>) ori.getMetadata(EvolutionsMiner.METADATA_KEY_EVO);
+        if (md == null) {
+            md = new HashSet<>();
+            ori.putMetadata(EvolutionsMiner.METADATA_KEY_EVO, md);
+        }
+        md.add(dr);
+    }
+
     private CoEvolutionsExtension computeDirectCoevolutions(Sources sourcesProvider, Commit currentCommit,
             Commit nextCommit) throws SmallMiningException, SeverMiningException {
         // List<Evolution> currEvolutions = perBeforeCommit.get(currentCommit);
@@ -205,7 +217,14 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         Map<Evolution, Set<Evolution>> explainedTopLevels = decompose(currentEvolutions, currentDiff);
 
         Impacts currentImpacts = impactHandler.handle(impactHandler.buildSpec(before_ast_id, currEvoSpecRM));
-
+        for (Evolution evo : currentEvolutions.toSet()) {
+            for (DescRange dr : evo.getBefore()) {
+                augment(dr);
+            }
+            for (DescRange dr : evo.getAfter()) {
+                augment(dr);
+            }
+        }
         Project.Specifier after_ast_id = astHandler.buildSpec(spec.evoSpec.sources, nextCommit.getId());
         Project<?> after_ast = astHandler.handle(after_ast_id);
 
@@ -218,13 +237,12 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         System.out.println(smallestGroups);
         for (Project.AST.FileSnapshot.Range testBefore : currentImpacts.getImpactedTests()) {
             CtElement originalImpactedTest = before_ast.getAst().getOriginal(testBefore);
-            CtElement nextStateImpactedTest = currentDiff.map(currentCommit, nextCommit,
-                    originalImpactedTest, true);
+            CtElement nextStateImpactedTest = currentDiff.map(currentCommit, nextCommit, originalImpactedTest, true);
             SourcePosition position = nextStateImpactedTest.getPosition();
             Range testAfter = after_ast.getRange(position.getFile().getPath(), position.getSourceStart(),
                     position.getSourceEnd()); // TODO add original is not here
-            Set<String> reqBefore = testBefore.getNeededFiles();
-            Set<String> reqAfter = testAfter.getNeededFiles();
+            Set<String> reqBefore = getNeededFiles(currentImpacts,testBefore);
+            Set<String> reqAfter = getNeededFiles(currentImpacts,testAfter);
             Set<String> reqChanged = new HashSet<>(reqAfter);
             reqChanged.removeAll(reqBefore);
             // set TMP DIR for test
@@ -325,14 +343,50 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         return currCoevolutions;
     }
 
+    private Set<String> getNeededFiles(Impacts currentImpacts, Range testBefore) {
+        return null;
+    }
+
     private Map<Evolution, Set<Evolution>> decompose(Evolutions from, Evolutions by) {
-        assert from!=null;
-        assert by!=null;
+        assert from != null;
+        assert by != null;
+        Map<Evolution, Set<Evolution>> result = new HashMap<>();
+
+        Set<Evolution> fromL = from.toSet();
+        for (Evolution evolution : fromL) {
+            Set<Evolution> acc = new HashSet<>();
+            for (DescRange descRange : evolution.getBefore()) {
+                CtElement ele = (CtElement) descRange.getTarget().getOriginal();
+                aux(acc,ele);
+            }
+            for (DescRange descRange : evolution.getAfter()) {
+                CtElement ele = (CtElement) descRange.getTarget().getOriginal();
+                aux(acc,ele);
+            }
+            result.put(evolution, acc);
+        }
+
+        return null;
+    }
+
+    private void aux(Set<Evolution> acc, CtElement ele) {
+        for (CtElement child : ele.getDirectChildren()) {
+            Set<DescRange> s = (Set<DescRange>) child.getMetadata(EvolutionsMiner.METADATA_KEY_EVO);
+            for (DescRange ds : s) {
+                acc.add(ds.getSource());
+            }
+            aux(acc, child);
+        }
+    }
+
+    private Map<Evolution, Set<Evolution>> decomposeOld(Evolutions from, Evolutions by) {
+        assert from != null;
+        assert by != null;
         Map<Evolution, Set<Evolution>> result = new HashMap<>();
 
         Set<Evolution> fromL = from.toSet();
         Set<Evolution> byL = by.toSet();
-        Map<FileSnapshot,Map<Range,Set<Evolution>>> fromLByFile = new HashMap<>();
+        Map<FileSnapshot, Map<Range, Set<Evolution>>> fromLByFile = new HashMap<>();
         for (Evolution evolution : fromL) {
             for (DescRange descRange : evolution.getBefore()) {
                 fromLByFile.putIfAbsent(descRange.getTarget().getFile(), new HashMap<>());
@@ -345,21 +399,21 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 fromLByFile.get(descRange.getTarget().getFile()).get(descRange.getTarget()).add(evolution);
             }
         }
-        Map<FileSnapshot,Map<Range,Set<Evolution>>> nonUsedByLByFile = new HashMap<>();
+        Map<FileSnapshot, Map<Range, Set<Evolution>>> nonUsedByLByFile = new HashMap<>();
         for (Evolution evolution : byL) {
             for (DescRange descRange : evolution.getBefore()) {
                 nonUsedByLByFile.putIfAbsent(descRange.getTarget().getFile(), new HashMap<>());
-                nonUsedByLByFile.get(descRange.getTarget().getFile()).putIfAbsent(descRange.getTarget(), new HashSet<>());
+                nonUsedByLByFile.get(descRange.getTarget().getFile()).putIfAbsent(descRange.getTarget(),
+                        new HashSet<>());
                 nonUsedByLByFile.get(descRange.getTarget().getFile()).get(descRange.getTarget()).add(evolution);
             }
             for (DescRange descRange : evolution.getAfter()) {
                 nonUsedByLByFile.putIfAbsent(descRange.getTarget().getFile(), new HashMap<>());
-                nonUsedByLByFile.get(descRange.getTarget().getFile()).putIfAbsent(descRange.getTarget(), new HashSet<>());
+                nonUsedByLByFile.get(descRange.getTarget().getFile()).putIfAbsent(descRange.getTarget(),
+                        new HashSet<>());
                 nonUsedByLByFile.get(descRange.getTarget().getFile()).get(descRange.getTarget()).add(evolution);
             }
         }
-
-
 
         return null;
     }

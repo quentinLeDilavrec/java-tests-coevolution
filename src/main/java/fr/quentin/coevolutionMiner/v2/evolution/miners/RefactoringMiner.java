@@ -29,9 +29,11 @@ import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionsMiner;
+import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution.DescRange;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import gr.uom.java.xmi.diff.CodeRange;
+import spoon.reflect.declaration.CtElement;
 
 public class RefactoringMiner implements EvolutionsMiner {
     Logger LOGGER = Logger.getLogger("ImpactRM commitHandler");

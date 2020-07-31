@@ -41,8 +41,7 @@ public class Project<T> {
             this.miner = miner;
         }
 
-        public Specifier(Sources.Specifier sources, Path relPath, String commitId,
-                Class<U> miner) {
+        public Specifier(Sources.Specifier sources, Path relPath, String commitId, Class<U> miner) {
             this.sources = sources;
             this.relPath = relPath;
             this.commitId = commitId;
@@ -101,22 +100,26 @@ public class Project<T> {
     }
 
     public AST.FileSnapshot.Range getRange(String path, Integer start, Integer end) {
+        return getRange(path, start, end, null);
+    }
+
+    public AST.FileSnapshot.Range getRange(String path, Integer start, Integer end, Object original) {
         if (Paths.get(path).isAbsolute()) {
             System.err.println(path);
             return null;
         }
-        return getRangeAux(path, start, end);
+        return getRangeAux(path, start, end, original);
     }
 
-    private AST.FileSnapshot.Range getRangeAux(String path, Integer start, Integer end) {
-        assert !Paths.get(path).isAbsolute(): path;
-        assert ast!=null;
+    private AST.FileSnapshot.Range getRangeAux(String path, Integer start, Integer end, Object original) {
+        assert !Paths.get(path).isAbsolute() : path;
+        assert ast != null;
         File x = Paths.get(path).toFile();
         if (ast.contains(x)) {
-            return ast.getRange(path, start, end);
+            return ((AST) ast).getRange(path, start, end, (T) original);
         } else {
             for (Project project : modules) {
-                Range tmp = project.getRangeAux(path, start, end);
+                Range tmp = project.getRangeAux(path, start, end, original);
                 if (tmp != null) {
                     return tmp;
                 }
@@ -143,14 +146,14 @@ public class Project<T> {
             this.compilerException = compilerException;
         }
 
-        private Map<FileSnapshot.Range, T> originals = new HashMap<>();
+        // private Map<FileSnapshot.Range, T> originals = new HashMap<>();
 
         public T getOriginal(FileSnapshot.Range range) {
-            return originals.get(range);
+            return range.getOriginal();
         }
 
         Object putOriginal(FileSnapshot.Range range, T original) {
-            return originals.put(range, original);
+            return range.setOriginal(original);
         }
 
         private Map<String, FileSnapshot> snaps = new HashMap<>();
@@ -169,7 +172,7 @@ public class Project<T> {
 
         public FileSnapshot.Range getRange(String path, Integer start, Integer end, T original) {
             FileSnapshot.Range range = getRange(path, start, end);
-            Object old = putOriginal(range, original);
+            Object old = range.setOriginal(original);
             if (old != null && old != original) {
                 throw new RuntimeException("Original value of range should be unique");
             }
@@ -219,9 +222,18 @@ public class Project<T> {
 
                 private Integer end;
                 private Integer start;
+                private T original;
 
                 public FileSnapshot getFile() {
                     return FileSnapshot.this;
+                }
+
+                public T getOriginal() {
+                    return null;
+                }
+
+                public Object setOriginal(T original) {
+                    return this.original = original;
                 }
 
                 public Integer getStart() {

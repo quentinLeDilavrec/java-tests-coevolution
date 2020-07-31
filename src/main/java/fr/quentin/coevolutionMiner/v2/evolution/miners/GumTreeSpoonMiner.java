@@ -25,6 +25,7 @@ import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionsMiner;
+import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution.DescRange;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
@@ -141,14 +142,32 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             before.add(toRange(astBefore, op.getSrcNode(), "src"));
             List<ImmutablePair<Range, String>> after = new ArrayList<>();
             after.add(toRange(astAfter, op.getDstNode(), "dst"));
-            super.addEvolution(op.getAction().getName(), before, after, astBefore.commit, astAfter.commit, (Object) op);
+            Evolution evo = super.addEvolution(op.getAction().getName(), before, after, astBefore.commit,
+                    astAfter.commit, (Object) op);
+            for (DescRange dr : evo.getBefore()) {
+                augment(dr);
+            }
+            for (DescRange dr : evo.getAfter()) {
+                augment(dr);
+            }
         }
 
-        private <T> ImmutablePair<Range, String> toRange(Project<T> ast, CtElement range, String desc) {
-            SourcePosition position = range.getPosition();
-            return new ImmutablePair<>(
-                    ast.getRange(position.getFile().getPath(), position.getSourceStart(), position.getSourceEnd()),
-                    desc);
+        private void augment(DescRange dr) {
+            CtElement ori = (CtElement) dr.getTarget().getOriginal();
+            assert ori != null;
+            HashSet<DescRange> md = (HashSet<DescRange>) ori.getMetadata(METADATA_KEY_EVO);
+            if (md == null) {
+                md = new HashSet<>();
+                ori.putMetadata(METADATA_KEY_EVO, md);
+            }
+            md.add(dr);
+        }
+
+        private <T> ImmutablePair<Range, String> toRange(Project<T> ast, CtElement element, String desc) {
+            SourcePosition position = element.getPosition();
+            Project<T>.AST.FileSnapshot.Range range = ast.getRange(position.getFile().getPath(),
+                    position.getSourceStart(), position.getSourceEnd(), element);
+            return new ImmutablePair<>(range, desc);
         }
 
         @Override

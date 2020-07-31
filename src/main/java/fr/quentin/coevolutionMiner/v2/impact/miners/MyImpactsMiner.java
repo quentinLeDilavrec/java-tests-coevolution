@@ -57,13 +57,11 @@ public class MyImpactsMiner implements ImpactsMiner {
 
     @Override
     public Impacts compute() {
+        assert spec.evoSpec != null : spec;
         boolean isOnBefore = spec.astSpec.commitId.equals(spec.evoSpec.commitIdBefore);
         ProjectSpoon project = (ProjectSpoon)astHandler.handle(spec.astSpec);
         ProjectSpoon.SpoonAST ast = project.getAst();
-        Evolutions evo = null;
-        if (spec.evoSpec != null) {
-            evo = evoHandler.handle(spec.evoSpec);
-        }
+        Evolutions evo = evoHandler.handle(spec.evoSpec);
         // return res;
 
         Path rootDir = ast.rootDir;
