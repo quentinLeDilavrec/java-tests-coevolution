@@ -51,6 +51,8 @@ import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.transport.URIish;
 import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.treewalk.filter.PathFilter;
+import org.eclipse.jgit.treewalk.filter.PathSuffixFilter;
 import org.refactoringminer.api.Refactoring;
 
 import fr.quentin.impactMiner.Evolution;
@@ -152,6 +154,10 @@ public class SourcesHelper implements AutoCloseable {
 
 	public Path materializePrev(String commitId) throws IOException {
 		return materializePrev(commitId, ALLOW_ALL);
+	}
+
+	public void materializeExtended(String commitIdBefore, String commitIdAfter) {
+		PathSuffixFilter.create(".java");
 	}
 
 	public String getBeforeCommit(String commitId) throws IOException {

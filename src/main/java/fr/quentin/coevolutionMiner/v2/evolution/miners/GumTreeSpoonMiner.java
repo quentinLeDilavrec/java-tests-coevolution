@@ -72,9 +72,10 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         // List<Evolutions.Evolution> evolutions = new
         // ArrayList<Evolutions.Evolution>();
 
-        EvolutionsExtension result = new EvolutionsExtension(spec, src);
+        EvolutionsExtension result;
         Map<ImmutablePair<Project<?>, Project<?>>, ImmutablePair<Diff, List<Operation<?>>>> mapOpByCommit = new HashMap<>();
         try (SourcesHelper helper = src.open()) {
+            result = new EvolutionsExtension(spec, src);
             Set<Commit> commits = src.getCommitsBetween(spec.commitIdBefore, spec.commitIdAfter);
             Commit beforeCom = null;
             for (Commit commit : commits) {
@@ -83,7 +84,6 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     Project<?> afterAST = astHandler.handle(astHandler.buildSpec(spec.sources, commit.getId()));
                     Diff diff = comp.compare(((ProjectSpoon) beforeAST).getAst().launcher.getModel().getRootPackage(),
                             ((ProjectSpoon) afterAST).getAst().launcher.getModel().getRootPackage());
-
                     for (Operation<?> op : diff.getRootOperations()) {
                         ImmutablePair<Project<?>, Project<?>> tmp1 = new ImmutablePair<>(beforeAST, afterAST);
                         mapOpByCommit.putIfAbsent(tmp1, new ImmutablePair<>(diff, new ArrayList<>()));
@@ -105,7 +105,6 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 result.addEvolution(op, pair.left, pair.right);
             }
         }
-
         return result;
     }
 
@@ -124,6 +123,10 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
 
         void addDiff(Diff diff, Project<?> astBefore, Project<?> astAfter) {
             diffs.put(new ImmutablePair<>(astBefore.commit, astAfter.commit), diff);
+        }
+
+        public Diff getDiff(Commit before, Commit after) {
+            return diffs.get(new ImmutablePair<>(before, after));
         }
 
         @Override
