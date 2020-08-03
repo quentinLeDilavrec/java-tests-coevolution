@@ -55,6 +55,7 @@ import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.eclipse.jgit.treewalk.filter.PathSuffixFilter;
 import org.refactoringminer.api.Refactoring;
 
+import fr.quentin.impactMiner.AugmentedAST;
 import fr.quentin.impactMiner.Evolution;
 import fr.quentin.impactMiner.ImpactAnalysis;
 import fr.quentin.impactMiner.ImpactChain;
@@ -393,7 +394,8 @@ public class SourcesHelper implements AutoCloseable {
 
 	public static <T> JsonElement impactAnalysis(Path root, MavenLauncher launcher, List<Evolution<T>> evolutions)
 			throws IOException {
-		ImpactAnalysis l = new ImpactAnalysis(launcher);
+		AugmentedAST<MavenLauncher> aug = new AugmentedAST<>(launcher);
+		ImpactAnalysis l = new ImpactAnalysis(aug);
 
 		logger.info("Number of executable refs mapped to positions " + evolutions.size());
 		List<ImpactChain> imptst1 = l.getImpactedTests(evolutions);

@@ -16,6 +16,7 @@ import org.apache.log4j.Logger;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.transport.URIish;
 
+import fr.quentin.impactMiner.AugmentedAST;
 import fr.quentin.impactMiner.Evolution;
 import fr.quentin.impactMiner.ImpactAnalysis;
 import fr.quentin.impactMiner.ImpactChain;
@@ -103,7 +104,9 @@ public class DiffHelper {
 	}
 
 	public <T> JsonElement impactAnalysis(MavenLauncher launcher, List<Evolution<T>> evolutions) throws IOException {
-		ImpactAnalysis l = new ImpactAnalysis(launcher);
+
+		AugmentedAST<MavenLauncher> aug = new AugmentedAST<>(launcher);
+		ImpactAnalysis l = new ImpactAnalysis(aug);
 
 		List<CtExecutableReference<?>> allExecutableReference = new ArrayList<>();
 		for (CtMethod<?> m : launcher.getModel().getElements(new TypeFilter<>(CtMethod.class))) {
