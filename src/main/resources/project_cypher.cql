@@ -58,16 +58,15 @@ MERGE (parent:Project {
 		artifactId: coalesce(e.parent.artifactId, "")
 	})
 
-MERGE (commit)-[par:PARENT]->(parent)
-ON CREATE SET 
-	par.groupId=e.content.groupId,// relative to project not dependency
-	par.artifactId=e.content.artifactId,// relative to project not dependency
+MERGE (commit)-[par:PARENT{
+		groupId: coalesce(e.content.groupId, ""),// relative to project not parent
+		artifactId: coalesce(e.content.artifactId, "")// relative to project not parent
+}]->(parent)
+ON CREATE SET
 	par.id= e.parent.id,
 	par.relativePath= e.parent.relativePath,
 	par.version = e.parent.version
-ON MATCH SET 
-	par.groupId=e.content.groupId,// relative to project not dependency
-	par.artifactId=e.content.artifactId,// relative to project not dependency
+ON MATCH SET
 	par.id= e.parent.id,
 	par.relativePath= e.parent.relativePath,
 	par.version = e.parent.version
