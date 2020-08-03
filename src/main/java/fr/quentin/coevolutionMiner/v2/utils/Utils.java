@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
 
+import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon.SpoonAST;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.impactMiner.Evolution;
 import fr.quentin.impactMiner.ImpactAnalysis;
@@ -14,8 +15,18 @@ import fr.quentin.impactMiner.Position;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtExecutable;
 import spoon.reflect.declaration.CtMethod;
+import spoon.reflect.declaration.CtType;
 
 public class Utils {
+
+	public static CtElement matchExactChild(CtElement parent, int start, int end) {
+		return fr.quentin.impactMiner.Utils.matchExact(parent, start, end);
+	}
+
+	public static CtElement matchExactChild(SpoonAST ast, String path, int start, int end) {
+		CtType<?> type = ast.getTop(path);
+		return fr.quentin.impactMiner.Utils.matchExact(type, start, end);
+	}
 
 	public static List<String> getCommitIdBeforeAndAfter(ImpactElement rootCause) {
 		String commitIdBefore = null;

@@ -68,9 +68,8 @@ public class MyImpactsMiner implements ImpactsMiner {
         // return res;
 
         Path rootDir = ast.rootDir;
-        MavenLauncher launcher = ((ProjectSpoon.SpoonAST) ast).launcher; // TODO maybe clone model and/or launcher
 
-        ImpactAnalysis l = new ImpactAnalysis(launcher, 1);
+        ImpactAnalysis l = new ImpactAnalysis(ast.augmented, 1);
         ImpactsExtension result = new ImpactsExtension(spec, project, rootDir, l);
 
         Set<Evolution> evolutions = evo.toSet();
@@ -166,15 +165,16 @@ public class MyImpactsMiner implements ImpactsMiner {
             logger.info("Number of executable refs mapped to positions " + evolutions.size());
             List<ImpactChain> imptst1;
             try {
-                Set<ImmutablePair<Object, Position>> tmp = new HashSet<>();
+                Set<ImmutablePair<Object, CtElement>> tmp = new HashSet<>();
                 for (Evolution evo : evolutions) {
                     for (Evolutions.Evolution.DescRange bef : isOnBefore ? evo.getBefore() : evo.getAfter()) {
                         final Range targ = bef.getTarget();
-                        Position pos = new Position(targ.getFile().getPath(), targ.getStart(), targ.getEnd());
-                        tmp.add(new ImmutablePair<>(bef, pos));
+                        CtElement ori = (CtElement)targ.getOriginal();
+                        // Position pos = new Position(targ.getFile().getPath(), targ.getStart(), targ.getEnd());
+                        tmp.add(new ImmutablePair<>(bef, ori));
                     }
                 }
-                imptst1 = analyzer.getImpactedTests2(tmp);
+                imptst1 = analyzer.getImpactedTests3(tmp, false);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

@@ -27,6 +27,7 @@ import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.coevolutionMiner.v2.utils.Utils;
+import fr.quentin.impactMiner.AugmentedAST;
 import spoon.Launcher;
 import spoon.MavenLauncher;
 import spoon.SpoonException;
@@ -57,21 +58,45 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         }
 
         protected ProjectSpoon.SpoonAST ast;
+
         public ProjectSpoon.SpoonAST getAst() {
             return ast;
         }
 
         public class SpoonAST extends Project<CtElement>.AST {
             public final MavenLauncher launcher;
+            public final AugmentedAST<MavenLauncher> augmented;
 
             SpoonAST(Path rootDir, MavenLauncher launcher, Exception compilerException) {
                 super(rootDir, compilerException);
                 this.launcher = launcher;
+                this.augmented = new AugmentedAST<>(launcher);
+            }
+
+            public CtType<?> getTop(String path) {
+                return augmented.getTop(path);
             }
 
             @Override
             public boolean contains(File x) {
                 return launcher.getModelBuilder().getInputSources().contains(x);
+            }
+            
+            @Override
+            public FileSnapshot.Range getRange(String path, Integer start, Integer end, CtElement original) {
+                FileSnapshot.Range range = getRange(path, start, end);
+                CtElement tmp = original;
+                if (tmp == null) {
+                    tmp = Utils.matchExactChild(ast, path, start, end);
+                }
+                if (tmp == null) {
+                    return range;
+                }
+                Object old = range.setOriginal(original);
+                if (old != null && old != original) {
+                    throw new RuntimeException("Original value of range should have been unique");
+                }
+                return range;
             }
 
         }
@@ -197,7 +222,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             if (compilerExceptionAll != null) {
                 compilerExceptionAll.printStackTrace();
             }
-            
+
             if (r == null) {
                 try {
                     launcherAll.buildModel();
