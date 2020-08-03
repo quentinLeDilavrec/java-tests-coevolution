@@ -50,6 +50,7 @@ import fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner.CoE
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
+import spoon.reflect.declaration.CtType;
 import spoon.reflect.visitor.Filter;
 import fr.quentin.impactMiner.Position;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
@@ -58,6 +59,7 @@ import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
+import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon.SpoonAST;
 
 // CAUTION same limitation as MyImpactsMiner
 public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
@@ -185,21 +187,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         return n <= 1 ? 1 : Math.sqrt(2 * Math.PI * n) * Math.pow(n / Math.E, n);
     }
 
-    private void augment(DescRange dr) {
-        CtElement ori = (CtElement) dr.getTarget().getOriginal();
-        assert ori != null;
-        HashSet<DescRange> md = (HashSet<DescRange>) ori.getMetadata(EvolutionsMiner.METADATA_KEY_EVO);
-        if (md == null) {
-            md = new HashSet<>();
-            ori.putMetadata(EvolutionsMiner.METADATA_KEY_EVO, md);
-        }
-        md.add(dr);
-    }
-
+    // TODO go through projects modules recusively
     private CoEvolutionsExtension computeDirectCoevolutions(Sources sourcesProvider, Commit currentCommit,
             Commit nextCommit) throws SmallMiningException, SeverMiningException {
-        // List<Evolution> currEvolutions = perBeforeCommit.get(currentCommit);
-        // GET THE RIGHT NEXT COMMIT (FORWARD IN TIME)
+
         Evolutions.Specifier currEvoSpecGTS = EvolutionHandler.buildSpec(sourcesProvider.spec, currentCommit.getId(),
                 nextCommit.getId(), GumTreeSpoonMiner.class);
         Evolutions currentDiff = evoHandler.handle(currEvoSpecGTS);
@@ -209,24 +200,32 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         Evolutions currentEvolutions = evoHandler.handle(currEvoSpecRM);
 
         Project.Specifier<SpoonMiner> before_ast_id = astHandler.buildSpec(spec.evoSpec.sources, currentCommit.getId());
-        Project<CtElement> before_ast = astHandler.handle(before_ast_id);
-        if (before_ast.getAst().compilerException != null) {
+        Project<CtElement> before_proj = astHandler.handle(before_ast_id);
+        if (before_proj.getAst().compilerException != null) {
             throw new SmallMiningException("Before Code Don't Build");
         }
+        SpoonAST ast_before = (SpoonAST) before_proj.getAst();
 
-        Map<Evolution, Set<Evolution>> explainedTopLevels = decompose(currentEvolutions, currentDiff);
+        // match each refactoring against evolutions mined by gumtree,
+        // it allows to easily apply refactrings
+        Map<Evolution, Set<Evolution>> atomizedRefactorings = decompose(currentEvolutions, currentDiff);
 
-        Impacts currentImpacts = impactHandler.handle(impactHandler.buildSpec(before_ast_id, currEvoSpecRM));
-        for (Evolution evo : currentEvolutions.toSet()) {
-            for (DescRange dr : evo.getBefore()) {
-                augment(dr);
-            }
-            for (DescRange dr : evo.getAfter()) {
-                augment(dr);
+        for (Entry<Evolution, Set<Evolution>> entry : atomizedRefactorings.entrySet()) {
+            Evolution evo = entry.getKey();
+            System.out.println("---------------");
+            System.out.println(evo.getType());
+            for (Evolution atom : entry.getValue()) {
+                if (atom != evo) {
+                    System.out.println(atom.getType());
+                }
             }
         }
+
+        Impacts currentImpacts = impactHandler.handle(impactHandler.buildSpec(before_ast_id, currEvoSpecRM));
+
         Project.Specifier after_ast_id = astHandler.buildSpec(spec.evoSpec.sources, nextCommit.getId());
-        Project<?> after_ast = astHandler.handle(after_ast_id);
+        Project<?> after_proj = astHandler.handle(after_ast_id);
+        SpoonAST ast_after = (SpoonAST) before_proj.getAst();
 
         logNaiveCost(currentEvolutions);
         Map<FileSnapshot, Set<Evolution>> byFileBefore = new HashMap<>();
@@ -235,16 +234,25 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         Set<Set<Evolution>> smallestGroups = groupEvoByCommonFiles(currentEvolutions, byFileBefore, byFileAfter, byEvo);
 
         System.out.println(smallestGroups);
-        for (Project.AST.FileSnapshot.Range testBefore : currentImpacts.getImpactedTests()) {
-            CtElement originalImpactedTest = before_ast.getAst().getOriginal(testBefore);
+
+        for (Project<CtElement>.AST.FileSnapshot.Range testBefore : currentImpacts.getImpactedTests()) {
+            CtElement originalImpactedTest = before_proj.getAst().getOriginal(testBefore);
             CtElement nextStateImpactedTest = currentDiff.map(currentCommit, nextCommit, originalImpactedTest, true);
             SourcePosition position = nextStateImpactedTest.getPosition();
-            Range testAfter = after_ast.getRange(position.getFile().getPath(), position.getSourceStart(),
-                    position.getSourceEnd()); // TODO add original is not here
-            Set<String> reqBefore = getNeededFiles(currentImpacts,testBefore);
-            Set<String> reqAfter = getNeededFiles(currentImpacts,testAfter);
-            Set<String> reqChanged = new HashSet<>(reqAfter);
-            reqChanged.removeAll(reqBefore);
+            Project<CtElement>.AST.FileSnapshot.Range testAfter = (Project<CtElement>.AST.FileSnapshot.Range) after_proj
+                    .getRange(position.getFile().getPath(), position.getSourceStart(), position.getSourceEnd());
+            // TODO add original if not here ?
+            Set<CtType> reqBefore = ast_before.augmented.needs((CtElement) testBefore.getOriginal());
+            Set<String> reqBeforeS = typesToRelPaths(reqBefore);
+            System.out.println(reqBeforeS);
+            Set<CtType> reqAfter = ast_after.augmented.needs((CtElement) testAfter.getOriginal());
+            Set<String> reqAfterS = typesToRelPaths(reqAfter);
+
+            Set<String> reqAdded = new HashSet<>(reqAfterS);
+            reqAdded.removeAll(reqBeforeS);
+            Set<String> javaFiles = new HashSet<>();
+            addJavaFiles(ast_before, javaFiles);
+            addJavaFiles(ast_after, javaFiles);
             // set TMP DIR for test
             // put all non .java from currentCommit and all from reqBefore+current file of
             // test
@@ -255,19 +263,21 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         }
 
+        // TODO review + remove rest
+
         // Compile needed code and tests for each test potentially containing coevos
-        Exception beforeTestsCompileException = compileAllTests(sourcesProvider, before_ast.getAst().rootDir);
+        Exception beforeTestsCompileException = compileAllTests(sourcesProvider, before_proj.getAst().rootDir);
         if (beforeTestsCompileException != null) {
             throw new SmallMiningException("Before Tests Don't Build");
         }
 
-        if (after_ast.getAst().compilerException != null) {
+        if (after_proj.getAst().compilerException != null) {
             throw new SmallMiningException("Code after evolutions Don't Build");
         }
         Impacts afterImpacts = impactHandler.handle(impactHandler.buildSpec(after_ast_id, currEvoSpecRM));
         CoEvolutions.Specifier coevoSpec = CoEvolutionHandler.buildSpec(sourcesProvider.spec, currEvoSpecRM);
-        CoEvolutionsExtension currCoevolutions1 = new CoEvolutionsExtension(coevoSpec, currentEvolutions, before_ast,
-                after_ast);
+        CoEvolutionsExtension currCoevolutions1 = new CoEvolutionsExtension(coevoSpec, currentEvolutions, before_proj,
+                after_proj);
         Builder coevoBuilder = currCoevolutions1.createBuilder();
         coevoBuilder.setImpactsAfter(afterImpacts);
         store.construct(coevoBuilder, currentImpacts.getImpactedTests());
@@ -280,8 +290,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 break;
             }
 
-            CtMethod<?> testsBefore = (CtMethod<?>) before_ast.getAst().getOriginal(posBefore);
-            Exception resultTestBefore = executeTest(sourcesProvider, before_ast.getAst().rootDir,
+            CtMethod<?> testsBefore = (CtMethod<?>) before_proj.getAst().getOriginal(posBefore);
+            Exception resultTestBefore = executeTest(sourcesProvider, before_proj.getAst().rootDir,
                     testsBefore.getDeclaringType().getQualifiedName(), testsBefore.getSimpleName());
 
             // TODO idem
@@ -298,11 +308,11 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 }
                 continue;
             }
-            CtMethod<?> testsAfter = (CtMethod<?>) after_ast.getAst().getOriginal(posAfter);
+            CtMethod<?> testsAfter = (CtMethod<?>) after_proj.getAst().getOriginal(posAfter);
             if (resultTestBefore != null) {
                 // TODO "mvn test "+ test.get(0).getDeclaringType() + "$" +
                 // test.get(0).getSimpleName();
-                Exception resultTestAfter = executeTest(sourcesProvider, after_ast.getAst().rootDir,
+                Exception resultTestAfter = executeTest(sourcesProvider, after_proj.getAst().rootDir,
                         testsAfter.getDeclaringType().getQualifiedName(), testsAfter.getSimpleName());
                 if (resultTestAfter != null) {
                     logger.info("TestStayedFailed");
@@ -315,7 +325,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 // Exception resultTestAfterWithoutResolutions =
                 // executeTestWithoutCoevo(sourcesProvider,nextCommit.id,entry.getValue(),resolutions);
                 if (testsAfter != null) {
-                    Exception resultTestAfter = executeTest(sourcesProvider, after_ast.getAst().rootDir,
+                    Exception resultTestAfter = executeTest(sourcesProvider, after_proj.getAst().rootDir,
                             testsAfter.getDeclaringType().getQualifiedName(), testsAfter.getSimpleName());
                     if (resultTestAfter != null) {
                         logger.info("TestNowFail");
@@ -343,6 +353,28 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         return currCoevolutions;
     }
 
+    private void addJavaFiles(SpoonAST ast_before, Set<String> javaFiles) {
+        for (java.io.File jf : ast_before.augmented.launcher.getModelBuilder().getInputSources()) {
+            if (jf.isFile()) {
+                if (jf.isAbsolute()) {
+                    javaFiles.add(ast_before.rootDir.relativize(jf.toPath()).toString());
+                } else {
+                    assert false : jf;
+                }
+            } else {
+                assert false : jf;
+            }
+        }
+    }
+
+    private Set<String> typesToRelPaths(Set<CtType> reqBefore) {
+        Set<String> reqBeforeS = new HashSet<>();
+        for (CtType t : reqBefore) {
+            reqBeforeS.add(t.getPosition().getFile().getAbsolutePath());
+        }
+        return reqBeforeS;
+    }
+
     private Set<String> getNeededFiles(Impacts currentImpacts, Range testBefore) {
         return null;
     }
@@ -357,11 +389,11 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             Set<Evolution> acc = new HashSet<>();
             for (DescRange descRange : evolution.getBefore()) {
                 CtElement ele = (CtElement) descRange.getTarget().getOriginal();
-                aux(acc,ele);
+                aux(acc, ele);
             }
             for (DescRange descRange : evolution.getAfter()) {
                 CtElement ele = (CtElement) descRange.getTarget().getOriginal();
-                aux(acc,ele);
+                aux(acc, ele);
             }
             result.put(evolution, acc);
         }

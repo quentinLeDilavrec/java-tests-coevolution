@@ -20,6 +20,7 @@ import fr.quentin.impactMiner.Position;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 
+// TODO try to extends Evolutions or make an interface for inner class Evolution and implement it with CoEvolution
 public class CoEvolutions {
 
     public final Specifier spec;
@@ -90,7 +91,8 @@ public class CoEvolutions {
             //     }
             // }
 			return null;
-		}
+        }
+        
 		public Set<Range> getTestsAfter() {
 			return null;
         }
@@ -124,6 +126,26 @@ public class CoEvolutions {
             } else if (!resolutions.equals(other.resolutions))
                 return false;
             return true;
+        }
+
+        enum Validation {
+            NONE,
+            VALIDATED,
+            NOT_CONCLUSIVE
+        }
+
+        private Validation validation = Validation.NONE;
+
+        public Validation getValidation() {
+            return validation;
+        }
+
+        public void validate() {
+            this.validation = Validation.VALIDATED;
+        }
+
+        public void validationNotConclusive() {
+            this.validation = Validation.NOT_CONCLUSIVE;
         }
         
     }

@@ -70,7 +70,14 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             SpoonAST(Path rootDir, MavenLauncher launcher, Exception compilerException) {
                 super(rootDir, compilerException);
                 this.launcher = launcher;
-                this.augmented = new AugmentedAST<>(launcher);
+                AugmentedAST aaa;
+                try {
+                    aaa = new AugmentedAST<>(launcher);                    
+                } catch (Throwable e) {
+                    aaa = null;
+                    e.printStackTrace();
+                }
+                this.augmented = aaa;
             }
 
             public CtType<?> getTop(String path) {

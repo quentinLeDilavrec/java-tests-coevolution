@@ -21,6 +21,7 @@ import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 
 import fr.quentin.coevolutionMiner.utils.FilePathFilter;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
+import fr.quentin.impactMiner.AugmentedAST;
 import fr.quentin.impactMiner.Evolution;
 import fr.quentin.impactMiner.ImpactAnalysis;
 import fr.quentin.impactMiner.ImpactChain;
@@ -98,8 +99,8 @@ class AppTest {
 
             System.out.println("refactorings");
             System.out.println(detectedRefactorings);
-
-            ImpactAnalysis l = new ImpactAnalysis(launcher);
+            AugmentedAST<MavenLauncher> aug = new AugmentedAST<>(launcher);
+            ImpactAnalysis l = new ImpactAnalysis(aug);
             System.out.println("evolutions");
             System.out.println(evolutions);
             int MAX_EVO = 1000;
@@ -160,16 +161,16 @@ class AppTest {
                     @Override
                     public void handle(String commitId, List<Refactoring> refactorings) {
                         detectedRefactorings.addAll(refactorings);
-                            String before;
-                            try {
-                                before = helper.getBeforeCommit(commitId);
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
-                            }
+                        String before;
+                        try {
+                            before = helper.getBeforeCommit(commitId);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
                         for (Refactoring op : refactorings) {
                             if (op.getRefactoringType().equals(RefactoringType.MOVE_OPERATION)) {
                                 MoveMethodEvolution tmp = new MoveMethodEvolution(path.toAbsolutePath().toString(), op,
-                                before, commitId);
+                                        before, commitId);
                                 evolutions.add(tmp);
                             }
                         }
@@ -182,7 +183,8 @@ class AppTest {
             System.out.println("refactorings");
             System.out.println(detectedRefactorings);
 
-            ImpactAnalysis l = new ImpactAnalysis(launcher);
+            AugmentedAST<MavenLauncher> aug = new AugmentedAST<>(launcher);
+            ImpactAnalysis l = new ImpactAnalysis(aug);
             System.out.println("evolutions");
             System.out.println(evolutions);
             int MAX_EVO = 1000;
@@ -230,16 +232,16 @@ class AppTest {
                     @Override
                     public void handle(String commitId, List<Refactoring> refactorings) {
                         detectedRefactorings.addAll(refactorings);
-                            String before;
-                            try {
-                                before = helper.getBeforeCommit(commitId);
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
-                            }
+                        String before;
+                        try {
+                            before = helper.getBeforeCommit(commitId);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
                         for (Refactoring op : refactorings) {
                             if (op.getRefactoringType().equals(RefactoringType.MOVE_OPERATION)) {
                                 MoveMethodEvolution tmp = new MoveMethodEvolution(path.toAbsolutePath().toString(), op,
-                                before, commitId);
+                                        before, commitId);
                                 evolutions.add(tmp);
                             }
                         }
@@ -251,7 +253,8 @@ class AppTest {
 
             System.out.println("refactorings");
             System.out.println(detectedRefactorings);
-            ImpactAnalysis l = new ImpactAnalysis(launcher);
+            AugmentedAST<MavenLauncher> aug = new AugmentedAST<>(launcher);
+            ImpactAnalysis l = new ImpactAnalysis(aug);
             System.out.println("evolutions");
             System.out.println(evolutions);
             int MAX_EVO = 1000;
@@ -299,16 +302,15 @@ class AppTest {
             return op;
         }
 
+        @Override
+        public String getCommitIdBefore() {
+            return commitIdBefore;
+        }
 
-		@Override
-		public String getCommitIdBefore() {
-			return commitIdBefore;
-		}
-
-		@Override
-		public String getCommitIdAfter() {
-			return commitIdAfter;
-		}
+        @Override
+        public String getCommitIdAfter() {
+            return commitIdAfter;
+        }
     }
 
     static class OtherEvolution implements Evolution<Refactoring> {
@@ -347,16 +349,15 @@ class AppTest {
             return op;
         }
 
+        @Override
+        public String getCommitIdBefore() {
+            return commitIdBefore;
+        }
 
-		@Override
-		public String getCommitIdBefore() {
-			return commitIdBefore;
-		}
-
-		@Override
-		public String getCommitIdAfter() {
-			return commitIdAfter;
-		}
+        @Override
+        public String getCommitIdAfter() {
+            return commitIdAfter;
+        }
     }
 
 }

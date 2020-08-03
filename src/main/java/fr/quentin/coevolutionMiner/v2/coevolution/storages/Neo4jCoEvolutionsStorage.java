@@ -189,7 +189,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
     // }
 
     /**
-     * evolutions is on a single commit
+     * Evolutions is on a single commit
      */
     @Override
     public void construct(CoEvolutionsExtension.Builder coevoBuilder, Set<Range> startingTests) {

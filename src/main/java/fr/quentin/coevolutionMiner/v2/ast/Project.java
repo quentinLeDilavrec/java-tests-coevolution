@@ -229,7 +229,7 @@ public class Project<T> {
                 }
 
                 public T getOriginal() {
-                    return null;
+                    return original;
                 }
 
                 public Object setOriginal(T original) {
