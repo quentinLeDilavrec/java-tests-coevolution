@@ -17,6 +17,7 @@ import org.refactoringminer.api.Refactoring;
 
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
+import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 
 public class Evolutions {
@@ -138,7 +139,7 @@ public class Evolutions {
         return evo;
     }
 
-    public <T> T map(Commit before, Commit after, T element, boolean fromSource) {
+    public <T> T map(Commit before, Commit after, Project<T> proj, T element, boolean fromSource) {
         return null;
     }
 
