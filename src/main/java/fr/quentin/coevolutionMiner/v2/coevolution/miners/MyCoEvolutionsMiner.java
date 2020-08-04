@@ -201,7 +201,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         Project.Specifier<SpoonMiner> before_ast_id = astHandler.buildSpec(spec.evoSpec.sources, currentCommit.getId());
         Project<CtElement> before_proj = astHandler.handle(before_ast_id);
-        if (before_proj.getAst().compilerException != null) {
+        if (before_proj.getAst().compilerException != null || !before_proj.getAst().isUsable()) {
             throw new SmallMiningException("Before Code Don't Build");
         }
         SpoonAST ast_before = (SpoonAST) before_proj.getAst();
@@ -225,7 +225,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         Project.Specifier after_ast_id = astHandler.buildSpec(spec.evoSpec.sources, nextCommit.getId());
         Project<?> after_proj = astHandler.handle(after_ast_id);
-        SpoonAST ast_after = (SpoonAST) before_proj.getAst();
+        if (after_proj.getAst().compilerException != null || !after_proj.getAst().isUsable()) {
+            throw new SmallMiningException("Code after evolutions Don't Build");
+        }
+        SpoonAST ast_after = (SpoonAST) after_proj.getAst();
 
         logNaiveCost(currentEvolutions);
         Map<FileSnapshot, Set<Evolution>> byFileBefore = new HashMap<>();
@@ -271,9 +274,6 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             throw new SmallMiningException("Before Tests Don't Build");
         }
 
-        if (after_proj.getAst().compilerException != null) {
-            throw new SmallMiningException("Code after evolutions Don't Build");
-        }
         Impacts afterImpacts = impactHandler.handle(impactHandler.buildSpec(after_ast_id, currEvoSpecRM));
         CoEvolutions.Specifier coevoSpec = CoEvolutionHandler.buildSpec(sourcesProvider.spec, currEvoSpecRM);
         CoEvolutionsExtension currCoevolutions1 = new CoEvolutionsExtension(coevoSpec, currentEvolutions, before_proj,

@@ -68,7 +68,9 @@ public class MyImpactsMiner implements ImpactsMiner {
         // return res;
 
         Path rootDir = ast.rootDir;
-
+        if (!ast.isUsable()) {
+            return null;
+        }
         ImpactAnalysis l = new ImpactAnalysis(ast.augmented, 1);
         ImpactsExtension result = new ImpactsExtension(spec, project, rootDir, l);
 
@@ -116,27 +118,27 @@ public class MyImpactsMiner implements ImpactsMiner {
             }
         }
 
-        // public Set<String> needs(Set<Evolution> evos, boolean onAfter) {
-        //     Set<CtType<?>> tmp = new HashSet<>();
-        //     TypeFilter<CtType<?>> filter = new TypeFilter<CtType<?>>(CtType.class);
-        //     for (Evolution evo : evos) {
-        //         for (Evolutions.Evolution.DescRange ds : onAfter ? evo.getBefore() : evo.getAfter()) {
-        //             tmp.add(((CtElement) ds.getTarget().getOriginal()).getParent(filter).getTopLevelType());
-        //         }
-        //     }
-        //     Set<CtType> tmp2 = new HashSet<>();
-        //     for (CtType<?> f : tmp) {
-        //         tmp2.addAll(analyzer.augmented.needsDyn(f));
-        //     }
-        //     Set<String> result = new HashSet<>();
-        //     for (CtType t : tmp) {
-        //         SourcePosition position = t.getPosition();
-        //         if (position.isValidPosition()) {
-        //             result.add(position.getFile().getAbsolutePath());
-        //         }
-        //     }
-        //     return result;
-        // }
+        public Set<String> needs(Set<Evolution> evos, boolean onAfter) {
+            Set<CtType<?>> tmp = new HashSet<>();
+            TypeFilter<CtType<?>> filter = new TypeFilter<CtType<?>>(CtType.class);
+            for (Evolution evo : evos) {
+                for (Evolutions.Evolution.DescRange ds : onAfter ? evo.getBefore() : evo.getAfter()) {
+                    tmp.add(((CtElement) ds.getTarget().getOriginal()).getParent(filter).getTopLevelType());
+                }
+            }
+            Set<CtType> tmp2 = new HashSet<>();
+            for (CtType<?> f : tmp) {
+                tmp2.addAll(analyzer.augmented.needsDyn(f));
+            }
+            Set<String> result = new HashSet<>();
+            for (CtType t : tmp) {
+                SourcePosition position = t.getPosition();
+                if (position.isValidPosition()) {
+                    result.add(position.getFile().getAbsolutePath());
+                }
+            }
+            return result;
+        }
 
         @Override
         protected Map<String, Object> makeRange(DescRange descRange) {

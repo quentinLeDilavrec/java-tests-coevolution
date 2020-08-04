@@ -115,7 +115,9 @@ public class Project<T> {
         assert !Paths.get(path).isAbsolute() : path;
         assert ast != null;
         File x = Paths.get(path).toFile();
-        if (ast.contains(x)) {
+        if (!ast.isUsable()) {
+            return null;
+        } else if (ast.contains(x)) {
             return ((AST) ast).getRange(path, start, end, (T) original);
         } else {
             for (Project project : modules) {
@@ -130,6 +132,10 @@ public class Project<T> {
 
     public class AST {
         public final Path rootDir;
+
+        public boolean isUsable() {
+            return true;
+        }
 
         public Path getRootDir() {
             return rootDir;

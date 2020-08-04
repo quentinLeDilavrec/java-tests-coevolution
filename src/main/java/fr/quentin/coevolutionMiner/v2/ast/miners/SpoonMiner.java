@@ -70,14 +70,12 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             SpoonAST(Path rootDir, MavenLauncher launcher, Exception compilerException) {
                 super(rootDir, compilerException);
                 this.launcher = launcher;
-                AugmentedAST aaa;
-                try {
-                    aaa = new AugmentedAST<>(launcher);                    
-                } catch (Throwable e) {
-                    aaa = null;
-                    e.printStackTrace();
-                }
-                this.augmented = aaa;
+                this.augmented = this.launcher == null ? null : new AugmentedAST<>(launcher);
+            }
+
+            @Override
+            public boolean isUsable() {
+                return this.launcher != null && this.augmented != null;
             }
 
             public CtType<?> getTop(String path) {
@@ -88,7 +86,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             public boolean contains(File x) {
                 return launcher.getModelBuilder().getInputSources().contains(x);
             }
-            
+
             @Override
             public FileSnapshot.Range getRange(String path, Integer start, Integer end, CtElement original) {
                 FileSnapshot.Range range = getRange(path, start, end);

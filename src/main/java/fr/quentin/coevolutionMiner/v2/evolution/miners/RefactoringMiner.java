@@ -123,38 +123,28 @@ public class RefactoringMiner implements EvolutionsMiner {
         }
 
         void addEvolution(Refactoring refact, Project<?> astBefore, Project<?> astAfter) {
-            List<ImmutablePair<Range, String>> before = new ArrayList<>();
-            for (CodeRange range : refact.leftSide()) {
-                before.add(toRange(astBefore, range));
-
-            }
-            List<ImmutablePair<Range, String>> after = new ArrayList<>();
-            for (CodeRange range : refact.rightSide()) {
-                after.add(toRange(astAfter, range));
-            }
-            Evolution evo = addEvolution(refact.getName(), before, after, astBefore.commit, astAfter.commit, refact);
-            for (DescRange dr : evo.getBefore()) {
-                augment(dr);
-            }
-            for (DescRange dr : evo.getAfter()) {
-                augment(dr);
-            }
+            List<ImmutablePair<Range, String>> before = aux(refact.leftSide(), astBefore);
+            List<ImmutablePair<Range, String>> after = aux(refact.rightSide(), astAfter);
+            addEvolution(refact.getName(), before, after, astBefore.commit, astAfter.commit, refact);
         }
 
-        private void augment(DescRange dr) {
-            CtElement ori = (CtElement) dr.getTarget().getOriginal();
-            assert ori != null;
-            HashSet<DescRange> md = (HashSet<DescRange>) ori.getMetadata(METADATA_KEY_EVO);
-            if (md == null) {
-                md = new HashSet<>();
-                ori.putMetadata(METADATA_KEY_EVO, md);
+        private List<ImmutablePair<Range, String>> aux(List<CodeRange> list, Project<?> ast) {
+            List<ImmutablePair<Range, String>> result = new ArrayList<>();
+            for (CodeRange range : list) {
+                ImmutablePair<Range, String> rg = toRange(ast, range);
+                if (rg != null) {
+                    result.add(rg);
+                }
             }
-            md.add(dr);
+            return result;
         }
 
         private ImmutablePair<Range, String> toRange(Project proj, CodeRange range) {
-            return new ImmutablePair<>(proj.getRange(range.getFilePath(), range.getStartOffset(), range.getEndOffset()),
-                    range.getDescription());
+            Range tmp = proj.getRange(range.getFilePath(), range.getStartOffset(), range.getEndOffset());
+            if (tmp == null) {
+                return null;
+            }
+            return new ImmutablePair<>(tmp, range.getDescription());
         }
 
         @Override
