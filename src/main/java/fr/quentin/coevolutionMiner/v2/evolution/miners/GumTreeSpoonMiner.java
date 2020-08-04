@@ -82,6 +82,9 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 if (beforeCom != null) {
                     Project<?> beforeAST = astHandler.handle(astHandler.buildSpec(spec.sources, beforeCom.getId()));
                     Project<?> afterAST = astHandler.handle(astHandler.buildSpec(spec.sources, commit.getId()));
+                    if (!beforeAST.getAst().isUsable() || !afterAST.getAst().isUsable()) {
+                        continue;
+                    }
                     Diff diff = comp.compare(((ProjectSpoon) beforeAST).getAst().launcher.getModel().getRootPackage(),
                             ((ProjectSpoon) afterAST).getAst().launcher.getModel().getRootPackage());
                     for (Operation<?> op : diff.getRootOperations()) {

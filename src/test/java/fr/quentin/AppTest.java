@@ -21,6 +21,7 @@ import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 
 import fr.quentin.coevolutionMiner.utils.FilePathFilter;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
+import fr.quentin.impactMiner.AugmentedAST;
 import fr.quentin.impactMiner.Evolution;
 import fr.quentin.impactMiner.ImpactAnalysis;
 import fr.quentin.impactMiner.ImpactChain;
@@ -98,8 +99,8 @@ class AppTest {
 
             System.out.println("refactorings");
             System.out.println(detectedRefactorings);
-
-            ImpactAnalysis l = new ImpactAnalysis(launcher);
+            AugmentedAST<MavenLauncher> aug = new AugmentedAST<>(launcher);
+            ImpactAnalysis l = new ImpactAnalysis(aug);
             System.out.println("evolutions");
             System.out.println(evolutions);
             int MAX_EVO = 1000;
@@ -182,7 +183,8 @@ class AppTest {
             System.out.println("refactorings");
             System.out.println(detectedRefactorings);
 
-            ImpactAnalysis l = new ImpactAnalysis(launcher);
+            AugmentedAST<MavenLauncher> aug = new AugmentedAST<>(launcher);
+            ImpactAnalysis l = new ImpactAnalysis(aug);
             System.out.println("evolutions");
             System.out.println(evolutions);
             int MAX_EVO = 1000;
@@ -251,7 +253,8 @@ class AppTest {
 
             System.out.println("refactorings");
             System.out.println(detectedRefactorings);
-            ImpactAnalysis l = new ImpactAnalysis(launcher);
+            AugmentedAST<MavenLauncher> aug = new AugmentedAST<>(launcher);
+            ImpactAnalysis l = new ImpactAnalysis(aug);
             System.out.println("evolutions");
             System.out.println(evolutions);
             int MAX_EVO = 1000;

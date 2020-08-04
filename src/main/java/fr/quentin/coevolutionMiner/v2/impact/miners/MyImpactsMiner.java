@@ -68,7 +68,9 @@ public class MyImpactsMiner implements ImpactsMiner {
         // return res;
 
         Path rootDir = ast.rootDir;
-
+        if (!ast.isUsable()) {
+            return null;
+        }
         ImpactAnalysis l = new ImpactAnalysis(ast.augmented, 1);
         ImpactsExtension result = new ImpactsExtension(spec, project, rootDir, l);
 
@@ -126,7 +128,7 @@ public class MyImpactsMiner implements ImpactsMiner {
             }
             Set<CtType> tmp2 = new HashSet<>();
             for (CtType<?> f : tmp) {
-                tmp2.addAll(analyzer.needsDyn(f));
+                tmp2.addAll(analyzer.augmented.needsDyn(f));
             }
             Set<String> result = new HashSet<>();
             for (CtType t : tmp) {
