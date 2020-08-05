@@ -78,7 +78,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                 public String execute(Transaction tx) {
                     Result result = tx.run(getCypher(), parameters("json", tmp, "tool", value.spec.miner));
                     result.consume();
-                    return "done coevolution on "+ value.spec.srcSpec.repository;
+                    return "done coevolution on " + value.spec.srcSpec.repository;
                 }
             });
             System.out.println(done);
@@ -97,7 +97,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
             o.put("content", tmp);
             o.put("type", "cause");
             pointed.add(o);
-            causes_url.add((String)(((Map<String, Object>)tmp.get("content")).get("url")));
+            causes_url.add((String) (((Map<String, Object>) tmp.get("content")).get("url")));
         }
         List<String> resolutions_url = new ArrayList<>();
         for (Evolution evolution : coevolution.getResolutions()) {
@@ -106,7 +106,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
             o.put("content", tmp);
             o.put("type", "resolution");
             pointed.add(o);
-            resolutions_url.add((String)(((Map<String, Object>)tmp.get("content")).get("url")));
+            resolutions_url.add((String) (((Map<String, Object>) tmp.get("content")).get("url")));
         }
         Map<String, Object> content = new HashMap<>();
         content.put("validated", validated);
@@ -125,7 +125,9 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
     }
 
     public Neo4jCoEvolutionsStorage() {
-        this(MyProperties.getPropValues().getProperty("neo4jAddress"), MyProperties.getPropValues().getProperty("neo4jId"), MyProperties.getPropValues().getProperty("neo4jPwd"));
+        this(MyProperties.getPropValues().getProperty("neo4jAddress"),
+                MyProperties.getPropValues().getProperty("neo4jId"),
+                MyProperties.getPropValues().getProperty("neo4jPwd"));
     }
 
     @Override
@@ -214,8 +216,9 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                     Result queryResult = tx.run(getMinerCypher(), parameters("data", list));
                     return queryResult.list(x -> {
                         Value beforeTestRaw = x.get("test");
-                        Project.AST.FileSnapshot.Range testBefore = astBefore.getRange(beforeTestRaw.get("path").asString(),
-                                beforeTestRaw.get("start").asInt(), beforeTestRaw.get("end").asInt());
+                        Project.AST.FileSnapshot.Range testBefore = astBefore.getRange(
+                                beforeTestRaw.get("path").asString(), beforeTestRaw.get("start").asInt(),
+                                beforeTestRaw.get("end").asInt());
 
                         Set<Evolution> causes = new HashSet<>();
                         causes.addAll(getEvo(x.get("shortCall"), evolutions, astBefore, astAfter));
@@ -252,7 +255,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
     }
 
     // TODO use after ranges to make the match
-    protected Set<Evolution> getEvo(Value value, Evolutions evolutions, Project astBefore, Project astAfter) {
+    protected Set<Evolution> getEvo(Value value, Evolutions evolutions, Project<?> projBefore, Project<?> projAfter) {
         Set<Evolution> r = new HashSet<>();
         for (Value x : value.asList(x -> x)) {
             List<ImmutablePair<Range, String>> before = new ArrayList<>();
@@ -263,13 +266,13 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                 Node rangeNode = segment.end();
                 Relationship relation = segment.relationship();
                 String relType = relation.get("desc").asString();
-                ImmutablePair<Range, String> descRange = getEvoAux(astBefore.commit.getRepository().getUrl(),
-                        astBefore.commit.getId(), astBefore, rangeNode, relType);
+                ImmutablePair<Range, String> descRange = getEvoAux(projBefore.commit.getRepository().getUrl(),
+                        projBefore.commit.getId(), projBefore, rangeNode, relType);
                 if (descRange != null)
                     before.add(descRange);
             }
             try {
-                r.add(evolutions.getEvolution(evoType, before));
+                r.add(evolutions.getEvolution(evoType, before, projAfter));
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -277,7 +280,8 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         return r;
     }
 
-    private ImmutablePair<Range, String> getEvoAux(String repoURL, String commitId, Project ast, Node curr, String type) {
+    private ImmutablePair<Range, String> getEvoAux(String repoURL, String commitId, Project ast, Node curr,
+            String type) {
         if (!repoURL.equals(curr.get("repo").asString()))
             return null;
         if (!commitId.equals(curr.get("commitId").asString()))

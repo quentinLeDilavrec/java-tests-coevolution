@@ -70,6 +70,7 @@ public class ImpactHandler implements AutoCloseable {
                 case "myMiner":
                     MyImpactsMiner minerInst = new MyImpactsMiner(spec, astHandler, evoHandler);
                     res = minerInst.compute();
+                    populate((MyImpactsMiner.ImpactsExtension)res);
                     break;
                 default:
                     throw new RuntimeException(spec.miner + " is not a registered impacts miner.");
@@ -86,6 +87,20 @@ public class ImpactHandler implements AutoCloseable {
         }
     }
 
+	private void populate(MyImpactsMiner.ImpactsExtension impacts) {
+		for (MyImpactsMiner.ImpactsExtension x : impacts.getModules()) {
+			memoizedImpacts.putIfAbsent(x.spec, new Data<>());
+			Data<Impacts> tmp = memoizedImpacts.get(x.spec);
+			tmp.lock.lock();
+			try {
+				tmp.set(x);
+			} finally {
+				tmp.lock.unlock();
+            }
+            populate(x);
+		}
+    }
+    
     @Override
     public void close() throws Exception {
         neo4jStore.close();

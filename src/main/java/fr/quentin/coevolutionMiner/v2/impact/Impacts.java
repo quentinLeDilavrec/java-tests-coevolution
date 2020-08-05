@@ -154,12 +154,12 @@ public abstract class Impacts {
     }
 
     public static class Specifier {
-        public final Project.Specifier astSpec;
+        public final Project.Specifier projSpec;
         public final Evolutions.Specifier evoSpec;
         public final String miner;
 
-        public Specifier(Project.Specifier astSpec, Evolutions.Specifier evoSpec, String miner) {
-            this.astSpec = astSpec;
+        public Specifier(Project.Specifier projSpec, Evolutions.Specifier evoSpec, String miner) {
+            this.projSpec = projSpec;
             this.evoSpec = evoSpec;
             this.miner = miner;
         }
@@ -170,7 +170,7 @@ public abstract class Impacts {
             final int prime = 31;
             int result = 1;
             result = prime * result + ((miner == null) ? 0 : miner.hashCode());
-            result = prime * result + ((astSpec == null) ? 0 : astSpec.hashCode());
+            result = prime * result + ((projSpec == null) ? 0 : projSpec.hashCode());
             result = prime * result + ((evoSpec == null) ? 0 : evoSpec.hashCode());
             return result;
         }
@@ -189,10 +189,10 @@ public abstract class Impacts {
                     return false;
             } else if (!miner.equals(other.miner))
                 return false;
-            if (astSpec == null) {
-                if (other.astSpec != null)
+            if (projSpec == null) {
+                if (other.projSpec != null)
                     return false;
-            } else if (!astSpec.equals(other.astSpec))
+            } else if (!projSpec.equals(other.projSpec))
                 return false;
             if (evoSpec == null) {
                 if (other.evoSpec != null)

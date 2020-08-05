@@ -17,6 +17,7 @@ import org.refactoringminer.api.Refactoring;
 
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
+import spoon.reflect.declaration.CtElement;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 
@@ -104,17 +105,18 @@ public class Evolutions {
 
     protected final Set<Evolution> evolutions = new HashSet<>();
     private Map<ImmutablePair<String, List<ImmutablePair<Range, String>>>, Evolution> evoByBeforeList = new HashMap<>();
-    private Sources sources;
+    protected final Sources sources;
 
     public Sources getSources() {
         return sources;
     }
 
-    public Evolution getEvolution(String type, List<ImmutablePair<Range, String>> before) throws Exception {
+    public Evolution getEvolution(String type, List<ImmutablePair<Range, String>> before, Project<?> target) {
         Evolution tmp = evoByBeforeList.get(new ImmutablePair<>(type, before));
         if (tmp == null) {
-            throw new Exception("evo of type " + type + " and " + before + " is not in list");
+            throw new RuntimeException("evo of type " + type + " and " + before + " is not in list");
         }
+        // TODO do some checks on target
         return tmp;
     }
 
@@ -137,10 +139,6 @@ public class Evolutions {
         if (old != null && evo.equals(old))
             throw new RuntimeException("evo sharing same type and before");
         return evo;
-    }
-
-    public <T> T map(Commit before, Commit after, Project<T> proj, T element, boolean fromSource) {
-        return null;
     }
 
     // @uniq // (also put relations as attributs)
@@ -322,4 +320,8 @@ public class Evolutions {
             return Evolutions.this;
         }
     }
+
+	public Project<?>.AST.FileSnapshot.Range map(Project<?>.AST.FileSnapshot.Range testBefore, Project<?> target) {
+		return null;
+	}
 }

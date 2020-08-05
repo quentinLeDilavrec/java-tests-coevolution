@@ -80,7 +80,7 @@ public class Neo4jProjectStorage implements ProjectStorage {
 
     private <T> Map<String, Object> projectToMap(ProjectSpoon project) {
         Map<String, Object> r = new HashMap<>();
-        ProjectSpoon.SpoonAST ast = project.getAst();
+        ProjectSpoon.SpoonAST ast = (ProjectSpoon.SpoonAST)project.getAst();
         Stats stats = ast.getGlobalStats();
         r.put("stats", stats.toMap());
         Commit commit = project.commit;

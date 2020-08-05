@@ -1,6 +1,7 @@
 package fr.quentin.coevolutionMiner.v2.coevolution.miners;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.math.BigInteger;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -24,6 +26,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
 import org.eclipse.core.internal.resources.File;
+import org.eclipse.jdt.internal.compiler.codegen.IntegerCache;
 import org.eclipse.jdt.internal.core.nd.util.MathUtils;
 import org.refactoringminer.api.Refactoring;
 
@@ -187,6 +190,15 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         return n <= 1 ? 1 : Math.sqrt(2 * Math.PI * n) * Math.pow(n / Math.E, n);
     }
 
+    static interface AAA {
+        int run();
+        // void g();
+    }
+
+    static interface BBB {
+        // void g();
+    }
+
     // TODO go through projects modules recusively
     private CoEvolutionsExtension computeDirectCoevolutions(Sources sourcesProvider, Commit currentCommit,
             Commit nextCommit) throws SmallMiningException, SeverMiningException {
@@ -198,13 +210,22 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         Evolutions.Specifier currEvoSpecRM = EvolutionHandler.buildSpec(sourcesProvider.spec, currentCommit.getId(),
                 nextCommit.getId(), RefactoringMiner.class);
         Evolutions currentEvolutions = evoHandler.handle(currEvoSpecRM);
+        logNaiveCostCoEvoValidation(currentEvolutions);
 
         Project.Specifier<SpoonMiner> before_ast_id = astHandler.buildSpec(spec.evoSpec.sources, currentCommit.getId());
+        Project.Specifier<SpoonMiner> after_ast_id = astHandler.buildSpec(spec.evoSpec.sources, nextCommit.getId());
+
         Project<CtElement> before_proj = astHandler.handle(before_ast_id);
         if (before_proj.getAst().compilerException != null || !before_proj.getAst().isUsable()) {
             throw new SmallMiningException("Before Code Don't Build");
         }
         SpoonAST ast_before = (SpoonAST) before_proj.getAst();
+
+        Project<?> after_proj = astHandler.handle(after_ast_id);
+        if (after_proj.getAst().compilerException != null || !after_proj.getAst().isUsable()) {
+            throw new SmallMiningException("Code after evolutions Don't Build");
+        }
+        SpoonAST ast_after = (SpoonAST) after_proj.getAst();
 
         // match each refactoring against evolutions mined by gumtree,
         // it allows to easily apply refactrings
@@ -223,33 +244,21 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         Impacts currentImpacts = impactHandler.handle(impactHandler.buildSpec(before_ast_id, currEvoSpecRM));
 
-        Project.Specifier after_ast_id = astHandler.buildSpec(spec.evoSpec.sources, nextCommit.getId());
-        Project<?> after_proj = astHandler.handle(after_ast_id);
-        if (after_proj.getAst().compilerException != null || !after_proj.getAst().isUsable()) {
-            throw new SmallMiningException("Code after evolutions Don't Build");
-        }
-        SpoonAST ast_after = (SpoonAST) after_proj.getAst();
+        // Map<FileSnapshot, Set<Evolution>> byFileBefore = new HashMap<>();
+        // Map<FileSnapshot, Set<Evolution>> byFileAfter = new HashMap<>();
+        // Map<Evolution, Set<Evolution>> byEvo = new HashMap<>();
+        // Set<Set<Evolution>> smallestGroups = groupEvoByCommonFiles(currentEvolutions, byFileBefore, byFileAfter, byEvo);
 
-        logNaiveCost(currentEvolutions);
-        Map<FileSnapshot, Set<Evolution>> byFileBefore = new HashMap<>();
-        Map<FileSnapshot, Set<Evolution>> byFileAfter = new HashMap<>();
-        Map<Evolution, Set<Evolution>> byEvo = new HashMap<>();
-        Set<Set<Evolution>> smallestGroups = groupEvoByCommonFiles(currentEvolutions, byFileBefore, byFileAfter, byEvo);
+        // System.out.println(smallestGroups);
 
-        System.out.println(smallestGroups);
-
-        for (Project<CtElement>.AST.FileSnapshot.Range testBefore : currentImpacts.getImpactedTests()) {
-            CtElement originalImpactedTest = before_proj.getAst().getOriginal(testBefore);
-            CtElement nextStateImpactedTest = currentDiff.map(currentCommit, nextCommit, originalImpactedTest, true);
-            SourcePosition position = nextStateImpactedTest.getPosition();
-            Project<CtElement>.AST.FileSnapshot.Range testAfter = (Project<CtElement>.AST.FileSnapshot.Range) after_proj
-                    .getRange(position.getFile().getPath(), position.getSourceStart(), position.getSourceEnd());
+        for (Project<?>.AST.FileSnapshot.Range testBefore : currentImpacts.getImpactedTests()) {
+            Project<?>.AST.FileSnapshot.Range testAfter = currentDiff.map(testBefore, after_proj);
             // TODO add original if not here ?
             Set<CtType> reqBefore = ast_before.augmented.needs((CtElement) testBefore.getOriginal());
-            Set<String> reqBeforeS = typesToRelPaths(reqBefore);
+            Set<String> reqBeforeS = typesToRelPaths(reqBefore,ast_before.getProject().spec.relPath.toString());
             System.out.println(reqBeforeS);
             Set<CtType> reqAfter = ast_after.augmented.needs((CtElement) testAfter.getOriginal());
-            Set<String> reqAfterS = typesToRelPaths(reqAfter);
+            Set<String> reqAfterS = typesToRelPaths(reqAfter,ast_after.getProject().spec.relPath.toString());
 
             Set<String> reqAdded = new HashSet<>(reqAfterS);
             reqAdded.removeAll(reqBeforeS);
@@ -265,7 +274,6 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             // apply all from subsets of reqAfter +testAfter file of test
 
         }
-
         // TODO review + remove rest
 
         // Compile needed code and tests for each test potentially containing coevos
@@ -367,7 +375,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
     }
 
-    private Set<String> typesToRelPaths(Set<CtType> reqBefore) {
+    private Set<String> typesToRelPaths(Set<CtType> reqBefore, String root) {
         Set<String> reqBeforeS = new HashSet<>();
         for (CtType t : reqBefore) {
             reqBeforeS.add(t.getPosition().getFile().getAbsolutePath());
@@ -476,7 +484,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         return smallestGroups;
     }
 
-    private void logNaiveCost(Evolutions currentEvolutions) {
+    private void logNaiveCostCoEvoValidation(Evolutions currentEvolutions) {
         int size = currentEvolutions.toSet().size();
         logger.info("naive: " + size + " evolution ->" + factApprox(size));
     }

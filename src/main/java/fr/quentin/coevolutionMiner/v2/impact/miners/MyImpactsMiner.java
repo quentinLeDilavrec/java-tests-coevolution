@@ -3,7 +3,9 @@ package fr.quentin.coevolutionMiner.v2.impact.miners;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -61,29 +63,54 @@ public class MyImpactsMiner implements ImpactsMiner {
     @Override
     public Impacts compute() {
         assert spec.evoSpec != null : spec;
-        boolean isOnBefore = spec.astSpec.commitId.equals(spec.evoSpec.commitIdBefore);
-        ProjectSpoon project = (ProjectSpoon) astHandler.handle(spec.astSpec);
-        ProjectSpoon.SpoonAST ast = project.getAst();
+        boolean isOnBefore = spec.projSpec.commitId.equals(spec.evoSpec.commitIdBefore);
+        ProjectSpoon project = (ProjectSpoon) astHandler.handle(spec.projSpec);
+        ImpactsExtension result = computeAux(isOnBefore, project);
+        return result;
+    }
+
+    private ImpactsExtension computeAux(boolean isOnBefore, ProjectSpoon project) {
+        ProjectSpoon.SpoonAST ast = (ProjectSpoon.SpoonAST)project.getAst();
         Evolutions evo = evoHandler.handle(spec.evoSpec);
         // return res;
 
         Path rootDir = ast.rootDir;
         if (!ast.isUsable()) {
-            return null;
+            // return null;
         }
         ImpactAnalysis l = new ImpactAnalysis(ast.augmented, 1);
-        ImpactsExtension result = new ImpactsExtension(spec, project, rootDir, l);
+        ImpactsExtension result = new ImpactsExtension(new Impacts.Specifier(project.spec, spec.evoSpec, spec.miner),
+                project, rootDir, l);
 
         Set<Evolution> evolutions = evo.toSet();
-        return result.computeImpacts(isOnBefore, ast, evolutions);
+        result.computeImpacts(isOnBefore, ast, evolutions);
+
+        for (Project<?> childProj : project.getModules()) {
+            result.addModule(computeAux(isOnBefore, (ProjectSpoon) childProj));
+        }
+
+        return result;
     }
 
-    final class ImpactsExtension extends Impacts {
+    public class ImpactsExtension extends Impacts {
         private final Path root;
         ImpactAnalysis analyzer;
+        Map<Path, ImpactsExtension> modules = new HashMap<>();
 
         public void addImpactedTest(Range range) {
             impactedTests.add(range);
+        }
+
+        public void addModule(ImpactsExtension impacts) {
+            modules.put(impacts.spec.projSpec.relPath, impacts);
+        }
+
+        public ImpactsExtension getModule(Path relPath) {
+            return modules.get(relPath);
+        }
+
+        public Collection<ImpactsExtension> getModules() {
+            return Collections.unmodifiableCollection(modules.values());
         }
 
         public void addAdjusment(Object root, Range cause, Range effect) {
@@ -171,8 +198,9 @@ public class MyImpactsMiner implements ImpactsMiner {
                 for (Evolution evo : evolutions) {
                     for (Evolutions.Evolution.DescRange bef : isOnBefore ? evo.getBefore() : evo.getAfter()) {
                         final Range targ = bef.getTarget();
-                        CtElement ori = (CtElement)targ.getOriginal();
-                        // Position pos = new Position(targ.getFile().getPath(), targ.getStart(), targ.getEnd());
+                        CtElement ori = (CtElement) targ.getOriginal();
+                        // Position pos = new Position(targ.getFile().getPath(), targ.getStart(),
+                        // targ.getEnd());
                         tmp.add(new ImmutablePair<>(bef, ori));
                     }
                 }

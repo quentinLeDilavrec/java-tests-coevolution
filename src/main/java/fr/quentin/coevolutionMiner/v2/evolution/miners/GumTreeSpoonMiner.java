@@ -1,6 +1,7 @@
 package fr.quentin.coevolutionMiner.v2.evolution.miners;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -63,107 +64,243 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
     @Override
     public Evolutions compute() {
         Sources src = srcHandler.handle(spec.sources, "jgit");
-        try {
-            Set<Sources.Commit> commits = src.getCommitsBetween(spec.commitIdBefore, spec.commitIdAfter);
-        } catch (Exception e1) {
-            e1.printStackTrace();
+
+        EvolutionsMany result = new EvolutionsMany(spec, src);
+        return result.compute();
+    }
+
+    public static class SpecificifierAtProj extends Evolutions.Specifier {
+
+        private Project.Specifier<SpoonMiner> before_spec;
+        private Project.Specifier<SpoonMiner> after_spec;
+
+        public SpecificifierAtProj(fr.quentin.coevolutionMiner.v2.sources.Sources.Specifier sources,
+                Project.Specifier<SpoonMiner> before_spec, Project.Specifier<SpoonMiner> after_spec,
+                Class<? extends EvolutionsMiner> miner) {
+            super(sources, before_spec.commitId, after_spec.commitId, miner);
+            this.before_spec = before_spec;
+            this.after_spec = after_spec;
         }
-        AstComparator comp = new AstComparator();
 
-        // List<Refactoring> detectedRefactorings = new ArrayList<Refactoring>();
-        // List<Evolutions.Evolution> evolutions = new
-        // ArrayList<Evolutions.Evolution>();
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = super.hashCode();
+            result = prime * result + ((after_spec == null) ? 0 : after_spec.hashCode());
+            result = prime * result + ((before_spec == null) ? 0 : before_spec.hashCode());
+            return result;
+        }
 
-        EvolutionsExtension result;
-        Map<ImmutablePair<Project<?>, Project<?>>, ImmutableTriple<Diff, String, List<Operation<?>>>> mapOpByCommit = new HashMap<>();
-        try (SourcesHelper helper = src.open()) {
-            result = new EvolutionsExtension(spec, src);
-            Set<Commit> commits = src.getCommitsBetween(spec.commitIdBefore, spec.commitIdAfter);
-            Commit beforeCom = null;
-            for (Commit commit : commits) {
-                if (beforeCom != null) {
-                    Project<?> beforeProj = astHandler.handle(astHandler.buildSpec(spec.sources, beforeCom.getId()));
-                    Project<?> afterProj = astHandler.handle(astHandler.buildSpec(spec.sources, commit.getId()));
-                    // TODO handle changes at the module level (rename, move, ...)
-                    computeProj(comp, mapOpByCommit, beforeProj, afterProj);
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (!super.equals(obj))
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            SpecificifierAtProj other = (SpecificifierAtProj) obj;
+            if (after_spec == null) {
+                if (other.after_spec != null)
+                    return false;
+            } else if (!after_spec.equals(other.after_spec))
+                return false;
+            if (before_spec == null) {
+                if (other.before_spec != null)
+                    return false;
+            } else if (!before_spec.equals(other.before_spec))
+                return false;
+            return true;
+        }
+
+    }
+
+    public class EvolutionsAtCommit extends Evolutions {
+        Map<SpecificifierAtProj, EvolutionsAtProj> modules = new HashMap<>();
+
+        public EvolutionsAtCommit(Specifier spec, Sources sources, Commit beforeCom, Commit commit) {
+            super(spec, sources);
+            // TODO Auto-generated constructor stub
+        }
+
+        private EvolutionsAtProj compute() {
+            SpecificifierAtProj projSpec = new SpecificifierAtProj(spec.sources,
+                    astHandler.buildSpec(spec.sources, spec.commitIdBefore),
+                    astHandler.buildSpec(spec.sources, spec.commitIdAfter), spec.miner);
+            EvolutionsAtProj result = new EvolutionsAtProj(projSpec);
+            result.compute();
+            return result;
+        }
+
+        public class EvolutionsAtProj extends Evolutions {
+            List<EvolutionsAtProj> modules = new ArrayList<>();
+            private Diff diff = null;
+            private Project<?> beforeProj;
+            private Project<?> afterProj;
+
+            public EvolutionsAtProj(SpecificifierAtProj spec) {
+                super(spec, EvolutionsAtCommit.this.sources);
+            }
+
+            public EvolutionsAtProj compute() {
+                Project<?> beforeProj = astHandler.handle(((SpecificifierAtProj) spec).before_spec);
+                Project<?> afterProj = astHandler.handle(((SpecificifierAtProj) spec).after_spec);
+                return compute(beforeProj, afterProj);
+            }
+
+            private EvolutionsAtProj compute(Project<?> beforeProj, Project<?> afterProj) {
+                this.beforeProj = beforeProj;
+                this.afterProj = afterProj;
+                AstComparator comp = new AstComparator();
+                String relPath = beforeProj.spec.relPath.toString();
+                assert relPath == afterProj.spec.relPath.toString();
+                Map<String, MutablePair<Project<?>, Project<?>>> modulesPairs = new HashMap<>();
+                for (Project<?> p : beforeProj.getModules()) {
+                    modulesPairs.putIfAbsent(p.spec.relPath.toString(), new MutablePair<>());
+                    modulesPairs.get(p.spec.relPath.toString()).setLeft(p);
                 }
-                beforeCom = commit;
+                for (Project<?> p : afterProj.getModules()) {
+                    modulesPairs.putIfAbsent(p.spec.relPath.toString(), new MutablePair<>());
+                    modulesPairs.get(p.spec.relPath.toString()).setRight(p);
+                }
+
+                if (beforeProj.getAst().isUsable() && afterProj.getAst().isUsable()) {
+                    this.diff = comp.compare(((ProjectSpoon.SpoonAST) beforeProj.getAst()).launcher.getModel().getRootPackage(),
+                            ((ProjectSpoon.SpoonAST) afterProj.getAst()).launcher.getModel().getRootPackage());
+                    for (Operation<?> op : diff.getRootOperations()) {
+                        addEvolution(op, beforeProj, afterProj);
+                        LOGGER.info("O- " + op + "\n");
+                    }
+                }
+
+                // TODO handle moved/renamed projects
+                for (Entry<String, MutablePair<Project<?>, Project<?>>> entry : modulesPairs.entrySet()) {
+                    MutablePair<Project<?>, Project<?>> value = entry.getValue();
+                    SpecificifierAtProj projSpec = new SpecificifierAtProj(spec.sources, value.left.spec,
+                            value.right.spec, spec.miner);
+                    EvolutionsAtProj child = new EvolutionsAtProj(projSpec);
+                    modules.add(child.compute(value.left, value.right));
+                    EvolutionsAtCommit.this.modules.put((SpecificifierAtProj) spec,
+                            child.compute(value.left, value.right));
+                }
+                return this;
             }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+
+            void addEvolution(Operation<?> refact, Project<?> astBefore, Project<?> astAfter) {
+                List<ImmutablePair<Range, String>> before = Collections
+                        .singletonList(toRange(refact.getSrcNode(), astBefore, "src"));
+                List<ImmutablePair<Range, String>> after = Collections
+                        .singletonList(toRange(refact.getDstNode(), astAfter, "dst"));
+                addEvolution(refact.getAction().getName(), before, after, astBefore.commit, astAfter.commit, refact);
+            }
+
+            private ImmutablePair<Range, String> toRange(CtElement ele, Project<?> proj, String description) {
+                SourcePosition position = ele.getPosition();
+                if (position == null) {
+                    return null;
+                }
+                Range range = proj.getRange(position.getFile().getAbsolutePath(), position.getSourceStart(),
+                        position.getSourceEnd(), ele);
+                if (range == null) {
+                    return null;
+                }
+                return new ImmutablePair<>(range, description);
+            }
+
+            @Override
+            public Project<?>.AST.FileSnapshot.Range map(Project<?>.AST.FileSnapshot.Range range, Project<?> target) {
+                Project<?> source = range.getFile().getAST().getProject();
+                CtElement element = (CtElement) range.getOriginal();
+                boolean fromSource = source.spec.equals(((SpecificifierAtProj) spec).before_spec);
+                CtElement aaa = new SpoonSupport().getMappedElement(diff, (CtElement) element, fromSource);
+                Project<?> outProj = fromSource ? afterProj : beforeProj;
+                SourcePosition position = aaa.getPosition();
+                return (Project<?>.AST.FileSnapshot.Range) outProj.getRange(position.getFile().getAbsolutePath(),
+                        position.getSourceStart(), position.getSourceEnd());
+            }
         }
 
-        for (Entry<ImmutablePair<Project<?>, Project<?>>, ImmutableTriple<Diff, String, List<Operation<?>>>> entry : mapOpByCommit
-                .entrySet()) {
-            ImmutablePair<Project<?>, Project<?>> pair = entry.getKey();
-            result.addDiff(entry.getValue().left, entry.getValue().middle, pair.left, pair.right);
-            for (Operation<?> op : entry.getValue().right) {
-                result.addEvolution(op, entry.getValue().middle, pair.left, pair.right);
-            }
+        public Diff getDiff(Project.Specifier before, Project.Specifier after) {
+            // assert !(before instanceof SpecificifierAtProj);
+            SpecificifierAtProj projSpec = new SpecificifierAtProj(spec.sources, before, after, spec.miner);
+            EvolutionsAtProj tmp = modules.get(projSpec);
+            return tmp == null ? null : tmp.diff;
         }
-        return result;
+
+        public EvolutionsAtProj getModule(Project.Specifier before, Project.Specifier after) {
+            // assert !(before instanceof SpecificifierAtProj);
+            SpecificifierAtProj projSpec = new SpecificifierAtProj(spec.sources, before, after, spec.miner);
+            EvolutionsAtProj tmp = modules.get(projSpec);
+            return tmp;
+        }
+
+        @Override
+        public Project<?>.AST.FileSnapshot.Range map(Project<?>.AST.FileSnapshot.Range range, Project<?> target) {
+            Project<?> source = range.getFile().getAST().getProject();
+            CtElement originalImpactedTest = (CtElement) range.getOriginal();
+            EvolutionsAtProj diff = getModule(source.spec, target.spec);
+            return diff.map(range, null);
+        }
+
+        @Override
+        public Evolution getEvolution(String type, List<ImmutablePair<Range, String>> before, Project<?> target) {
+            Project source = before.get(0).left.getFile().getAST().getProject();
+            return getModule(source.spec, target.spec).getEvolution(type, before, target);
+        }
     }
 
-    private void computeProj(AstComparator comp,
-            Map<ImmutablePair<Project<?>, Project<?>>, ImmutableTriple<Diff, String, List<Operation<?>>>> mapOpByCommit,
-            Project<?> beforeProj, Project<?> afterProj) {
-        String relPath = beforeProj.spec.relPath.toString();
-        Map<String, MutablePair<Project<?>, Project<?>>> modulesPairs = new HashMap<>();
-        for (Project<?> p : beforeProj.getModules()) {
-            modulesPairs.putIfAbsent(p.spec.relPath.toString(), new MutablePair<>());
-            modulesPairs.get(p.spec.relPath.toString()).setLeft(p);
-        }
-        for (Project<?> p : afterProj.getModules()) {
-            modulesPairs.putIfAbsent(p.spec.relPath.toString(), new MutablePair<>());
-            modulesPairs.get(p.spec.relPath.toString()).setRight(p);
-        }
+    public final class EvolutionsMany extends Evolutions {
 
-        if (!beforeProj.getAst().isUsable() || !afterProj.getAst().isUsable()) {
-            // continue;
-        }
-        Diff diff = comp.compare(((ProjectSpoon) beforeProj).getAst().launcher.getModel().getRootPackage(),
-                ((ProjectSpoon) afterProj).getAst().launcher.getModel().getRootPackage());
-        for (Operation<?> op : diff.getRootOperations()) {
-            ImmutablePair<Project<?>, Project<?>> tmp1 = new ImmutablePair<>(beforeProj, afterProj);
-            mapOpByCommit.putIfAbsent(tmp1, new ImmutableTriple<>(diff, relPath, new ArrayList<>()));
-            mapOpByCommit.get(tmp1).right.add(op);
-            LOGGER.info("O- " + op + "\n");
-        }
-    }
-
-    public final class EvolutionsExtension extends Evolutions {
-
-        private EvolutionsExtension(Specifier spec, Sources sources) {
+        private EvolutionsMany(Specifier spec, Sources sources) {
             super(spec, sources);
         }
 
-        private EvolutionsExtension(Specifier spec, Sources sources, Set<Evolution> subSet) {
+        private EvolutionsMany(Specifier spec, Sources sources, Set<Evolution> subSet) {
             this(spec, sources);
             evolutions.addAll(subSet);
         }
 
-        Map<ImmutablePair<Commit, Commit>, Map<String, Diff>> diffs = new HashMap<>();
-
-        void addDiff(Diff diff, String relPath, Project<?> astBefore, Project<?> astAfter) {
-            ImmutablePair<Commit, Commit> pair = new ImmutablePair<>(astBefore.commit, astAfter.commit);
-            diffs.putIfAbsent(pair, new HashMap());
-            diffs.get(new ImmutablePair<>(astBefore.commit, astAfter.commit)).put(relPath, diff);
+        public Diff getDiff(Project.Specifier<?> before, Project.Specifier<?> after, String relPath) {
+            EvolutionsAtCommit tmp = getPerCommit(before, after);
+            return tmp.getDiff(before, after);
         }
 
-        public Diff getDiff(Commit before, Commit after, String relPath) {
-            Map<String, Diff> map = diffs.get(new ImmutablePair<>(before, after));
-            return map == null ? null : map.get(relPath);
+        private EvolutionsAtCommit getPerCommit(Project.Specifier<?> before, Project.Specifier<?> after) {
+            return perCommit.get(new ImmutablePair<>(before.commitId, after.commitId));
+        }
+
+        EvolutionsMany compute() {
+            Set<Commit> commits;
+            Commit beforeCom = null;
+            try (SourcesHelper helper = this.sources.open()) {
+                commits = this.sources.getCommitsBetween(spec.commitIdBefore, spec.commitIdAfter);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            for (Commit commit : commits) {
+                if (beforeCom != null) {
+                    // per commit evolutions
+                    EvolutionsAtCommit perCommit = new EvolutionsAtCommit(
+                            new Evolutions.Specifier(spec.sources, beforeCom.getId(), commit.getId(), spec.miner),
+                            sources, beforeCom, commit);
+                    perCommit.compute();
+                    putPerCommit(beforeCom, commit, perCommit);
+                }
+                beforeCom = commit;
+            }
+            return this;
         }
 
         @Override
-        public <T> T map(Commit before, Commit after, Project<T> proj, T element, boolean fromSource) {
-            // MAPPING !!!
-            if (element instanceof CtElement) {
-                CtElement aaa = new SpoonSupport().getMappedElement(getDiff(before,after,proj.spec.relPath.toString()),
-                        (CtElement) element, true);
-                return (T) aaa;
-            }
-            return null;
+        public Evolution getEvolution(String type, List<ImmutablePair<Range, String>> before, Project<?> target) {
+            Project source = before.get(0).left.getFile().getAST().getProject();
+            return getPerCommit(source.spec, target.spec).getEvolution(type, before, target);
+        }
+
+        Map<ImmutablePair<String, String>, EvolutionsAtCommit> perCommit = new HashMap<>();
+
+        private EvolutionsAtCommit putPerCommit(Commit beforeCom, Commit commit, EvolutionsAtCommit perCommit) {
+            return this.perCommit.put(new ImmutablePair<>(beforeCom.getId(), commit.getId()), perCommit);
         }
 
         void addEvolution(Operation<?> op, String relPath, Project<?> astBefore, Project<?> astAfter) {
@@ -228,7 +365,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 if (evolutionsSubSet.size() == 0) {
                     continue;
                 }
-                Evolutions newEvo = new EvolutionsExtension(
+                Evolutions newEvo = new EvolutionsMany(
                         EvolutionHandler.buildSpec(spec.sources,
                                 evolutionsSubSet.iterator().next().getCommitBefore().getId(),
                                 evolutionsSubSet.iterator().next().getCommitAfter().getId()),

@@ -57,12 +57,6 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             this.ast = new SpoonAST(rootDir, null, compilerException);
         }
 
-        protected ProjectSpoon.SpoonAST ast;
-
-        public ProjectSpoon.SpoonAST getAst() {
-            return ast;
-        }
-
         public class SpoonAST extends Project<CtElement>.AST {
             public final MavenLauncher launcher;
             public final AugmentedAST<MavenLauncher> augmented;
@@ -92,7 +86,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                 FileSnapshot.Range range = getRange(path, start, end);
                 CtElement tmp = original;
                 if (tmp == null) {
-                    tmp = Utils.matchExactChild(ast, path, start, end);
+                    tmp = Utils.matchExactChild((ProjectSpoon.SpoonAST)ast, path, start, end);
                 }
                 if (tmp == null) {
                     return range;

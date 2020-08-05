@@ -133,6 +133,10 @@ public class Project<T> {
     public class AST {
         public final Path rootDir;
 
+        public Project<T> getProject() {
+            return Project.this;
+        }
+
         public boolean isUsable() {
             return true;
         }
@@ -199,6 +203,10 @@ public class Project<T> {
                 return Project.this.commit;
             }
 
+            public AST getAST() {
+                return AST.this;
+            }
+
             /**
              * @return the path
              */
@@ -259,7 +267,7 @@ public class Project<T> {
                 public int hashCode() {
                     final int prime = 31;
                     int result = 1;
-                    result = prime * result + getEnclosingInstance().hashCode();
+                    result = prime * result + getFileSnapshot().hashCode();
                     result = prime * result + ((end == null) ? 0 : end.hashCode());
                     result = prime * result + ((start == null) ? 0 : start.hashCode());
                     return result;
@@ -274,7 +282,7 @@ public class Project<T> {
                     if (getClass() != obj.getClass())
                         return false;
                     Range other = (Range) obj;
-                    if (!getEnclosingInstance().equals(other.getEnclosingInstance()))
+                    if (!getFileSnapshot().equals(other.getFileSnapshot()))
                         return false;
                     if (end == null) {
                         if (other.end != null)
@@ -289,7 +297,7 @@ public class Project<T> {
                     return true;
                 }
 
-                private FileSnapshot getEnclosingInstance() {
+                private FileSnapshot getFileSnapshot() {
                     return FileSnapshot.this;
                 }
 
