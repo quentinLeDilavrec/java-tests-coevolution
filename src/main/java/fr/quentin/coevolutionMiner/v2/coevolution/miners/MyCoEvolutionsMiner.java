@@ -164,7 +164,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     "Small errors occured during consecutive commits analysis");
             Commit currentCommit = null;
             for (Commit nextCommit : commits) {
-                if (currentCommit==null) {
+                if (currentCommit == null) {
                     currentCommit = nextCommit;
                     continue;
                 }
@@ -209,7 +209,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         Project<CtElement> before_proj = astHandler.handle(before_ast_id);
         if (before_proj.getAst().compilerException != null || !before_proj.getAst().isUsable()) {
-            throw new SmallMiningException("Before Code Don't Build",before_proj.getAst().compilerException);
+            throw new SmallMiningException("Before Code Don't Build", before_proj.getAst().compilerException);
         }
         SpoonAST ast_before = (SpoonAST) before_proj.getAst();
 
@@ -239,7 +239,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         // Map<FileSnapshot, Set<Evolution>> byFileBefore = new HashMap<>();
         // Map<FileSnapshot, Set<Evolution>> byFileAfter = new HashMap<>();
         // Map<Evolution, Set<Evolution>> byEvo = new HashMap<>();
-        // Set<Set<Evolution>> smallestGroups = groupEvoByCommonFiles(currentEvolutions, byFileBefore, byFileAfter, byEvo);
+        // Set<Set<Evolution>> smallestGroups = groupEvoByCommonFiles(currentEvolutions,
+        // byFileBefore, byFileAfter, byEvo);
 
         // System.out.println(smallestGroups);
 
@@ -247,10 +248,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             Project<?>.AST.FileSnapshot.Range testAfter = currentDiff.map(testBefore, after_proj);
             // TODO add original if not here ?
             Set<CtType> reqBefore = ast_before.augmented.needs((CtElement) testBefore.getOriginal());
-            Set<String> reqBeforeS = typesToRelPaths(reqBefore,ast_before.getProject().spec.relPath.toString());
+            Set<String> reqBeforeS = typesToRelPaths(reqBefore, ast_before.getProject().spec.relPath.toString());
             System.out.println(reqBeforeS);
             Set<CtType> reqAfter = ast_after.augmented.needs((CtElement) testAfter.getOriginal());
-            Set<String> reqAfterS = typesToRelPaths(reqAfter,ast_after.getProject().spec.relPath.toString());
+            Set<String> reqAfterS = typesToRelPaths(reqAfter, ast_after.getProject().spec.relPath.toString());
 
             Set<String> reqAdded = new HashSet<>(reqAfterS);
             reqAdded.removeAll(reqBeforeS);
@@ -271,7 +272,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         // Compile needed code and tests for each test potentially containing coevos
         Exception beforeTestsCompileException = compileAllTests(sourcesProvider, before_proj.getAst().rootDir);
         if (beforeTestsCompileException != null) {
-            throw new SmallMiningException("Before Tests Don't Build",beforeTestsCompileException);
+            throw new SmallMiningException("Before Tests Don't Build", beforeTestsCompileException);
         }
 
         Impacts afterImpacts = impactHandler.handle(impactHandler.buildSpec(after_ast_id, currEvoSpecRM));
@@ -370,7 +371,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     private Set<String> typesToRelPaths(Set<CtType> reqBefore, String root) {
         Set<String> reqBeforeS = new HashSet<>();
         for (CtType t : reqBefore) {
-            reqBeforeS.add(t.getPosition().getFile().getAbsolutePath());
+            SourcePosition position = t.getPosition();
+            if (position != null && position.isValidPosition()) {
+                reqBeforeS.add(Paths.get(root).relativize(position.getFile().toPath()).toString());
+            }
         }
         return reqBeforeS;
     }
@@ -389,7 +393,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             Set<Evolution> acc = new HashSet<>();
             for (DescRange descRange : evolution.getBefore()) {
                 CtElement ele = (CtElement) descRange.getTarget().getOriginal();
-                if (ele==null) {
+                if (ele == null) {
                     logger.warning("no original for" + descRange.getTarget());
                 } else {
                     aux(acc, ele);
@@ -397,7 +401,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             }
             for (DescRange descRange : evolution.getAfter()) {
                 CtElement ele = (CtElement) descRange.getTarget().getOriginal();
-                if (ele==null) {
+                if (ele == null) {
                     logger.warning("no original for" + descRange.getTarget());
                 } else {
                     aux(acc, ele);
@@ -410,10 +414,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     }
 
     private void aux(Set<Evolution> acc, CtElement ele) {
-        assert ele!=null;
+        assert ele != null;
         for (CtElement child : ele.getDirectChildren()) {
             Set<DescRange> s = (Set<DescRange>) child.getMetadata(EvolutionsMiner.METADATA_KEY_EVO);
-            if (s!=null) {
+            if (s != null) {
                 for (DescRange ds : s) {
                     acc.add(ds.getSource());
                 }
@@ -497,6 +501,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         public SmallMiningException(String string, Exception compilerException) {
             super(string, compilerException);
         }
+
         public SmallMiningException(String string) {
             super(string);
         }
