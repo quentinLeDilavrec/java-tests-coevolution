@@ -114,10 +114,10 @@ public class Project<T> {
     private AST.FileSnapshot.Range getRangeAux(String path, Integer start, Integer end, Object original) {
         assert !Paths.get(path).isAbsolute() : path;
         assert ast != null;
-        File x = Paths.get(path).toFile();
+        File parentDir = Paths.get(this.ast.rootDir.toString(), path).getParent().toFile();
         if (!ast.isUsable()) {
             return null;
-        } else if (ast.contains(x)) {
+        } else if (ast.contains(parentDir)) {
             return ((AST) ast).getRange(path, start, end, (T) original);
         } else {
             for (Project project : modules) {
@@ -182,9 +182,11 @@ public class Project<T> {
 
         public FileSnapshot.Range getRange(String path, Integer start, Integer end, T original) {
             FileSnapshot.Range range = getRange(path, start, end);
-            Object old = range.setOriginal(original);
-            if (old != null && old != original) {
+            if (original != null) {
+                Object old = range.setOriginal(original);
+                if (old != null && old != original) {
                 throw new RuntimeException("Original value of range should be unique");
+                }
             }
             return range;
         }
