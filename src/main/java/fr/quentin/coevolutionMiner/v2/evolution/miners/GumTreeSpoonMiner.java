@@ -206,7 +206,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     return null;
                 }
                 SourcePosition position = ele.getPosition();
-                if (position == null || position.isValidPosition()) {
+                if (position == null || !position.isValidPosition()) {
                     return null;
                 }
                 Range range = proj.getRange(position.getFile().getAbsolutePath(), position.getSourceStart(),
