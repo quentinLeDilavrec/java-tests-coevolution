@@ -218,13 +218,13 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         Project<CtElement> before_proj = astHandler.handle(before_ast_id);
         if (before_proj.getAst().compilerException != null || !before_proj.getAst().isUsable()) {
-            throw new SmallMiningException("Before Code Don't Build");
+            throw new SmallMiningException("Before Code Don't Build",before_proj.getAst().compilerException);
         }
         SpoonAST ast_before = (SpoonAST) before_proj.getAst();
 
         Project<?> after_proj = astHandler.handle(after_ast_id);
         if (after_proj.getAst().compilerException != null || !after_proj.getAst().isUsable()) {
-            throw new SmallMiningException("Code after evolutions Don't Build");
+            throw new SmallMiningException("Code after evolutions Don't Build", after_proj.getAst().compilerException);
         }
         SpoonAST ast_after = (SpoonAST) after_proj.getAst();
 
@@ -280,7 +280,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         // Compile needed code and tests for each test potentially containing coevos
         Exception beforeTestsCompileException = compileAllTests(sourcesProvider, before_proj.getAst().rootDir);
         if (beforeTestsCompileException != null) {
-            throw new SmallMiningException("Before Tests Don't Build");
+            throw new SmallMiningException("Before Tests Don't Build",beforeTestsCompileException);
         }
 
         Impacts afterImpacts = impactHandler.handle(impactHandler.buildSpec(after_ast_id, currEvoSpecRM));
@@ -492,6 +492,9 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
     public class SmallMiningException extends Exception {
 
+        public SmallMiningException(String string, Exception compilerException) {
+            super(string, compilerException);
+        }
         public SmallMiningException(String string) {
             super(string);
         }
