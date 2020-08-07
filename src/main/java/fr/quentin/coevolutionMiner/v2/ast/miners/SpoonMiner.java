@@ -340,7 +340,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             }
         }
         int exitCode = process.waitFor();
-        System.out.printf("cloc ended with exitCode %d", exitCode);
+        System.out.printf("cloc ended with exitCode %d\n", exitCode);
     }
 
 }
