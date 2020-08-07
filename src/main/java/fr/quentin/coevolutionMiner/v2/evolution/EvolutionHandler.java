@@ -51,7 +51,7 @@ public class EvolutionHandler implements AutoCloseable {
 
 	enum Miners {
 		RefactoringMiner,
-		GumtreeSpoon
+		GumTreeSpoonMiner
 	}
 
 	private Evolutions handle(Evolutions.Specifier spec, String storeName) {
@@ -86,7 +86,7 @@ public class EvolutionHandler implements AutoCloseable {
 					res = minerInstRM.compute();
 					populate(res);
 					break;
-				case GumtreeSpoon:
+				case GumTreeSpoonMiner:
 					GumTreeSpoonMiner minerInstGTS = new GumTreeSpoonMiner(spec, srcHandler, astHandler);
 					res = minerInstGTS.compute();
 					populate(res);
@@ -100,7 +100,7 @@ public class EvolutionHandler implements AutoCloseable {
 			tmp.set(res);
 			return res;
 		} catch (Exception e) {
-			throw e;
+			throw new RuntimeException("Problem during Evolution mining ",e);
 		} finally {
 			tmp.lock.unlock();
 		}
