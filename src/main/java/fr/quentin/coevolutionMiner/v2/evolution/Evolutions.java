@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Logger;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -137,7 +138,7 @@ public class Evolutions {
         evolutions.add(evo);
         Evolution old = evoByBeforeList.put(new ImmutablePair<>(type, before), evo);
         if (old != null && evo.equals(old))
-            throw new RuntimeException("evo sharing same type and before");
+            Logger.getLogger("evo").info("evo sharing same type and before");
         return evo;
     }
 
