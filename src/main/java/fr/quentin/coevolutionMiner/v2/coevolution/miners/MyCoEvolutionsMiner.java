@@ -413,8 +413,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         assert ele!=null;
         for (CtElement child : ele.getDirectChildren()) {
             Set<DescRange> s = (Set<DescRange>) child.getMetadata(EvolutionsMiner.METADATA_KEY_EVO);
-            for (DescRange ds : s) {
-                acc.add(ds.getSource());
+            if (s!=null) {
+                for (DescRange ds : s) {
+                    acc.add(ds.getSource());
+                }
             }
             aux(acc, child);
         }
