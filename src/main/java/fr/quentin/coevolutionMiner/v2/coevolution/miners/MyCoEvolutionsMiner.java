@@ -191,15 +191,6 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         return n <= 1 ? 1 : Math.sqrt(2 * Math.PI * n) * Math.pow(n / Math.E, n);
     }
 
-    static interface AAA {
-        int run();
-        // void g();
-    }
-
-    static interface BBB {
-        // void g();
-    }
-
     // TODO go through projects modules recusively
     private CoEvolutionsExtension computeDirectCoevolutions(Sources sourcesProvider, Commit currentCommit,
             Commit nextCommit) throws SmallMiningException, SeverMiningException {

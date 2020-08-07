@@ -83,16 +83,16 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
 
             @Override
             public FileSnapshot.Range getRange(String path, Integer start, Integer end, CtElement original) {
-                FileSnapshot.Range range = getRange(path, start, end);
-                CtElement tmp = original;
+                FileSnapshot.Range range = super.getRange(path, start, end, original);
+                CtElement tmp = range.getOriginal();
                 if (tmp == null) {
                     tmp = Utils.matchExactChild((ProjectSpoon.SpoonAST)ast, path, start, end);
                 }
                 if (tmp == null) {
                     return range;
                 }
-                Object old = range.setOriginal(original);
-                if (old != null && old != original) {
+                Object old = range.setOriginal(tmp);
+                if (old != null && old != tmp) {
                     throw new RuntimeException("Original value of range should have been unique");
                 }
                 return range;
