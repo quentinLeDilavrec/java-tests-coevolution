@@ -165,7 +165,8 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 }
 
                 if (beforeProj.getAst().isUsable() && afterProj.getAst().isUsable()) {
-                    this.diff = comp.compare(((ProjectSpoon.SpoonAST) beforeProj.getAst()).launcher.getModel().getRootPackage(),
+                    this.diff = comp.compare(
+                            ((ProjectSpoon.SpoonAST) beforeProj.getAst()).launcher.getModel().getRootPackage(),
                             ((ProjectSpoon.SpoonAST) afterProj.getAst()).launcher.getModel().getRootPackage());
                     for (Operation<?> op : diff.getRootOperations()) {
                         addEvolution(op, beforeProj, afterProj);
@@ -187,14 +188,23 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             }
 
             void addEvolution(Operation<?> refact, Project<?> astBefore, Project<?> astAfter) {
-                List<ImmutablePair<Range, String>> before = Collections
-                        .singletonList(toRange(refact.getSrcNode(), astBefore, "src"));
-                List<ImmutablePair<Range, String>> after = Collections
-                        .singletonList(toRange(refact.getDstNode(), astAfter, "dst"));
+                List<ImmutablePair<Range, String>> before = new ArrayList<>();
+                ImmutablePair<Range, String> rangeBef = toRange(refact.getSrcNode(), astBefore, "src");
+                if (rangeBef != null) {
+                    before.add(rangeBef);
+                }
+                List<ImmutablePair<Range, String>> after = new ArrayList<>();
+                ImmutablePair<Range, String> rangeAft = toRange(refact.getDstNode(), astAfter, "dst");
+                if (rangeAft != null) {
+                    after.add(rangeAft);
+                }
                 addEvolution(refact.getAction().getName(), before, after, astBefore.commit, astAfter.commit, refact);
             }
 
             private ImmutablePair<Range, String> toRange(CtElement ele, Project<?> proj, String description) {
+                if (ele == null) {
+                    return null;
+                }
                 SourcePosition position = ele.getPosition();
                 if (position == null) {
                     return null;
