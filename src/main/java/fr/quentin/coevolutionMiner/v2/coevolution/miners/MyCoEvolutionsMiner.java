@@ -406,7 +406,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             result.put(evolution, acc);
         }
 
-        return null;
+        return result;
     }
 
     private void aux(Set<Evolution> acc, CtElement ele) {
