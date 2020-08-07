@@ -398,11 +398,19 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             Set<Evolution> acc = new HashSet<>();
             for (DescRange descRange : evolution.getBefore()) {
                 CtElement ele = (CtElement) descRange.getTarget().getOriginal();
-                aux(acc, ele);
+                if (ele==null) {
+                    logger.warning("no original for" + descRange.getTarget());
+                } else {
+                    aux(acc, ele);
+                }
             }
             for (DescRange descRange : evolution.getAfter()) {
                 CtElement ele = (CtElement) descRange.getTarget().getOriginal();
-                aux(acc, ele);
+                if (ele==null) {
+                    logger.warning("no original for" + descRange.getTarget());
+                } else {
+                    aux(acc, ele);
+                }
             }
             result.put(evolution, acc);
         }
@@ -411,6 +419,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     }
 
     private void aux(Set<Evolution> acc, CtElement ele) {
+        assert ele!=null;
         for (CtElement child : ele.getDirectChildren()) {
             Set<DescRange> s = (Set<DescRange>) child.getMetadata(EvolutionsMiner.METADATA_KEY_EVO);
             for (DescRange ds : s) {
