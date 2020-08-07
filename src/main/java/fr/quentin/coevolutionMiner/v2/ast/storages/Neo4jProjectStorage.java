@@ -47,7 +47,7 @@ public class Neo4jProjectStorage implements ProjectStorage {
             String done = session.writeTransaction(new TransactionWork<String>() {
                 @Override
                 public String execute(Transaction tx) {
-                    Result result = tx.run(getCypher(), parameters("json", tmp, "tool", value.spec.miner.toString()));
+                    Result result = tx.run(getCypher(), parameters("json", tmp, "tool", value.spec.miner.getSimpleName()));
                     result.consume();
                     // Result result2 = tx.run(getCommitCypher(), parameters("commits", commits));
                     // result2.consume();

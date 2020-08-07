@@ -9,6 +9,7 @@ import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.TransactionWork;
+import org.neo4j.driver.exceptions.TransientException;
 import org.refactoringminer.api.Refactoring;
 
 import fr.quentin.coevolutionMiner.utils.MyProperties;
@@ -70,7 +71,7 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
             String done = session.writeTransaction(new TransactionWork<String>() {
                 @Override
                 public String execute(Transaction tx) {
-                    Result result = tx.run(getCypher(), parameters("json", tmp, "tool", evos_spec.miner));
+                    Result result = tx.run(getCypher(), parameters("json", tmp, "tool", evos_spec.miner.getSimpleName()));
                     result.consume();
                     Result result2 = tx.run(getCommitCypher(), parameters("commits", commits));
                     result2.consume();
@@ -78,6 +79,8 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
                 }
             });
             System.out.println(done);
+        } catch (TransientException e) {
+            e.printStackTrace();
         } catch (Exception e) {
             e.printStackTrace();
         }

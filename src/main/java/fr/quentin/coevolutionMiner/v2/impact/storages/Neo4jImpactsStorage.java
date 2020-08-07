@@ -17,6 +17,7 @@ import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.TransactionWork;
+import org.neo4j.driver.exceptions.TransientException;
 
 import fr.quentin.coevolutionMiner.utils.MyProperties;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts;
@@ -37,6 +38,8 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
                 }
             });
             System.out.println(done);
+        } catch (TransientException e) {
+            e.printStackTrace();
         } catch (Exception e) {
             e.printStackTrace();
         }
