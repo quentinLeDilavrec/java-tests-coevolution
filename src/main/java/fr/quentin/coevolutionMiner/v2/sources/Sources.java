@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -208,7 +209,7 @@ public abstract class Sources {
         }
     }
 
-    public abstract Set<Commit> getCommitsBetween(String commitIdBefore, String commitIdAfter) throws Exception;
+    public abstract List<Commit> getCommitsBetween(String commitIdBefore, String commitIdAfter) throws Exception;
 
     // /*
     // * Not sure, for example, it would be used to represent maven artefacts.

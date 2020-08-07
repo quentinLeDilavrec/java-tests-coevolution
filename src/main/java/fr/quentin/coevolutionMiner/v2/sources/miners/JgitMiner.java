@@ -1,7 +1,9 @@
 package fr.quentin.coevolutionMiner.v2.sources.miners;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -33,17 +35,17 @@ public class JgitMiner implements SourcesMiner {
             }
 
             @Override
-            public Set<Sources.Commit> getCommitsBetween(String commitIdBefore, String commitIdAfter) {
+            public List<Sources.Commit> getCommitsBetween(String commitIdBefore, String commitIdAfter) {
                 try (SourcesHelper helper = open();) {
-                    Map<String, Sources.Commit> result = new HashMap<>(commits);
+                    Map<String, Sources.Commit> result = new HashMap<>();
                     ImmutableTriple<RevCommit, Iterable<RevCommit>, RevCommit> tmp0 = helper
                             .getCommitsBetween(commitIdBefore, commitIdAfter);
                     Consumer<? super RevCommit> consumer = x -> {
                         String name = x.getId().getName();
-                        Commit o = result.getOrDefault(name,createCommit(name));
+                        Commit o = result.getOrDefault(name, createCommit(name));
                         for (RevCommit commit : x.getParents()) {
                             String pname = commit.getId().getName();
-                            Commit p = result.getOrDefault(pname, createCommit(pname));
+                            Commit p = commits.getOrDefault(pname, createCommit(pname));
                             commits.putIfAbsent(p.getId(), p);
                             result.putIfAbsent(p.getId(), p);
                             addParent(o, p);
@@ -52,17 +54,36 @@ public class JgitMiner implements SourcesMiner {
                         result.putIfAbsent(o.getId(), o);
                     };
                     consumer.accept(tmp0.left);
-                    consumer.accept(tmp0.right);
                     tmp0.middle.forEach(consumer);
-                    for (Commit commit : result.values()){
+                    consumer.accept(tmp0.right);
+                    for (Commit commit : result.values()) {
                         for (Commit parent : commit.getParents()) {
-							Commit tmp = result.get(parent.getId());
+                            Commit tmp = result.get(parent.getId());
                             if (tmp != null) {
                                 addChildren(tmp, commit);
                             }
                         }
                     }
-                    return new HashSet<Commit>(result.values());
+                    List<Sources.Commit> rlist = new ArrayList<>();
+                    Sources.Commit curr = result.get(commitIdBefore);
+                    while (true) {
+                        rlist.add(curr);
+                        if (curr.getId().equals(commitIdAfter)) {
+                            break;
+                        } else {
+                            boolean b = true;
+                            for (Commit child : curr.getChildrens()) {
+                                if (result.containsKey(child.getId())) {
+                                    b = false;
+                                    curr = child;
+                                }
+                            }
+                            if (b) {
+                                break;
+                            }
+                        }
+                    }
+                    return rlist;
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }

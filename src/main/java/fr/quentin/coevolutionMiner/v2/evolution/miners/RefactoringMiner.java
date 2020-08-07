@@ -61,7 +61,8 @@ public class RefactoringMiner implements EvolutionsMiner {
     public Evolutions compute() {
         Sources src = srcHandler.handle(spec.sources, "jgit");
         try {
-            Set<Sources.Commit> commits = src.getCommitsBetween(spec.commitIdBefore, spec.commitIdAfter);
+            // TODO remove that, after fix the need to init things it inits
+            List<Sources.Commit> commits = src.getCommitsBetween(spec.commitIdBefore, spec.commitIdAfter);
         } catch (Exception e1) {
             e1.printStackTrace();
         }
@@ -140,7 +141,7 @@ public class RefactoringMiner implements EvolutionsMiner {
         }
 
         private ImmutablePair<Range, String> toRange(Project proj, CodeRange range) {
-            Range tmp = proj.getRange(range.getFilePath(), range.getStartOffset(), range.getEndOffset());
+            Range tmp = proj.getRange(range.getFilePath(), range.getStartOffset(), range.getEndOffset()-1);
             if (tmp == null) {
                 return null;
             }

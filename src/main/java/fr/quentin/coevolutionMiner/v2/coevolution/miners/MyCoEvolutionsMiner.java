@@ -140,7 +140,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             CoEvolutionsManyCommit globalResult = new CoEvolutionsManyCommit(spec);
             Sources sourcesProvider = srcHandler.handle(spec.evoSpec.sources, "JGit");
             String initialCommitId = spec.evoSpec.commitIdBefore;
-            Set<Sources.Commit> commits;
+            List<Sources.Commit> commits;
             try {
                 commits = sourcesProvider.getCommitsBetween(initialCommitId, spec.evoSpec.commitIdAfter);
                 System.out.println(
@@ -155,7 +155,6 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
             // GET COMMIT FROM ID
             // // // NOTE GOING FORWARD in time
-            Commit currentCommit = findCorrespondingCommit(commits, initialCommitId);
             // for (Evolution evolution : evolutions) {
             // String commitIdBefore = evolution.getCommitBefore().getId();
             // perBeforeCommit.get(sourcesProvider.temporaryCreateCommit(commitIdBefore)).add(evolution);
@@ -163,9 +162,12 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             // }
             SmallMiningException smallSuppressedExc = new SmallMiningException(
                     "Small errors occured during consecutive commits analysis");
-
-            while (currentCommit.getChildrens().size() > 0) {
-                Commit nextCommit = findNextCommit(commits, currentCommit);
+            Commit currentCommit = null;
+            for (Commit nextCommit : commits) {
+                if (currentCommit==null) {
+                    currentCommit = nextCommit;
+                    continue;
+                }
                 try {
                     CoEvolutionsExtension currCoevolutions = computeDirectCoevolutions(sourcesProvider, currentCommit,
                             nextCommit);
@@ -173,7 +175,6 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 } catch (SmallMiningException e) {
                     smallSuppressedExc.addSuppressed(e);
                 }
-                currentCommit = nextCommit;
             }
             if (smallSuppressedExc.getSuppressed().length > 0) {
                 logger.log(Level.INFO, "Small exceptions", smallSuppressedExc);

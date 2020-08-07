@@ -270,7 +270,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         }
 
         EvolutionsMany compute() {
-            Set<Commit> commits;
+            List<Commit> commits;
             Commit beforeCom = null;
             try (SourcesHelper helper = this.sources.open()) {
                 commits = this.sources.getCommitsBetween(spec.commitIdBefore, spec.commitIdAfter);
