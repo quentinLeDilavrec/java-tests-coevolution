@@ -324,19 +324,23 @@ public class CLI {
                     Evolutions evos = null;
                     String commitIdAfter = null;
                     String commitIdBefore = null;
-                    int commit_index = 2;
+                    int commit_index = 1;
                     int impact_computed = 0;
-                    for (; commit_index < s.size() && impact_computed < max_commits_impacts;) {
+                    while (commit_index < s.size() && impact_computed < max_commits_impacts) {
 
-                        for (; commit_index < s.size(); commit_index++) {
+                        while (commit_index < s.size()) {
+                            commit_index++;
                             commitIdAfter = s.get(commit_index);
                             commitIdBefore = s.get(commit_index + 1);
                             try {
                                 evos = evoH.handle(evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter));
                                 logger.info("done evolution analysis " + s.get(0));
                             } catch (Exception e) {
-                                logger.info("failed evolution analysis " + s.get(0));
+                                logger.log(Level.WARNING, "failed evolution analysis " + s.get(0), e);
+                                e.printStackTrace();
                                 break;
+                            } finally {
+                                logger.info("finished an evolution analysis " + s.get(0));
                             }
                             if (evos != null && evos.toSet().size() > 0) {
                                 break;
@@ -345,7 +349,7 @@ public class CLI {
                         if (s.size() < 3) {
                             logger.info("no commits for " + s.get(0));
                         } else if (evos == null) {
-                            logger.info("evolution no working " + s.get(0));
+                            logger.info("evolution not working " + s.get(0));
                         } else if (evos.toSet().size() <= 0) {
                             logger.info("no evolutions found for " + s.get(0));
                         } else {
