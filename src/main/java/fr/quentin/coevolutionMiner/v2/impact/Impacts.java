@@ -62,7 +62,7 @@ public abstract class Impacts {
         res.put("rangesToType", ranges_to_type);
         List<Map<String, Object>> json = new ArrayList<>();
         res.put("json", json);
-        res.put("tool", spec.miner);
+        res.put("tool", spec.miner+2);
         for (Impact impact : impacts.values()) {
 
             Map<String, Object> map = impact.toMap(this);

@@ -10,9 +10,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Function;
 import java.util.Set;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.google.gson.GsonBuilder;
 
@@ -28,6 +30,7 @@ import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts;
+import fr.quentin.coevolutionMiner.v2.impact.Impacts.Impact;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts.Impact.DescRange;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactsMiner;
 import fr.quentin.coevolutionMiner.v2.utils.DbUtils;
@@ -70,7 +73,7 @@ public class MyImpactsMiner implements ImpactsMiner {
     }
 
     private ImpactsExtension computeAux(boolean isOnBefore, ProjectSpoon project) {
-        ProjectSpoon.SpoonAST ast = (ProjectSpoon.SpoonAST)project.getAst();
+        ProjectSpoon.SpoonAST ast = (ProjectSpoon.SpoonAST) project.getAst();
         Evolutions evo = evoHandler.handle(spec.evoSpec);
         // return res;
 
@@ -113,6 +116,30 @@ public class MyImpactsMiner implements ImpactsMiner {
             return Collections.unmodifiableCollection(modules.values());
         }
 
+        public void addImpWithUniqEffect(Set<Object> roots, Set<Range> causes, Range effect, String type,
+                String causeDesc, String effectDesc) {
+            Impact imp = addImpact(type, Collections.emptySet(),
+                    Collections.singleton(new ImmutablePair<>(effect, effectDesc)));
+            for (Object root : roots) {
+                perRoot.putIfAbsent(root, new HashSet<>());
+                perRoot.get(root).add(imp);
+            }
+            for (Range range : causes) {
+                addCause(imp, range, causeDesc);
+            }
+        }
+
+        public void addImpWithUniqCause(Set<Object> roots, Range cause, Set<Range> effects, String type,
+                String causeDesc, String effectDesc) {
+            Impact imp = addImpact(type, Collections.singleton(new ImmutablePair<>(cause, causeDesc)),
+                    Collections.emptySet());
+            perRoot.putIfAbsent(root, new HashSet<>());
+            perRoot.get(root).add(imp);
+            for (Range range : effects) {
+                addEffect(imp, range, effectDesc);
+            }
+        }
+
         public void addAdjusment(Object root, Range cause, Range effect) {
             Impact imp = addImpact("adjustment", Collections.singleton(new ImmutablePair<>(cause, "given")),
                     Collections.emptySet());
@@ -122,27 +149,11 @@ public class MyImpactsMiner implements ImpactsMiner {
         }
 
         public void addCalls(Set<Object> roots, Range cause, Set<Range> effects) {
-            Impact imp = addImpact("call", Collections.singleton(new ImmutablePair<>(cause, "declaration")),
-                    Collections.emptySet());
-            for (Object root : roots) {
-                perRoot.putIfAbsent(root, new HashSet<>());
-                perRoot.get(root).add(imp);
-            }
-            for (Range range : effects) {
-                addEffect(imp, range, "reference");
-            }
+            addImpWithUniqCause(roots, cause, effects, "call", "declaration", "reference");
         }
 
         public void addExpands(Set<Object> roots, Set<Range> causes, Range effect) {
-            Impact imp = addImpact("expand to executable", Collections.emptySet(),
-                    Collections.singleton(new ImmutablePair<>(effect, "executable")));
-            for (Object root : roots) {
-                perRoot.putIfAbsent(root, new HashSet<>());
-                perRoot.get(root).add(imp);
-            }
-            for (Range range : causes) {
-                addCause(imp, range, "instruction");
-            }
+            addImpWithUniqEffect(roots, causes, effect, "expand to executable", "instruction", "executable");
         }
 
         public Set<String> needs(Set<Evolution> evos, boolean onAfter) {
@@ -224,7 +235,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                     Position rootPosition = root.getPosition();
                     String relPath = ast.rootDir.relativize(Paths.get(rootPosition.getFilePath())).toString();
                     Project<CtElement>.AST.FileSnapshot.Range source = ast.getRange(relPath, rootPosition.getStart(),
-                            rootPosition.getEnd() + 1, root.getContent());
+                            rootPosition.getEnd(), root.getContent());
                     Evolutions.Evolution.DescRange impactingDescRange = (Evolutions.Evolution.DescRange) b.getKey();
                     Project<CtElement>.AST.FileSnapshot.Range target = impactingDescRange.getTarget();
                     if (!source.equals(target)) {
@@ -236,31 +247,50 @@ public class MyImpactsMiner implements ImpactsMiner {
                     Position currIEPos = currIE.getPosition();
                     String relPath = ast.rootDir.relativize(Paths.get(currIEPos.getFilePath())).toString();
                     Project<CtElement>.AST.FileSnapshot.Range currRange = ast.getRange(relPath, currIEPos.getStart(),
-                            currIEPos.getEnd() + 1);
+                            currIEPos.getEnd());
+
                     Set<ImpactElement> calls = rel.getEffects().get("call");
                     if (calls != null && calls.size() > 0) {
-                        addCalls(roots, currRange, calls.stream()
-                                .map(x -> ast.getRange(
-                                        ast.rootDir.relativize(Paths.get(x.getPosition().getFilePath())).toString(),
-                                        x.getPosition().getStart(), x.getPosition().getEnd() + 1, x.getContent()))
-                                .collect(Collectors.toSet()));
+                        addCalls(roots, currRange,
+                                calls.stream().map(x -> extracted(ast, x)).collect(Collectors.toSet()));
                     }
-                    Set<ImpactElement> exp2exe = rel.getCauses().get("expand to executable");
-                    if (exp2exe != null && exp2exe.size() > 0) {
-                        addExpands(roots, exp2exe.stream()
-                                .map(x -> ast.getRange(
-                                        ast.rootDir.relativize(Paths.get(x.getPosition().getFilePath())).toString(),
-                                        x.getPosition().getStart(), x.getPosition().getEnd() + 1, x.getContent()))
-                                .collect(Collectors.toSet()), currRange);
+
+                    for (String key : rel.getEffects().keySet()) {
+                        Set<ImpactElement> others = rel.getCauses().get(key);
+                        if (others == null) {
+                            continue;
+                        } else if (key.equals("call")) {
+                        } else if (key.equals("expand to executable")) {
+                            if (others.size() > 0) {
+                                addExpands(roots,
+                                        others.stream().map(x -> extracted(ast, x)).collect(Collectors.toSet()),
+                                        currRange);
+                            }
+                        } else {
+                            for (ImpactElement other : others) {
+                                Impact imp = addImpact(key,
+                                        Collections.singleton(new ImmutablePair<>(extracted(ast, other), "cause")),
+                                        Collections.singleton(new ImmutablePair<>(currRange, "effect")));
+                                for (Object root1 : roots) {
+                                    perRoot.putIfAbsent(root1, new HashSet<>());
+                                    perRoot.get(root1).add(imp);
+                                }
+                            }
+                        }
                     }
                 }
             }
             for (ImpactElement test : rawImpacts.getTests()) {
                 addImpactedTest(
                         ast.getRange(ast.rootDir.relativize(Paths.get(test.getPosition().getFilePath())).toString(),
-                                test.getPosition().getStart(), test.getPosition().getEnd() + 1, test.getContent()));
+                                test.getPosition().getStart(), test.getPosition().getEnd(), test.getContent()));
             }
             return this;
+        }
+
+        private Project<CtElement>.AST.FileSnapshot.Range extracted(SpoonAST ast, ImpactElement x) {
+            return ast.getRange(ast.rootDir.relativize(Paths.get(x.getPosition().getFilePath())).toString(),
+                    x.getPosition().getStart(), x.getPosition().getEnd(), x.getContent());
         }
 
         ImpactsExtension(Specifier spec, Project ast, Path root, ImpactAnalysis l) {
