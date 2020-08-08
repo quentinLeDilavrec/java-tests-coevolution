@@ -95,7 +95,9 @@ public class EvolutionHandler implements AutoCloseable {
 					throw new RuntimeException(spec.miner + " is not a registered Evolutions miner.");
 			}
 			if (db != null) {
-				db.put(spec, res);
+				if (z.equals(Miners.RefactoringMiner)) { // TODO generalize uploader
+					db.put(spec, res);	
+				}
 			}
 			tmp.set(res);
 			return res;

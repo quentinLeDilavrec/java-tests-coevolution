@@ -64,6 +64,7 @@ import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
@@ -474,7 +475,7 @@ public class CLI {
                             try {
                                 Impacts impacts = impactH.handle(impactH.buildSpec(
                                         astH.buildSpec(srcSpec, commitIdBefore), EvolutionHandler.buildSpec(srcSpec,
-                                                commitIdBefore, commitIdAfter, GumTreeSpoonMiner.class)));
+                                                commitIdBefore, commitIdAfter, RefactoringMiner.class)));
                                 System.out.println(
                                         Integer.toString(impacts.getPerRootCause().size()) + " impacts found for "
                                                 + s.get(0) + " from " + commitIdBefore + " to " + commitIdAfter);
