@@ -10,16 +10,17 @@ import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.TransactionWork;
 import org.neo4j.driver.exceptions.TransientException;
-import org.refactoringminer.api.Refactoring;
 
 import fr.quentin.coevolutionMiner.utils.MyProperties;
 // import fr.quentin.impactMiner.Evolution;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Specifier;
+import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution.DescRange;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import gr.uom.java.xmi.diff.CodeRange;
+import spoon.reflect.declaration.CtElement;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionsStorage;
 
 import static org.neo4j.driver.Values.parameters;
@@ -56,11 +57,11 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
         try {
             for (Commit commit : value.getSources().getCommitsBetween(evos_spec.commitIdBefore,
                     evos_spec.commitIdAfter)) {
-                Map<String,Object> o = new HashMap<>();
+                Map<String, Object> o = new HashMap<>();
                 o.put("repository", commit.getRepository().getUrl());
                 o.put("sha1", commit.getId());
-                o.put("children", commit.getChildrens().stream().map(x->x.getId()).collect(Collectors.toList()));
-                o.put("parents", commit.getParents().stream().map(x->x.getId()).collect(Collectors.toList()));
+                o.put("children", commit.getChildrens().stream().map(x -> x.getId()).collect(Collectors.toList()));
+                o.put("parents", commit.getParents().stream().map(x -> x.getId()).collect(Collectors.toList()));
             }
         } catch (Exception e1) {
             // TODO Auto-generated catch block
@@ -70,7 +71,8 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
             String done = session.writeTransaction(new TransactionWork<String>() {
                 @Override
                 public String execute(Transaction tx) {
-                    Result result = tx.run(getCypher(), parameters("json", tmp, "tool", evos_spec.miner.getSimpleName()));
+                    Result result = tx.run(getCypher(),
+                            parameters("json", tmp, "tool", evos_spec.miner.getSimpleName() + 2));
                     result.consume();
                     Result result2 = tx.run(getCommitCypher(), parameters("commits", commits));
                     result2.consume();
@@ -84,38 +86,35 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
             e.printStackTrace();
         }
     }
+
     public static String makeEvoUrl(String repository, Evolution evolution) {
         Map<String, EvoType> evoTypesByName = getCRefactoringTypes();
-        Refactoring ori = (Refactoring) evolution.getOriginal();
+        // Refactoring ori = (Refactoring) evolution.getOriginal();
 
         StringBuilder url = new StringBuilder();
         url.append("http://176.180.199.146:50000/?repo=" + repository);
         url.append("&before=" + evolution.getCommitBefore().getId());
         url.append("&after=" + evolution.getCommitAfter().getId());
-        url.append("&type=" + ori.getRefactoringType().getDisplayName());
-        EvoType aaa = evoTypesByName.get(ori.getRefactoringType().name());
+        url.append("&type=" + evolution.getType());
+        EvoType aaa = evoTypesByName.get(evolution.getType());
         Map<String, List<String>> before_e = new HashMap<>();
         List<Object> leftSideLocations = new ArrayList<>();
-        for (CodeRange e : ori.leftSide()) {
+        for (DescRange e : evolution.getBefore()) {
             Map<String, Object> o = new HashMap<>();
             leftSideLocations.add(o);
-            o.put("filePath", e.getFilePath());
-            o.put("start", e.getStartOffset());
-            o.put("end", e.getEndOffset());
-            String e_type = e.getCodeElementType().getName();
-            if (e_type == null) {
-                List<String> e_type_tmp = new ArrayList<>();
-                for (String s : e.getCodeElementType().name().split("_")) {
-                    e_type_tmp.add(s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase());
-                }
-                e_type = String.join(" ", e_type_tmp);
+            o.put("filePath", e.getTarget().getFile().getPath());
+            o.put("start", e.getTarget().getStart());
+            o.put("end", e.getTarget().getEnd());
+            CtElement e_ori = (CtElement) e.getTarget().getOriginal();
+            if (e_ori != null) {
+                o.put("type", e_ori.getClass().getGenericSuperclass().getTypeName());
             }
-            o.put("type", e_type);
             o.put("description", e.getDescription());
+            e.getDescription();
             for (int i = 0; i < aaa.left.size(); i++) {
                 if (aaa.left.get(i).description.equals(e.getDescription())) {
-                    String tmp = e.getFilePath() + ":" + Integer.toString(e.getStartOffset()) + "-"
-                            + Integer.toString(e.getEndOffset());
+                    String tmp = e.getTarget().getFile().getPath() + ":" + Integer.toString(e.getTarget().getStart()) + "-"
+                            + Integer.toString(e.getTarget().getEnd());
                     String key = Integer.toString(i);
                     List<String> tmp2 = before_e.getOrDefault(key, new ArrayList<>());
                     tmp2.add(tmp);
@@ -137,26 +136,22 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
         }
         Map<String, List<String>> after_e = new HashMap<>();
         List<Object> rightSideLocations = new ArrayList<>();
-        for (CodeRange e : ori.rightSide()) {
+        for (DescRange e : evolution.getAfter()) {
             Map<String, Object> o = new HashMap<>();
             rightSideLocations.add(o);
-            o.put("filePath", e.getFilePath());
-            o.put("start", e.getStartOffset());
-            o.put("end", e.getEndOffset());
-            String e_type = e.getCodeElementType().getName();
-            if (e_type == null) {
-                List<String> e_type_tmp = new ArrayList<>();
-                for (String s : e.getCodeElementType().name().split("_")) {
-                    e_type_tmp.add(s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase());
-                }
-                e_type = String.join(" ", e_type_tmp);
+            o.put("filePath", e.getTarget().getFile().getPath());
+            o.put("start", e.getTarget().getStart());
+            o.put("end", e.getTarget().getEnd());
+            CtElement e_ori = (CtElement) e.getTarget().getOriginal();
+            if (e_ori != null) {
+                o.put("type", e_ori.getClass().getGenericSuperclass().getTypeName());
             }
-            o.put("type", e_type);
             o.put("description", e.getDescription());
+            e.getDescription();
             for (int i = 0; i < aaa.right.size(); i++) {
                 if (aaa.right.get(i).description.equals(e.getDescription())) {
-                    String tmp = e.getFilePath() + ":" + Integer.toString(e.getStartOffset()) + "-"
-                            + Integer.toString(e.getEndOffset());
+                    String tmp = e.getTarget().getFile().getPath() + ":" + Integer.toString(e.getTarget().getStart()) + "-"
+                            + Integer.toString(e.getTarget().getEnd());
                     String key = Integer.toString(i);
                     List<String> tmp2 = after_e.getOrDefault(key, new ArrayList<>());
                     tmp2.add(tmp);
@@ -202,38 +197,35 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
         evofields.put("repository", repository);
         evofields.put("commitIdBefore", evolution.getCommitBefore().getId());
         evofields.put("commitIdAfter", evolution.getCommitAfter().getId());
-        Refactoring ori = (Refactoring) evolution.getOriginal();
-        evofields.put("type", ori.getRefactoringType().getDisplayName());
+        // Refactoring ori = (Refactoring) evolution.getOriginal();
+        evofields.put("type", evolution.getType());
 
         StringBuilder url = new StringBuilder();
         url.append("http://176.180.199.146:50000/?repo=" + repository);
         url.append("&before=" + evolution.getCommitBefore().getId());
         url.append("&after=" + evolution.getCommitAfter().getId());
-        url.append("&type=" + ori.getRefactoringType().getDisplayName());
-        EvoType aaa = evoTypesByName.get(ori.getRefactoringType().name());
+        url.append("&type=" + evolution.getType());
+        EvoType aaa = evoTypesByName.get(evolution.getType());
         Map<String, List<String>> before_e = new HashMap<>();
         List<Object> leftSideLocations = new ArrayList<>();
         res.put("leftSideLocations", leftSideLocations);
-        for (CodeRange e : ori.leftSide()) {
+        for (DescRange e : evolution.getBefore()) {
             Map<String, Object> o = new HashMap<>();
             leftSideLocations.add(o);
-            o.put("filePath", e.getFilePath());
-            o.put("start", e.getStartOffset());
-            o.put("end", e.getEndOffset());
-            String e_type = e.getCodeElementType().getName();
-            if (e_type == null) {
-                List<String> e_type_tmp = new ArrayList<>();
-                for (String s : e.getCodeElementType().name().split("_")) {
-                    e_type_tmp.add(s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase());
-                }
-                e_type = String.join(" ", e_type_tmp);
+            o.put("filePath", e.getTarget().getFile().getPath());
+            o.put("start", e.getTarget().getStart());
+            o.put("end", e.getTarget().getEnd());
+            CtElement e_ori = (CtElement) e.getTarget().getOriginal();
+            if (e_ori != null) {
+                o.put("type", e_ori.getClass().getGenericSuperclass().getTypeName());
             }
-            o.put("type", e_type);
             o.put("description", e.getDescription());
+            e.getDescription();
+
             for (int i = 0; i < aaa.left.size(); i++) {
                 if (aaa.left.get(i).description.equals(e.getDescription())) {
-                    String tmp = e.getFilePath() + ":" + Integer.toString(e.getStartOffset()) + "-"
-                            + Integer.toString(e.getEndOffset());
+                    String tmp = e.getTarget().getFile().getPath() + ":" + Integer.toString(e.getTarget().getStart()) + "-"
+                            + Integer.toString(e.getTarget().getEnd());
                     String key = Integer.toString(i);
                     List<String> tmp2 = before_e.getOrDefault(key, new ArrayList<>());
                     tmp2.add(tmp);
@@ -257,26 +249,22 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
         Map<String, List<String>> after_e = new HashMap<>();
         List<Object> rightSideLocations = new ArrayList<>();
         res.put("rightSideLocations", rightSideLocations);
-        for (CodeRange e : ori.rightSide()) {
+        for (DescRange e : evolution.getAfter()) {
             Map<String, Object> o = new HashMap<>();
             rightSideLocations.add(o);
-            o.put("filePath", e.getFilePath());
-            o.put("start", e.getStartOffset());
-            o.put("end", e.getEndOffset());
-            String e_type = e.getCodeElementType().getName();
-            if (e_type == null) {
-                List<String> e_type_tmp = new ArrayList<>();
-                for (String s : e.getCodeElementType().name().split("_")) {
-                    e_type_tmp.add(s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase());
-                }
-                e_type = String.join(" ", e_type_tmp);
+            o.put("filePath", e.getTarget().getFile().getPath());
+            o.put("start", e.getTarget().getStart());
+            o.put("end", e.getTarget().getEnd());
+            CtElement e_ori = (CtElement) e.getTarget().getOriginal();
+            if (e_ori != null) {
+                o.put("type", e_ori.getClass().getGenericSuperclass().getTypeName());
             }
-            o.put("type", e_type);
             o.put("description", e.getDescription());
+            e.getDescription();
             for (int i = 0; i < aaa.right.size(); i++) {
                 if (aaa.right.get(i).description.equals(e.getDescription())) {
-                    String tmp = e.getFilePath() + ":" + Integer.toString(e.getStartOffset()) + "-"
-                            + Integer.toString(e.getEndOffset());
+                    String tmp = e.getTarget().getFile().getPath() + ":" + Integer.toString(e.getTarget().getStart()) + "-"
+                            + Integer.toString(e.getTarget().getEnd());
                     String key = Integer.toString(i);
                     List<String> tmp2 = after_e.getOrDefault(key, new ArrayList<>());
                     tmp2.add(tmp);
@@ -319,7 +307,9 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
     }
 
     public Neo4jEvolutionsStorage() {
-        this(MyProperties.getPropValues().getProperty("neo4jAddress"), MyProperties.getPropValues().getProperty("neo4jId"), MyProperties.getPropValues().getProperty("neo4jPwd"));
+        this(MyProperties.getPropValues().getProperty("neo4jAddress"),
+                MyProperties.getPropValues().getProperty("neo4jId"),
+                MyProperties.getPropValues().getProperty("neo4jPwd"));
     }
 
     private static String getCypher() {
@@ -333,13 +323,12 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
 
     protected String getCommitCypher() {
         try {
-            return new String(Files.readAllBytes(Paths.get(
-                    Neo4jEvolutionsStorage.class.getClassLoader().getResource("commits_cypher.cql").getFile())));
+            return new String(Files.readAllBytes(Paths
+                    .get(Neo4jEvolutionsStorage.class.getClassLoader().getResource("commits_cypher.cql").getFile())));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
-
 
     private static Map<String, EvoType> RefactoringTypes = null;
 
@@ -353,10 +342,12 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
                             .getResource("RefactoringTypes_named.json").getFile()))),
                     new TypeToken<Map<String, EvoType>>() {
                     }.getType());
+            Map<String, EvoType> resByDN = new HashMap<>();
             for (Entry<String, EvoType> e : res.entrySet()) {
                 e.getValue().name = e.getKey();
+                resByDN.put(e.getValue().displayName, e.getValue());
             }
-            return res;
+            return resByDN;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

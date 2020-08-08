@@ -398,12 +398,14 @@ public abstract class Impacts {
 		    for (DescRange aaa : getCauses()) {
 		        Map<String, Object> o = impacts.makeRange(aaa);
 		        causes.add(o);
-		    }
+            }
+            causes.sort((a,b)->a.hashCode()-b.hashCode());
 		    List<Object> effects = new ArrayList<>();
 		    for (DescRange aaa : getEffects()) {
 		        Map<String, Object> o = impacts.makeRange(aaa);
 		        effects.add(o);
 		    }
+            effects.sort((a,b)->a.hashCode()-b.hashCode());
 		    Map<String, Object> map = impacts.makeImpact(content, causes, effects);
 		    return map;
 		}

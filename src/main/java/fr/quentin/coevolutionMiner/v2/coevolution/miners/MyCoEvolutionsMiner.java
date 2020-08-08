@@ -126,12 +126,6 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         this.store = store;
     }
 
-    class CoEvoManyCommitBuilder {
-        CoEvoManyCommitBuilder() {
-
-        }
-    }
-
     @Override
     public CoEvolutions compute() {
         assert spec.evoSpec != null : spec;
