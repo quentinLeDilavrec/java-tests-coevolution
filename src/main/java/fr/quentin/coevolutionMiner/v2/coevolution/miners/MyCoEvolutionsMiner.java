@@ -150,8 +150,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 throw new RuntimeException(e);
             }
 
-            final Evolutions global_evolutions = evoHandler.handle(spec.evoSpec);
-            Set<Evolution> global_evolutions_set = global_evolutions.toSet();
+            // final Evolutions global_evolutions = evoHandler.handle(spec.evoSpec);
+            // Set<Evolution> global_evolutions_set = global_evolutions.toSet();
 
             // GET COMMIT FROM ID
             // // // NOTE GOING FORWARD in time
@@ -179,7 +179,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             if (smallSuppressedExc.getSuppressed().length > 0) {
                 logger.log(Level.INFO, "Small exceptions", smallSuppressedExc);
             }
-            depr(global_evolutions_set);
+            // depr(global_evolutions_set);
             return globalResult;
         } catch (SeverMiningException e) {
             throw new RuntimeException(e);
@@ -388,8 +388,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         assert by != null;
         Map<Evolution, Set<Evolution>> result = new HashMap<>();
 
-        Set<Evolution> fromL = from.toSet();
-        for (Evolution evolution : fromL) {
+        for (Evolution evolution : from) {
             Set<Evolution> acc = new HashSet<>();
             for (DescRange descRange : evolution.getBefore()) {
                 CtElement ele = (CtElement) descRange.getTarget().getOriginal();
@@ -431,10 +430,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         assert by != null;
         Map<Evolution, Set<Evolution>> result = new HashMap<>();
 
-        Set<Evolution> fromL = from.toSet();
-        Set<Evolution> byL = by.toSet();
         Map<FileSnapshot, Map<Range, Set<Evolution>>> fromLByFile = new HashMap<>();
-        for (Evolution evolution : fromL) {
+        for (Evolution evolution : from) {
             for (DescRange descRange : evolution.getBefore()) {
                 fromLByFile.putIfAbsent(descRange.getTarget().getFile(), new HashMap<>());
                 fromLByFile.get(descRange.getTarget().getFile()).putIfAbsent(descRange.getTarget(), new HashSet<>());
@@ -447,7 +444,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             }
         }
         Map<FileSnapshot, Map<Range, Set<Evolution>>> nonUsedByLByFile = new HashMap<>();
-        for (Evolution evolution : byL) {
+        for (Evolution evolution : by) {
             for (DescRange descRange : evolution.getBefore()) {
                 nonUsedByLByFile.putIfAbsent(descRange.getTarget().getFile(), new HashMap<>());
                 nonUsedByLByFile.get(descRange.getTarget().getFile()).putIfAbsent(descRange.getTarget(),
@@ -468,7 +465,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     private Set<Set<Evolution>> groupEvoByCommonFiles(Evolutions currentEvolutions,
             Map<FileSnapshot, Set<Evolution>> byFileBefore, Map<FileSnapshot, Set<Evolution>> byFileAfter,
             Map<Evolution, Set<Evolution>> byEvo) {
-        for (Evolution evo : currentEvolutions.toSet()) {
+        for (Evolution evo : currentEvolutions) {
             for (DescRange descRange : evo.getBefore()) {
                 FileSnapshot f = descRange.getTarget().getFile();
                 Set<Evolution> s = byEvo.get(evo);

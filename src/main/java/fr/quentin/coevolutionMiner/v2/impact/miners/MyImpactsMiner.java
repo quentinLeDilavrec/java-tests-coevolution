@@ -85,8 +85,7 @@ public class MyImpactsMiner implements ImpactsMiner {
         ImpactsExtension result = new ImpactsExtension(new Impacts.Specifier(project.spec, spec.evoSpec, spec.miner),
                 project, rootDir, l);
 
-        Set<Evolution> evolutions = evo.toSet();
-        result.computeImpacts(isOnBefore, ast, evolutions);
+        result.computeImpacts(isOnBefore, ast, evo);
 
         for (Project<?> childProj : project.getModules()) {
             result.addModule(computeAux(isOnBefore, (ProjectSpoon) childProj));
@@ -201,8 +200,8 @@ public class MyImpactsMiner implements ImpactsMiner {
             return o;
         }
 
-        ImpactsExtension computeImpacts(boolean isOnBefore, SpoonAST ast, Set<Evolution> evolutions) {
-            logger.info("Number of executable refs mapped to positions " + evolutions.size());
+        ImpactsExtension computeImpacts(boolean isOnBefore, SpoonAST ast, Evolutions evolutions) {
+            logger.info("Number of executable refs mapped to positions " + evolutions.toSet().size());
             List<ImpactChain> imptst1;
             try {
                 Set<ImmutablePair<Object, CtElement>> tmp = new HashSet<>();

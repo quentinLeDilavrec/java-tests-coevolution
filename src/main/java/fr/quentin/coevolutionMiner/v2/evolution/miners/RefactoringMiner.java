@@ -158,7 +158,7 @@ public class RefactoringMiner implements EvolutionsMiner {
             // TODO optimize (serializing then deserializing is a dirty hack)
             Object diff = new Gson().fromJson(
                     JSON(spec.sources.repository, spec.commitIdAfter,
-                            evolutions.stream().map(x -> (Refactoring) x.getOriginal()).collect(Collectors.toList())),
+                            toSet().stream().map(x -> (Refactoring) x.getOriginal()).collect(Collectors.toList())),
                     new TypeToken<Object>() {
                     }.getType());
             return new Gson().toJsonTree(diff);

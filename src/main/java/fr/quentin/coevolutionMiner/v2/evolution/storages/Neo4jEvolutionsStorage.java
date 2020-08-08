@@ -48,9 +48,8 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
     }
 
     private void way2(Specifier evos_spec, Evolutions value) {
-        Set<Evolution> a = value.toSet();
         List<Object> tmp = new ArrayList<>();
-        for (Evolution evolution : a) {
+        for (Evolution evolution : value) {
             tmp.add(basifyEvo(evos_spec.sources.repository, evolution));
         }
         List<Map<String, Object>> commits = new ArrayList<>();

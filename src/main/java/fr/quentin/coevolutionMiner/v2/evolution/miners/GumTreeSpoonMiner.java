@@ -4,8 +4,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -18,6 +20,7 @@ import com.google.gson.reflect.TypeToken;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.commons.lang3.tuple.MutablePair;
+import org.bouncycastle.util.Iterable;
 
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
@@ -117,6 +120,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
 
     public class EvolutionsAtCommit extends Evolutions {
         Map<SpecificifierAtProj, EvolutionsAtProj> modules = new HashMap<>();
+        private EvolutionsAtProj rootModule;
 
         public EvolutionsAtCommit(Specifier spec, Sources sources, Commit beforeCom, Commit commit) {
             super(spec, sources);
@@ -128,8 +132,9 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     astHandler.buildSpec(spec.sources, spec.commitIdBefore),
                     astHandler.buildSpec(spec.sources, spec.commitIdAfter), spec.miner);
             EvolutionsAtProj result = new EvolutionsAtProj(projSpec);
-            result.compute();
+            this.rootModule = result;
             this.modules.put(projSpec, result);
+            result.compute();
             return result;
         }
 
@@ -258,6 +263,49 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             Project source = before.get(0).left.getFile().getAST().getProject();
             return getModule(source.spec, target.spec).getEvolution(type, before, target);
         }
+
+        private boolean evoSetWasBuilt = false;
+        @Override
+        @Deprecated
+        public Set<Evolution> toSet() {
+            if(evoSetWasBuilt) {
+                return evolutions;
+            }
+            for (Evolution e : this) {
+                evolutions.add(e);
+            }
+            evoSetWasBuilt = true;
+            return evolutions;
+        }
+
+        @Override
+        public Iterator<Evolution> iterator() {
+            if(evoSetWasBuilt) {
+                return evolutions.iterator();
+            }
+            return new Iterator<Evolutions.Evolution>() {
+
+                Iterator<EvolutionsAtProj> commitIt = EvolutionsAtCommit.this.modules.values().iterator();
+                Iterator<Evolutions.Evolution> it = EvolutionsAtCommit.this.evolutions.iterator();
+
+                @Override
+                public boolean hasNext() {
+                    return commitIt.hasNext() || (it != null && it.hasNext());
+                }
+
+                @Override
+                public Evolution next() {
+                    while (true) {
+                        try {
+                            return it.next();
+                        } catch (NoSuchElementException e) {
+                            it = commitIt.next().iterator();
+                        }
+                    }
+                }
+
+            };
+        }
     }
 
     public final class EvolutionsMany extends Evolutions {
@@ -347,9 +395,47 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             return new ImmutablePair<>(range, desc);
         }
 
+        private boolean evoSetWasBuilt = false;
+
         @Override
         public Set<Evolution> toSet() {
+            if(evoSetWasBuilt) {
+                return evolutions;
+            }
+            for (Evolution e : this) {
+                evolutions.add(e);
+            }
+            evoSetWasBuilt = true;
             return evolutions;
+        }
+
+        @Override
+        public Iterator<Evolution> iterator() {
+            if(evoSetWasBuilt) {
+                return evolutions.iterator();
+            }
+            return new Iterator<Evolutions.Evolution>() {
+
+                Iterator<EvolutionsAtCommit> commitIt = EvolutionsMany.this.perCommit.values().iterator();
+                Iterator<Evolutions.Evolution> it = EvolutionsMany.this.evolutions.iterator();
+
+                @Override
+                public boolean hasNext() {
+                    return commitIt.hasNext() || (it != null && it.hasNext());
+                }
+
+                @Override
+                public Evolution next() {
+                    while (true) {
+                        try {
+                            return it.next();
+                        } catch (NoSuchElementException e) {
+                            it = commitIt.next().iterator();
+                        }
+                    }
+                }
+
+            };
         }
 
         @Override
@@ -366,7 +452,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         @Override
         public List<Evolutions> perBeforeCommit() {
             Map<String, Set<Evolution>> tmp = new HashMap<>();
-            for (Evolution evolution : toSet()) {
+            for (Evolution evolution : this) {
                 String cidb = evolution.getCommitBefore().getId();
                 tmp.putIfAbsent(cidb, new HashSet<>());
                 tmp.get(cidb).add(evolution);

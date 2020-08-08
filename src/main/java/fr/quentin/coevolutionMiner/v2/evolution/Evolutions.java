@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -22,7 +23,7 @@ import spoon.reflect.declaration.CtElement;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 
-public class Evolutions {
+public class Evolutions implements Iterable<Evolutions.Evolution>{
 
     public static class Specifier {
         public final Sources.Specifier sources;
@@ -325,4 +326,9 @@ public class Evolutions {
 	public Project<?>.AST.FileSnapshot.Range map(Project<?>.AST.FileSnapshot.Range testBefore, Project<?> target) {
 		return null;
 	}
+
+    @Override
+    public Iterator<Evolution> iterator() {
+        return evolutions.iterator();
+    }
 }
