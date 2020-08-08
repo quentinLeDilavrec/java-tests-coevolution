@@ -129,7 +129,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     astHandler.buildSpec(spec.sources, spec.commitIdAfter), spec.miner);
             EvolutionsAtProj result = new EvolutionsAtProj(projSpec);
             result.compute();
-            this.modules.put((SpecificifierAtProj) spec, result);
+            this.modules.put(projSpec, result);
             return result;
         }
 
