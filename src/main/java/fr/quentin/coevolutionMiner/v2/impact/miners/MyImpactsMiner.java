@@ -254,7 +254,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                                 calls.stream().map(x -> extracted(ast, x)).collect(Collectors.toSet()));
                     }
 
-                    for (String key : rel.getEffects().keySet()) {
+                    for (String key : rel.getCauses().keySet()) {
                         Set<ImpactElement> others = rel.getCauses().get(key);
                         if (others == null) {
                             continue;
