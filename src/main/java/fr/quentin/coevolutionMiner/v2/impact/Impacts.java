@@ -64,7 +64,6 @@ public abstract class Impacts {
         res.put("json", json);
         res.put("tool", spec.miner+2);
         for (Impact impact : impacts.values()) {
-
             Map<String, Object> map = impact.toMap(this);
             json.add(map);
         }

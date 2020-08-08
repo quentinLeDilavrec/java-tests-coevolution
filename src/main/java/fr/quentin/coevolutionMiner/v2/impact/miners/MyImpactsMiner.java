@@ -183,7 +183,7 @@ public class MyImpactsMiner implements ImpactsMiner {
             Range target = descRange.getTarget();
             Object original = target.getOriginal();
             if (original != null) {
-                o.put("type", original.getClass().getSimpleName());
+                o.put("type", original.getClass().getSuperclass().getSimpleName());
                 if (original instanceof CtExecutable) {
                     o.put("sig", ((CtExecutable<?>) original).getSignature());
                 }
@@ -196,6 +196,8 @@ public class MyImpactsMiner implements ImpactsMiner {
                         // element.getContent().getParent(CtMethod.class), "expand to test"));
                     }
                 }
+            } else {
+                o.put("type","null");
             }
             return o;
         }

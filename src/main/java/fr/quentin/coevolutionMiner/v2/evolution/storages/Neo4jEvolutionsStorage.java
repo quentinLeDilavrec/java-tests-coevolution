@@ -107,7 +107,9 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
             o.put("end", e.getTarget().getEnd());
             CtElement e_ori = (CtElement) e.getTarget().getOriginal();
             if (e_ori != null) {
-                o.put("type", e_ori.getClass().getGenericSuperclass().getTypeName());
+                o.put("type", e_ori.getClass().getSuperclass().getSimpleName());
+            } else {
+                o.put("type", "evo null");
             }
             o.put("description", e.getDescription());
             e.getDescription();
@@ -144,7 +146,9 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
             o.put("end", e.getTarget().getEnd());
             CtElement e_ori = (CtElement) e.getTarget().getOriginal();
             if (e_ori != null) {
-                o.put("type", e_ori.getClass().getGenericSuperclass().getTypeName());
+                o.put("type", e_ori.getClass().getSuperclass().getSimpleName());
+            } else {
+                o.put("type", "evo null");
             }
             o.put("description", e.getDescription());
             e.getDescription();
@@ -217,7 +221,9 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
             o.put("end", e.getTarget().getEnd());
             CtElement e_ori = (CtElement) e.getTarget().getOriginal();
             if (e_ori != null) {
-                o.put("type", e_ori.getClass().getGenericSuperclass().getTypeName());
+                o.put("type", e_ori.getClass().getSuperclass().getSimpleName());
+            } else {
+                o.put("type", "evo null");
             }
             o.put("description", e.getDescription());
             e.getDescription();
@@ -257,7 +263,9 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
             o.put("end", e.getTarget().getEnd());
             CtElement e_ori = (CtElement) e.getTarget().getOriginal();
             if (e_ori != null) {
-                o.put("type", e_ori.getClass().getGenericSuperclass().getTypeName());
+                o.put("type", e_ori.getClass().getSuperclass().getSimpleName());
+            } else {
+                o.put("type", "evo null");
             }
             o.put("description", e.getDescription());
             e.getDescription();
