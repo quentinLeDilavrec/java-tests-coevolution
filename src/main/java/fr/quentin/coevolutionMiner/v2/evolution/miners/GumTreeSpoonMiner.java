@@ -129,6 +129,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     astHandler.buildSpec(spec.sources, spec.commitIdAfter), spec.miner);
             EvolutionsAtProj result = new EvolutionsAtProj(projSpec);
             result.compute();
+            this.modules.put((SpecificifierAtProj) spec, result);
             return result;
         }
 
@@ -209,8 +210,8 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 if (position == null || !position.isValidPosition()) {
                     return null;
                 }
-                Range range = proj.getRange(proj.getAst().rootDir.relativize(position.getFile().toPath()).toString(), position.getSourceStart(),
-                        position.getSourceEnd(), ele);
+                Range range = proj.getRange(proj.getAst().rootDir.relativize(position.getFile().toPath()).toString(),
+                        position.getSourceStart(), position.getSourceEnd(), ele);
                 if (range == null) {
                     return null;
                 }
