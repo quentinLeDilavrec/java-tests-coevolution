@@ -33,7 +33,7 @@ FOREACH (l IN imp.causes |
     path:l.file, repo:l.repository, commitId:l.commitId})
     ON CREATE SET cause.type = l.type, cause.isTest = l.isTest, cause.sig = l.sig
     ON MATCH SET cause.isTest = l.isTest, cause.sig = l.sig
-    MERGE (impact)-[:IMPACT_CAUSE {type: l.type}]->(cause)
+    MERGE (impact)-[:IMPACT_CAUSE {type: l.description}]->(cause)
     MERGE (snapCause:FileSnapshot {path:l.file, repo:l.repository, commitId:l.commitId})
     MERGE (snapCause)-[:IS_SNAPSHOT_IN]->(commitIdCause)
     MERGE (cause)-[:IS_RANGE_IN]->(snapCause)
@@ -52,7 +52,7 @@ FOREACH (l IN imp.effects |
     path:l.file, repo:l.repository, commitId:l.commitId})
     ON CREATE SET effect.type = l.type, effect.isTest = l.isTest, effect.sig = l.sig
     ON MATCH SET effect.isTest = l.isTest, effect.sig = l.sig
-    MERGE (impact)-[:IMPACT_EFFECT {type: l.type}]->(effect)
+    MERGE (impact)-[:IMPACT_EFFECT {type: l.description}]->(effect)
     MERGE (snapEffect:FileSnapshot {path:l.file, repo:l.repository, commitId:l.commitId})
     MERGE (snapEffect)-[:IS_SNAPSHOT_IN]->(commitIdEffect)
     MERGE (effect)-[:IS_RANGE_IN]->(snapEffect)
