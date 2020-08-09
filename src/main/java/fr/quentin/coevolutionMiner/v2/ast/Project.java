@@ -33,18 +33,17 @@ public class Project<T> {
         public final Class<U> miner;
         public final String commitId;
         public final Path relPath;
+        public final Boolean release; // do not distinguish specs, just a metadata
 
-        public Specifier(Sources.Specifier sources, String commitId, Class<U> miner) {
-            this.sources = sources;
-            this.relPath = Paths.get("");
-            this.commitId = commitId;
-            this.miner = miner;
+        public Specifier(Sources.Specifier sources, String commitId, Boolean release, Class<U> miner) {
+            this(sources, Paths.get(""), commitId, release, miner);
         }
 
-        public Specifier(Sources.Specifier sources, Path relPath, String commitId, Class<U> miner) {
+        public Specifier(Sources.Specifier sources, Path relPath, String commitId, Boolean release, Class<U> miner) {
             this.sources = sources;
             this.relPath = relPath;
             this.commitId = commitId;
+            this.release = release;
             this.miner = miner;
         }
         // TODO allow to specify Impacts more precisely with filters
@@ -185,7 +184,7 @@ public class Project<T> {
             if (original != null) {
                 Object old = range.setOriginal(original);
                 if (old != null && old != original) {
-                throw new RuntimeException("Original value of range should be unique");
+                    throw new RuntimeException("Original value of range should be unique");
                 }
             }
             return range;

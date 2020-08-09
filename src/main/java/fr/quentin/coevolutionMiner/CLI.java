@@ -74,6 +74,7 @@ import gumtree.spoon.diff.Diff;
 import gumtree.spoon.diff.operations.Operation;
 import spoon.MavenLauncher;
 import spoon.reflect.CtModel;
+import spoon.reflect.declaration.CtElement;
 import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
 
 /**
@@ -218,7 +219,7 @@ public class CLI {
                                   // evos = spoon compile + count tests/methods/class
                                 Sources src = srcH.handle(srcSpec, "JGit");
                                 src.getCommitsBetween(commitIdBefore, commitIdAfter);
-                                project = astH.handle(astH.buildSpec(srcSpec, commitIdBefore));
+                                project = astH.handle(astH.buildSpec(srcSpec, commitIdBefore, true));
                                 printThings(releases, commitIdBefore, project);
                                 for (Project<?> x : project.getModules()) {
                                     printThings(releases, commitIdBefore, x);
@@ -333,6 +334,20 @@ public class CLI {
                             commit_index++;
                             commitIdAfter = s.get(commit_index);
                             commitIdBefore = s.get(commit_index + 1);
+                            try { // https://github.com/chrisbanes/Android-PullToRefresh/commit/1f7a7e1daf89167b11166180d96bac54a9306c80
+                                  // evos = spoon compile + count tests/methods/class
+                                Sources src = srcH.handle(srcSpec, "JGit");
+                                src.getCommitsBetween(commitIdBefore, commitIdAfter);
+                                Project<CtElement> project = astH.handle(astH.buildSpec(srcSpec, commitIdBefore, true));
+                                printThings(s, commitIdBefore, project);
+                                for (Project<?> x : project.getModules()) {
+                                    printThings(s, commitIdBefore, x);
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                logger.info("failed statistics " + s.get(0));
+                                break;
+                            }
                             try {
                                 evos = evoH.handle(evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter));
                                 logger.info("done evolution analysis " + s.get(0));
@@ -448,6 +463,22 @@ public class CLI {
                             commit_index++;
                             commitIdAfter = s.get(commit_index);
                             commitIdBefore = s.get(commit_index + 1);
+
+                            try { // https://github.com/chrisbanes/Android-PullToRefresh/commit/1f7a7e1daf89167b11166180d96bac54a9306c80
+                                  // evos = spoon compile + count tests/methods/class
+                                Sources src = srcH.handle(srcSpec, "JGit");
+                                src.getCommitsBetween(commitIdBefore, commitIdAfter);
+                                Project<CtElement> project = astH.handle(astH.buildSpec(srcSpec, commitIdBefore, true));
+                                printThings(s, commitIdBefore, project);
+                                for (Project<?> x : project.getModules()) {
+                                    printThings(s, commitIdBefore, x);
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                logger.info("failed statistics " + s.get(0));
+                                break;
+                            }
+
                             try {
                                 evos = evoH.handle(evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter));
                                 logger.info("done evolution analysis " + s.get(0));

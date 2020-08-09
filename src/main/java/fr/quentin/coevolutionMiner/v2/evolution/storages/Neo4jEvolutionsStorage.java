@@ -87,6 +87,11 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
         }
     }
 
+    private static String formatedType(Object original) {
+        String name = original.getClass().getSimpleName();
+        return name.endsWith("Impl") ? name.substring(0, name.length() - "Impl".length()) : name;
+    }
+
     public static String makeEvoUrl(String repository, Evolution evolution) {
         Map<String, EvoType> evoTypesByName = getCRefactoringTypes();
         // Refactoring ori = (Refactoring) evolution.getOriginal();
@@ -107,7 +112,7 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
             o.put("end", e.getTarget().getEnd());
             CtElement e_ori = (CtElement) e.getTarget().getOriginal();
             if (e_ori != null) {
-                o.put("type", e_ori.getClass().getSuperclass().getSimpleName());
+                o.put("type", formatedType(e_ori));
             } else {
                 o.put("type", "evo null");
             }
@@ -146,7 +151,7 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
             o.put("end", e.getTarget().getEnd());
             CtElement e_ori = (CtElement) e.getTarget().getOriginal();
             if (e_ori != null) {
-                o.put("type", e_ori.getClass().getSuperclass().getSimpleName());
+                o.put("type", formatedType(e_ori));
             } else {
                 o.put("type", "evo null");
             }
@@ -221,7 +226,7 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
             o.put("end", e.getTarget().getEnd());
             CtElement e_ori = (CtElement) e.getTarget().getOriginal();
             if (e_ori != null) {
-                o.put("type", e_ori.getClass().getSuperclass().getSimpleName());
+                o.put("type", formatedType(e_ori));
             } else {
                 o.put("type", "evo null");
             }
@@ -263,7 +268,7 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
             o.put("end", e.getTarget().getEnd());
             CtElement e_ori = (CtElement) e.getTarget().getOriginal();
             if (e_ori != null) {
-                o.put("type", e_ori.getClass().getSuperclass().getSimpleName());
+                o.put("type", formatedType(e_ori));
             } else {
                 o.put("type", "evo null");
             }

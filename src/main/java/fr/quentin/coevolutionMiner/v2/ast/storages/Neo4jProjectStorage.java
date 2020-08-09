@@ -87,6 +87,7 @@ public class Neo4jProjectStorage implements ProjectStorage {
         Map<String, Object> commitMap = commit.toMap();
         Map<String, Object> content = new HashMap<>();
         r.put("content", content);
+        r.put("released", project.spec.release);
 
         content.putAll(commitMap);
         content.put("path", project.spec.relPath.toString());
