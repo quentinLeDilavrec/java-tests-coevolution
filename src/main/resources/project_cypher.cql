@@ -3,16 +3,16 @@ UNWIND data as e
 
 MERGE (repo:Repository {url:e.content.repository})
 ON CREATE SET
-	repo.markedRelease = CASE rel is null WHEN True THEN repo.released ELSE true END
+	repo.markedRelease = CASE rel is null WHEN True THEN repo.released ELSE True END
 ON MATCH SET
-	repo.markedRelease = CASE rel is null WHEN True THEN repo.released ELSE tre END
+	repo.markedRelease = CASE rel is null WHEN True THEN repo.released ELSE True END
 
 MERGE (commit:Commit {repo:e.content.repository, sha1:e.content.commitId})
 ON CREATE SET 
-	commit.exception = e.exception
+	commit.exception = e.exception,
 	commit.released = CASE rel is null WHEN True THEN commit.released ELSE e.released END
 ON MATCH SET 
-	commit.exception = e.exception
+	commit.exception = e.exception,
 	commit.released = CASE rel is null WHEN True THEN commit.released ELSE e.released END
 MERGE (commit)-[:IS_COMMIT_OF]->(repo)
 MERGE (commit)<-[:CONTAIN_COMMIT]-(repo)
