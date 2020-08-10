@@ -176,7 +176,10 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                             ((ProjectSpoon.SpoonAST) afterProj.getAst()).launcher.getModel().getRootPackage());
                     for (Operation<?> op : diff.getRootOperations()) {
                         addEvolution(op, beforeProj, afterProj);
-                        LOGGER.info("O- " + op + "\n");
+                        try {
+                            LOGGER.info("O- " + op + "\n");                            
+                        } catch (Exception e) {
+                        }
                     }
                 }
 
