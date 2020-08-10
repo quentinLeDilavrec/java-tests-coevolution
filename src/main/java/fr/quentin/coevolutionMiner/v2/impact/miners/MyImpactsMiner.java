@@ -204,7 +204,9 @@ public class MyImpactsMiner implements ImpactsMiner {
 
         private String formatedType(Object original) { // TODO put in utils
             String name = original.getClass().getSimpleName();
-            return name.endsWith("Impl") ? name.substring(0, name.length() - "Impl".length()) : name;
+            name = name.endsWith("Impl") ? name.substring(0, name.length() - "Impl".length()) : name;
+            name = name.startsWith("Ct") ? name.substring("Ct".length()) : name;
+            return name;
         }
 
         ImpactsExtension computeImpacts(boolean isOnBefore, SpoonAST ast, Evolutions evolutions) {
