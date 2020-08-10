@@ -466,9 +466,9 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     continue;
                 }
                 Evolutions newEvo = new EvolutionsMany(
-                        EvolutionHandler.buildSpec(spec.sources,
-                                evolutionsSubSet.iterator().next().getCommitBefore().getId(),
-                                evolutionsSubSet.iterator().next().getCommitAfter().getId()),
+                    new Evolutions.Specifier(spec.sources,
+                            evolutionsSubSet.iterator().next().getCommitBefore().getId(),
+                            evolutionsSubSet.iterator().next().getCommitAfter().getId(), spec.miner),
                         getSources(), evolutionsSubSet);
                 r.add(newEvo);
             }

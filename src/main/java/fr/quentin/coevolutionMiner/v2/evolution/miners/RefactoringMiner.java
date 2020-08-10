@@ -141,7 +141,7 @@ public class RefactoringMiner implements EvolutionsMiner {
         }
 
         private ImmutablePair<Range, String> toRange(Project proj, CodeRange range) {
-            Range tmp = proj.getRange(range.getFilePath(), range.getStartOffset(), range.getEndOffset()-1);
+            Range tmp = proj.getRange(range.getFilePath(), range.getStartOffset(), range.getEndOffset() - 1);
             if (tmp == null) {
                 return null;
             }
@@ -178,9 +178,9 @@ public class RefactoringMiner implements EvolutionsMiner {
                     continue;
                 }
                 Evolutions newEvo = new EvolutionsExtension(
-                        EvolutionHandler.buildSpec(spec.sources,
+                        new Evolutions.Specifier(spec.sources,
                                 evolutionsSubSet.iterator().next().getCommitBefore().getId(),
-                                evolutionsSubSet.iterator().next().getCommitAfter().getId()),
+                                evolutionsSubSet.iterator().next().getCommitAfter().getId(), spec.miner),
                         getSources(), evolutionsSubSet);
                 r.add(newEvo);
             }

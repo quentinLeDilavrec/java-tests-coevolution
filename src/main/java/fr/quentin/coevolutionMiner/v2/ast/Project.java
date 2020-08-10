@@ -52,8 +52,9 @@ public class Project<T> {
         public int hashCode() {
             final int prime = 31;
             int result = 1;
-            result = prime * result + ((miner == null) ? 0 : miner.hashCode());
             result = prime * result + ((commitId == null) ? 0 : commitId.hashCode());
+            result = prime * result + ((miner == null) ? 0 : miner.hashCode());
+            result = prime * result + ((relPath == null) ? 0 : relPath.hashCode());
             result = prime * result + ((sources == null) ? 0 : sources.hashCode());
             return result;
         }
@@ -67,15 +68,20 @@ public class Project<T> {
             if (getClass() != obj.getClass())
                 return false;
             Specifier other = (Specifier) obj;
+            if (commitId == null) {
+                if (other.commitId != null)
+                    return false;
+            } else if (!commitId.equals(other.commitId))
+                return false;
             if (miner == null) {
                 if (other.miner != null)
                     return false;
             } else if (!miner.equals(other.miner))
                 return false;
-            if (commitId == null) {
-                if (other.commitId != null)
+            if (relPath == null) {
+                if (other.relPath != null)
                     return false;
-            } else if (!commitId.equals(other.commitId))
+            } else if (!relPath.equals(other.relPath))
                 return false;
             if (sources == null) {
                 if (other.sources != null)
@@ -84,6 +90,8 @@ public class Project<T> {
                 return false;
             return true;
         }
+
+        
     }
 
     protected Project<T>.AST ast;
