@@ -177,7 +177,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     for (Operation<?> op : diff.getRootOperations()) {
                         addEvolution(op, beforeProj, afterProj);
                         try {
-                            LOGGER.info("O- " + op + "\n");                            
+                            LOGGER.info("O- " + op + "\n");
                         } catch (Exception e) {
                         }
                     }
@@ -196,21 +196,28 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 return this;
             }
 
-            void addEvolution(Operation<?> refact, Project<?> astBefore, Project<?> astAfter) {
+            void addEvolution(Operation<?> op, Project<?> astBefore, Project<?> astAfter) {
                 List<ImmutablePair<Range, String>> before = new ArrayList<>();
-                ImmutablePair<Range, String> rangeBef = toRange(refact.getSrcNode(), astBefore, "src");
+                ImmutablePair<Range, String> rangeBef = toRange(astBefore, op.getSrcNode(), "src");
                 if (rangeBef != null) {
                     before.add(rangeBef);
                 }
                 List<ImmutablePair<Range, String>> after = new ArrayList<>();
-                ImmutablePair<Range, String> rangeAft = toRange(refact.getDstNode(), astAfter, "dst");
+                ImmutablePair<Range, String> rangeAft = toRange(astAfter, op.getDstNode(), "dst");
                 if (rangeAft != null) {
                     after.add(rangeAft);
                 }
-                addEvolution(refact.getAction().getName(), before, after, astBefore.commit, astAfter.commit, refact);
+                Evolution evo = super.addEvolution(op.getAction().getName(), before, after, astBefore.commit,
+                        astAfter.commit, (Object) op);
+                for (DescRange dr : evo.getBefore()) {
+                    augment(dr);
+                }
+                for (DescRange dr : evo.getAfter()) {
+                    augment(dr);
+                }
             }
 
-            private ImmutablePair<Range, String> toRange(CtElement ele, Project<?> proj, String description) {
+            private <T> ImmutablePair<Range, String> toRange(Project<T> proj, CtElement ele, String desc) {
                 if (ele == null) {
                     return null;
                 }
@@ -223,7 +230,18 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 if (range == null) {
                     return null;
                 }
-                return new ImmutablePair<>(range, description);
+                return new ImmutablePair<>(range, desc);
+            }
+
+            private void augment(DescRange dr) {
+                CtElement ori = (CtElement) dr.getTarget().getOriginal();
+                assert ori != null;
+                HashSet<DescRange> md = (HashSet<DescRange>) ori.getMetadata(METADATA_KEY_EVO);
+                if (md == null) {
+                    md = new HashSet<>();
+                    ori.putMetadata(METADATA_KEY_EVO, md);
+                }
+                md.add(dr);
             }
 
             @Override
@@ -268,10 +286,11 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         }
 
         private boolean evoSetWasBuilt = false;
+
         @Override
         @Deprecated
         public Set<Evolution> toSet() {
-            if(evoSetWasBuilt) {
+            if (evoSetWasBuilt) {
                 return evolutions;
             }
             for (Evolution e : this) {
@@ -283,7 +302,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
 
         @Override
         public Iterator<Evolution> iterator() {
-            if(evoSetWasBuilt) {
+            if (evoSetWasBuilt) {
                 return evolutions.iterator();
             }
             return new Iterator<Evolutions.Evolution>() {
@@ -365,44 +384,11 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             return this.perCommit.put(new ImmutablePair<>(beforeCom.getId(), commit.getId()), perCommit);
         }
 
-        void addEvolution(Operation<?> op, String relPath, Project<?> astBefore, Project<?> astAfter) {
-            List<ImmutablePair<Range, String>> before = new ArrayList<>();
-            before.add(toRange(astBefore, op.getSrcNode(), "src"));
-            List<ImmutablePair<Range, String>> after = new ArrayList<>();
-            after.add(toRange(astAfter, op.getDstNode(), "dst"));
-            Evolution evo = super.addEvolution(op.getAction().getName(), before, after, astBefore.commit,
-                    astAfter.commit, (Object) op);
-            for (DescRange dr : evo.getBefore()) {
-                augment(dr);
-            }
-            for (DescRange dr : evo.getAfter()) {
-                augment(dr);
-            }
-        }
-
-        private void augment(DescRange dr) {
-            CtElement ori = (CtElement) dr.getTarget().getOriginal();
-            assert ori != null;
-            HashSet<DescRange> md = (HashSet<DescRange>) ori.getMetadata(METADATA_KEY_EVO);
-            if (md == null) {
-                md = new HashSet<>();
-                ori.putMetadata(METADATA_KEY_EVO, md);
-            }
-            md.add(dr);
-        }
-
-        private <T> ImmutablePair<Range, String> toRange(Project<T> ast, CtElement element, String desc) {
-            SourcePosition position = element.getPosition();
-            Project<T>.AST.FileSnapshot.Range range = ast.getRange(position.getFile().getPath(),
-                    position.getSourceStart(), position.getSourceEnd(), element);
-            return new ImmutablePair<>(range, desc);
-        }
-
         private boolean evoSetWasBuilt = false;
 
         @Override
         public Set<Evolution> toSet() {
-            if(evoSetWasBuilt) {
+            if (evoSetWasBuilt) {
                 return evolutions;
             }
             for (Evolution e : this) {
@@ -414,7 +400,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
 
         @Override
         public Iterator<Evolution> iterator() {
-            if(evoSetWasBuilt) {
+            if (evoSetWasBuilt) {
                 return evolutions.iterator();
             }
             return new Iterator<Evolutions.Evolution>() {
@@ -466,9 +452,9 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     continue;
                 }
                 Evolutions newEvo = new EvolutionsMany(
-                    new Evolutions.Specifier(spec.sources,
-                            evolutionsSubSet.iterator().next().getCommitBefore().getId(),
-                            evolutionsSubSet.iterator().next().getCommitAfter().getId(), spec.miner),
+                        new Evolutions.Specifier(spec.sources,
+                                evolutionsSubSet.iterator().next().getCommitBefore().getId(),
+                                evolutionsSubSet.iterator().next().getCommitAfter().getId(), spec.miner),
                         getSources(), evolutionsSubSet);
                 r.add(newEvo);
             }
