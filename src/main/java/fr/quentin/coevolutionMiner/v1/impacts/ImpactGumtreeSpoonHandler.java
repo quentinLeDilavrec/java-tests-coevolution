@@ -23,6 +23,7 @@ import fr.quentin.impactMiner.Impacts;
 import fr.quentin.impactMiner.JsonSerializable;
 import fr.quentin.impactMiner.Position;
 import fr.quentin.impactMiner.ToJson;
+import fr.quentin.impactMiner.ImpactAnalysis.ImpactAnalysisException;
 import fr.quentin.coevolutionMiner.utils.DiffHelper;
 import fr.quentin.coevolutionMiner.utils.FilePathFilter;
 import gumtree.spoon.AstComparator;
@@ -65,7 +66,8 @@ public class ImpactGumtreeSpoonHandler implements ImpactRoute {
 	}
 
 	@Override
-	public Object commitHandler(String gitURL, String commitIdBefore, String commitIdAfter, ImpactQuery body, QueryParamsMap queryMap) {
+	public Object commitHandler(String gitURL, String commitIdBefore, String commitIdAfter, ImpactQuery body,
+			QueryParamsMap queryMap) {
 
 		logger.info(gitURL);
 		logger.info(commitIdBefore);
@@ -145,7 +147,8 @@ public class ImpactGumtreeSpoonHandler implements ImpactRoute {
 	// (defalias 'redo 'undo-tree-redo)
 	// (global-set-key (kbd "C-S-z") 'redo)
 	@Override
-	public Object tagHandler(String repo, String tagBefore, String tagAfter, ImpactQuery body, QueryParamsMap queryMap) {
+	public Object tagHandler(String repo, String tagBefore, String tagAfter, ImpactQuery body,
+			QueryParamsMap queryMap) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -166,7 +169,8 @@ public class ImpactGumtreeSpoonHandler implements ImpactRoute {
 	// return repository;
 	// }
 
-	public JsonElement impactAnalysis(MavenLauncher launcher, Diff evolutions) throws IOException {
+	public JsonElement impactAnalysis(MavenLauncher launcher, Diff evolutions)
+			throws IOException, ImpactAnalysisException {
 		List<CtExecutableReference<?>> allExecutableReference = new ArrayList<>();
 		for (CtMethod<?> m : launcher.getModel().getElements(new TypeFilter<>(CtMethod.class))) {
 			allExecutableReference.add(m.getReference());

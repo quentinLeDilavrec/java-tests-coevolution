@@ -13,6 +13,7 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.Set;
 import java.util.logging.Logger;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -40,6 +41,7 @@ import fr.quentin.impactMiner.ImpactChain;
 import fr.quentin.impactMiner.ImpactElement;
 import fr.quentin.impactMiner.Impacts.Relations;
 import fr.quentin.impactMiner.Position;
+import fr.quentin.impactMiner.ImpactAnalysis.ImpactAnalysisException;
 import spoon.MavenLauncher;
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtElement;
@@ -68,11 +70,17 @@ public class MyImpactsMiner implements ImpactsMiner {
         assert spec.evoSpec != null : spec;
         boolean isOnBefore = spec.projSpec.commitId.equals(spec.evoSpec.commitIdBefore);
         ProjectSpoon project = (ProjectSpoon) astHandler.handle(spec.projSpec);
-        ImpactsExtension result = computeAux(isOnBefore, project);
-        return result;
+        try {
+            ImpactsExtension result = computeAux(isOnBefore, project);
+            return result;
+        } catch (Exception e) {
+            logger.log(Level.WARNING, e.getMessage(), e);
+            return new ImpactsExtension(new Impacts.Specifier(project.spec, spec.evoSpec, spec.miner),
+            project, project.getAst().rootDir, null);
+        }
     }
 
-    private ImpactsExtension computeAux(boolean isOnBefore, ProjectSpoon project) {
+    private ImpactsExtension computeAux(boolean isOnBefore, ProjectSpoon project) throws ImpactAnalysisException {
         ProjectSpoon.SpoonAST ast = (ProjectSpoon.SpoonAST) project.getAst();
         Evolutions evo = evoHandler.handle(spec.evoSpec);
         // return res;
@@ -81,14 +89,18 @@ public class MyImpactsMiner implements ImpactsMiner {
         if (!ast.isUsable()) {
             // return null;
         }
-        ImpactAnalysis l = new ImpactAnalysis(ast.augmented, 200);
+        ImpactAnalysis l = new ImpactAnalysis(ast.augmented, 50);
         ImpactsExtension result = new ImpactsExtension(new Impacts.Specifier(project.spec, spec.evoSpec, spec.miner),
                 project, rootDir, l);
 
         result.computeImpacts(isOnBefore, ast, evo);
 
         for (Project<?> childProj : project.getModules()) {
-            result.addModule(computeAux(isOnBefore, (ProjectSpoon) childProj));
+            try {
+                result.addModule(computeAux(isOnBefore, (ProjectSpoon) childProj));
+            } catch (Exception e) {
+                logger.log(Level.WARNING, e.getMessage(), e);
+            }
         }
 
         return result;
@@ -220,7 +232,11 @@ public class MyImpactsMiner implements ImpactsMiner {
                         CtElement ori = (CtElement) targ.getOriginal();
                         // Position pos = new Position(targ.getFile().getPath(), targ.getStart(),
                         // targ.getEnd());
-                        tmp.add(new ImmutablePair<>(bef, ori));
+                        if (ori == null) {
+                            logger.warning("no original element found at " + targ);
+                        } else {
+                            tmp.add(new ImmutablePair<>(bef, ori));
+                        }
                     }
                 }
                 imptst1 = analyzer.getImpactedTests3(tmp, false);

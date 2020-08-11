@@ -23,6 +23,7 @@ import fr.quentin.impactMiner.ImpactChain;
 import fr.quentin.impactMiner.Impacts;
 import fr.quentin.impactMiner.JsonSerializable;
 import fr.quentin.impactMiner.ToJson;
+import fr.quentin.impactMiner.ImpactAnalysis.ImpactAnalysisException;
 import spoon.MavenLauncher;
 import spoon.reflect.code.CtInvocation;
 import spoon.reflect.cu.SourcePosition;
@@ -35,10 +36,10 @@ import spoon.reflect.reference.CtExecutableReference;
 import spoon.reflect.visitor.filter.TypeFilter;
 
 public class DiffHelper {
-	
-    static String VERSIONS_PATH = "/home/quentin/resources/Versions";
+
+	static String VERSIONS_PATH = "/home/quentin/resources/Versions";
 	static String REPOS_PATH = "/home/quentin/resources/Repos";
-	
+
 	static FilePathFilter ALLOW_ALL = new FilePathFilter() {
 		@Override
 		public boolean isAllowed(String filePath) {
@@ -55,22 +56,22 @@ public class DiffHelper {
 	private MavenLauncher launcherAfter;
 	private Path pathAfter;
 
-    public DiffHelper(String gitRepoAddress, String commitIdBefore, String commitIdAfter) throws Exception {
+	public DiffHelper(String gitRepoAddress, String commitIdBefore, String commitIdAfter) throws Exception {
 		this.gitRepoAddress = gitRepoAddress;
 		URIish parsedRepoURI = new URIish(gitRepoAddress);
 		this.repoRawPath = parsedRepoURI.getRawPath();
 		this.repo = this.cloneIfNotExists();
 		new GitHelper().createAllRevsWalk(repo);
-		
+
 		PairBeforeAfter<SourceFileSet> beforeAndAfter = new PairBeforeAfter<SourceFileSet>(
-			GitHelper.getSourcesAtCommit(repo,commitIdBefore,ALLOW_ALL), 
-			GitHelper.getSourcesAtCommit(repo,commitIdAfter,ALLOW_ALL));
+				GitHelper.getSourcesAtCommit(repo, commitIdBefore, ALLOW_ALL),
+				GitHelper.getSourcesAtCommit(repo, commitIdAfter, ALLOW_ALL));
 		// GitHelper.getSourcesBeforeAndAfterCommit(repo, commitIdBefore,
-				// commitIdAfter, ALLOW_ALL);
+		// commitIdAfter, ALLOW_ALL);
 
 		// TODO maybe only instanciate these when the getter is first used
 		this.pathBefore = Paths.get(VERSIONS_PATH, repoRawPath.substring(0, repoRawPath.length() - 4), commitIdBefore);
-		beforeAndAfter.getBefore().materializeAt(this.pathBefore);	
+		beforeAndAfter.getBefore().materializeAt(this.pathBefore);
 		this.launcherBefore = new MavenLauncher(this.pathBefore.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
 
 		this.pathAfter = Paths.get(VERSIONS_PATH, repoRawPath.substring(0, repoRawPath.length() - 4), commitIdAfter);
@@ -103,7 +104,8 @@ public class DiffHelper {
 		return pathAfter;
 	}
 
-	public <T> JsonElement impactAnalysis(MavenLauncher launcher, List<Evolution<T>> evolutions) throws IOException {
+	public <T> JsonElement impactAnalysis(MavenLauncher launcher, List<Evolution<T>> evolutions)
+			throws IOException, ImpactAnalysisException {
 
 		AugmentedAST<MavenLauncher> aug = new AugmentedAST<>(launcher);
 		ImpactAnalysis l = new ImpactAnalysis(aug);

@@ -89,6 +89,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                     tmp = Utils.matchApproxChild((ProjectSpoon.SpoonAST)ast, path, start, end);
                 }
                 if (tmp == null) {
+                    logger.warning("no original element found at " + range);
                     return range;
                 }
                 Object old = range.setOriginal(tmp);
