@@ -28,6 +28,15 @@ public class Utils {
 		return fr.quentin.impactMiner.Utils.matchExact(type, start, end);
 	}
 
+	public static CtElement matchApproxChild(CtElement parent, int start, int end) {
+		return fr.quentin.impactMiner.Utils.matchApprox(parent, start, end);
+	}
+
+	public static CtElement matchApproxChild(SpoonAST ast, String path, int start, int end) {
+		CtType<?> type = ast.getTop(path);
+		return fr.quentin.impactMiner.Utils.matchApprox(type, start, end);
+	}
+
 	public static List<String> getCommitIdBeforeAndAfter(ImpactElement rootCause) {
 		String commitIdBefore = null;
 		String commitIdAfter = null;
