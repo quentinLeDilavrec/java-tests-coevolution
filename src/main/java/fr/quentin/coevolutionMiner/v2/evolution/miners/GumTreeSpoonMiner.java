@@ -274,7 +274,6 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         @Override
         public Project<?>.AST.FileSnapshot.Range map(Project<?>.AST.FileSnapshot.Range range, Project<?> target) {
             Project<?> source = range.getFile().getAST().getProject();
-            CtElement originalImpactedTest = (CtElement) range.getOriginal();
             EvolutionsAtProj diff = getModule(source.spec, target.spec);
             return diff.map(range, null);
         }

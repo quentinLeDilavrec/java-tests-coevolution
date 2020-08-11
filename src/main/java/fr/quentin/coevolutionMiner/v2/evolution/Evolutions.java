@@ -228,7 +228,7 @@ public class Evolutions implements Iterable<Evolutions.Evolution>{
         // @relation
         public class DescRange {
             private final String description;
-            private Range range;
+            private final Range range;
 
             DescRange(Range range, String description) {
                 this.range = range;

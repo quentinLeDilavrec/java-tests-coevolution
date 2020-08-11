@@ -38,6 +38,7 @@ import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.visitor.Filter;
 import fr.quentin.impactMiner.Position;
+import gumtree.spoon.diff.operations.Operation;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
@@ -222,18 +223,23 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         for (Project<?>.AST.FileSnapshot.Range testBefore : currentImpacts.getImpactedTests()) {
             Project<?>.AST.FileSnapshot.Range testAfter = currentDiff.map(testBefore, after_proj);
-            // TODO add original if not here ?
-            Set<CtType> reqBefore = ast_before.augmented.needs((CtElement) testBefore.getOriginal());
-            Set<String> reqBeforeS = typesToRelPaths(reqBefore, ast_before.getProject().spec.relPath.toString());
-            System.out.println(reqBeforeS);
-            Set<CtType> reqAfter = ast_after.augmented.needs((CtElement) testAfter.getOriginal());
-            Set<String> reqAfterS = typesToRelPaths(reqAfter, ast_after.getProject().spec.relPath.toString());
+            if (PartiallyInstanciateState) {
+                Set<String> javaFiles = new HashSet<>();
+                // TODO add original if not here ?
+                Set<CtType> reqBefore = ast_before.augmented.needs((CtElement) testBefore.getOriginal());
+                Set<String> reqBeforeS = typesToRelPaths(reqBefore, ast_before.getProject().spec.relPath.toString());
+                System.out.println(reqBeforeS);
+                System.err.println(ast_after);
+                System.err.println(testAfter);
+                System.err.println(ast_after.augmented);
+                Set<CtType> reqAfter = ast_after.augmented.needs((CtElement) testAfter.getOriginal());
+                Set<String> reqAfterS = typesToRelPaths(reqAfter, ast_after.getProject().spec.relPath.toString());
 
-            Set<String> reqAdded = new HashSet<>(reqAfterS);
-            reqAdded.removeAll(reqBeforeS);
-            Set<String> javaFiles = new HashSet<>();
-            addJavaFiles(ast_before, javaFiles);
-            addJavaFiles(ast_after, javaFiles);
+                Set<String> reqAdded = new HashSet<>(reqAfterS);
+                reqAdded.removeAll(reqBeforeS);
+                addJavaFiles(ast_before, javaFiles);
+                addJavaFiles(ast_after, javaFiles);
+            }
             // set TMP DIR for test
             // put all non .java from currentCommit and all from reqBefore+current file of
             // test
@@ -241,7 +247,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             // apply all non .java from nextCommit
             // compile code ? compile tests ? execute test ? good : half : bad ;
             // apply all from subsets of reqAfter +testAfter file of test
-
+            applyEvolutions(ast_before, ast_after, atomizedRefactorings.get(null));
         }
         // TODO review + remove rest
 
@@ -328,6 +334,16 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         CoEvolutionsExtension currCoevolutions = currCoevolutions1;
         return currCoevolutions;
+    }
+    // More controlled state, isolate compilation failures, but costly to instanciate
+    boolean PartiallyInstanciateState = false;
+
+    private void applyEvolutions(SpoonAST ast_before, SpoonAST ast_after, Set<Evolution> set) {
+        ast_before.augmented.launcher.getModel().getRootPackage().replace((CtElement)set.iterator().next().getAfter().get(0).getTarget().getOriginal());
+        Operation<?> aaa = (Operation<?>) set.iterator().next().getOriginal();
+        aaa.getDstNode().getPosition().getCompilationUnit().toString();// tranformed
+        aaa.getDstNode().getPosition().getCompilationUnit().getOriginalSourceFragment();// ±original
+        aaa.getDstNode().getPosition().getCompilationUnit().updateAllParentsBelow();
     }
 
     private void addJavaFiles(SpoonAST ast_before, Set<String> javaFiles) {

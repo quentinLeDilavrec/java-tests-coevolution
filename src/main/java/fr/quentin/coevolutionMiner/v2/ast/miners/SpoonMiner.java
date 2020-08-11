@@ -88,6 +88,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                 if (tmp == null) {
                     tmp = Utils.matchApproxChild((ProjectSpoon.SpoonAST)ast, path, start, end);
                 }
+                // TODO also match imports and package decl, through the compilation unit
                 if (tmp == null) {
                     logger.warning("no original element found at " + range);
                     return range;

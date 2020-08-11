@@ -44,6 +44,7 @@ import fr.quentin.impactMiner.Position;
 import fr.quentin.impactMiner.ImpactAnalysis.ImpactAnalysisException;
 import spoon.MavenLauncher;
 import spoon.reflect.cu.SourcePosition;
+import spoon.reflect.cu.position.DeclarationSourcePosition;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtExecutable;
 import spoon.reflect.declaration.CtType;
