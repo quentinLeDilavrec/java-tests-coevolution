@@ -28,10 +28,8 @@ import fr.quentin.coevolutionMiner.utils.MyProperties;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectStorage;
 import fr.quentin.coevolutionMiner.v2.ast.Stats;
-import fr.quentin.coevolutionMiner.v2.ast.Project.AST;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
-import fr.quentin.coevolutionMiner.v2.utils.DbUtils;
 
 public class Neo4jProjectStorage implements ProjectStorage {
 

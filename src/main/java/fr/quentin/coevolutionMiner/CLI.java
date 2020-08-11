@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -548,6 +549,127 @@ public class CLI {
             executor.shutdownNow();
         }
     }
+
+
+    private static void batchFromBDD(int pool_size, int max_commits, Map<String,Object> thresholds, Map<String,Object> sortings) {
+        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(pool_size);
+        SourcesHandler srcH = new SourcesHandler();
+        ProjectHandler astH = new ProjectHandler(srcH);
+        EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
+        ImpactHandler impactH = new ImpactHandler(srcH, astH, evoH);
+        CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH);
+        System.out.println("Starting batch from bdd");
+        // TODO need to store releases given in csv from djamel for the folowing to work
+        List<String> lines = new ArrayList<>();
+        lines.forEach(line -> {
+            logger.info("(laucher start) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                    + Integer.toString(executor.getActiveCount()) + " "
+                    + Long.toString(executor.getCompletedTaskCount()));
+            List<String> s = Arrays.asList(line.split(" "));
+            if (s.size() > 2) {
+                executor.submit(() -> {
+                    logger.info("(submit start) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                            + Integer.toString(executor.getActiveCount()) + " "
+                            + Long.toString(executor.getCompletedTaskCount()));
+                    Sources.Specifier srcSpec = srcH.buildSpec(s.get(0), Integer.parseInt(s.get(1)));
+
+                    Evolutions evos = null;
+                    String commitIdAfter = null;
+                    String commitIdBefore = null;
+                    int commit_index = 1;
+                    int impact_computed = 0;
+                    while (commit_index < s.size() && impact_computed < max_commits) {
+
+                        while (commit_index < s.size()) {
+                            commit_index++;
+                            commitIdAfter = s.get(commit_index);
+                            commitIdBefore = s.get(commit_index + 1);
+
+                            try { // https://github.com/chrisbanes/Android-PullToRefresh/commit/1f7a7e1daf89167b11166180d96bac54a9306c80
+                                  // evos = spoon compile + count tests/methods/class
+                                Sources src = srcH.handle(srcSpec, "JGit");
+                                src.getCommitsBetween(commitIdBefore, commitIdAfter);
+                                Project<CtElement> project = astH.handle(astH.buildSpec(srcSpec, commitIdBefore, true));
+                                printThings(s, commitIdBefore, project);
+                                for (Project<?> x : project.getModules()) {
+                                    printThings(s, commitIdBefore, x);
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                logger.info("failed statistics " + s.get(0));
+                                break;
+                            }
+
+                            try {
+                                evos = evoH.handle(evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter));
+                                logger.info("done evolution analysis " + s.get(0));
+                            } catch (Exception e) {
+                                logger.log(Level.WARNING, "failed evolution analysis " + s.get(0), e);
+                                e.printStackTrace();
+                                break;
+                            } finally {
+                                logger.info("finished an evolution analysis " + s.get(0));
+                            }
+                            if (evos != null && evos.toSet().size() > 0) {
+                                break;
+                            }
+                        }
+                        if (s.size() < 3) {
+                            logger.info("no commits for " + s.get(0));
+                        } else if (evos == null) {
+                            logger.info("evolution not working " + s.get(0));
+                        } else if (evos.toSet().size() <= 0) {
+                            logger.info("no evolutions found for " + s.get(0));
+                        } else {
+                            impact_computed += 1;
+                            logger.info(Integer.toString(evos.toSet().size()) + " evolutions found for " + s.get(0)
+                                    + " from " + commitIdBefore + " to " + commitIdAfter);
+                            try {
+                                Impacts impacts = impactH.handle(impactH.buildSpec(
+                                        astH.buildSpec(srcSpec, commitIdBefore), EvolutionHandler.buildSpec(srcSpec,
+                                                commitIdBefore, commitIdAfter, RefactoringMiner.class)));
+                                System.out.println(
+                                        Integer.toString(impacts.getPerRootCause().size()) + " impacts found for "
+                                                + s.get(0) + " from " + commitIdBefore + " to " + commitIdAfter);
+                            } catch (Exception e) {
+                                logger.info("failed impacts analysis for " + s.get(0));
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+
+                    logger.info("(submit end) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                            + Integer.toString(executor.getActiveCount()) + " "
+                            + Long.toString(executor.getCompletedTaskCount()));
+                    return 0;
+                });
+            } else
+
+            {
+                System.out.println("no commits for " + s.get(0));
+            }
+            logger.info("(launch end) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                    + Integer.toString(executor.getActiveCount()) + " "
+                    + Long.toString(executor.getCompletedTaskCount()));
+        });
+        System.out.println("Shutdown");
+        executor.shutdown();
+        try {
+            System.out.println("almost done submittings");
+            while (!executor.awaitTermination(1, TimeUnit.MINUTES)) {
+            }
+            System.out.println("done submitting");
+            impactH.close();
+            evoH.close();
+            coevoH.close();
+            executor.shutdownNow();
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+        } catch (Exception e) {
+            executor.shutdownNow();
+        }
+    }
+
 
     public static String ast(String path) {
         File f = new File(path);

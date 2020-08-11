@@ -1,12 +1,7 @@
 package fr.quentin.coevolutionMiner.v2.coevolution.miners;
 
-import java.io.IOException;
-import java.io.Serializable;
-import java.math.BigInteger;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -14,21 +9,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
-import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
-
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
-
-import org.eclipse.core.internal.resources.File;
-import org.eclipse.jdt.internal.compiler.codegen.IntegerCache;
-import org.eclipse.jdt.internal.core.nd.util.MathUtils;
-import org.refactoringminer.api.Refactoring;
 
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
@@ -48,8 +32,6 @@ import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsMiner;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsStorage;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.CoEvolution;
-import fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner.CoEvolutionsExtension;
-import fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner.CoEvolutionsExtension.Builder;
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
@@ -273,7 +255,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         CoEvolutions.Specifier coevoSpec = CoEvolutionHandler.buildSpec(sourcesProvider.spec, currEvoSpecRM);
         CoEvolutionsExtension currCoevolutions1 = new CoEvolutionsExtension(coevoSpec, currentEvolutions, before_proj,
                 after_proj);
-        Builder coevoBuilder = currCoevolutions1.createBuilder();
+        MyCoEvolutionsMiner.CoEvolutionsExtension.Builder coevoBuilder = currCoevolutions1.createBuilder();
         coevoBuilder.setImpactsAfter(afterImpacts);
         store.construct(coevoBuilder, currentImpacts.getImpactedTests());
         Set<CoEvolution> toValidate = new HashSet<>();
