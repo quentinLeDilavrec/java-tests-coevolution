@@ -14,6 +14,8 @@ import java.util.logging.Logger;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+import org.refactoringminer.api.Refactoring;
+
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionsMiner;
@@ -32,13 +34,21 @@ import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsMiner;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsStorage;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.CoEvolution;
+import spoon.MavenLauncher;
+import spoon.compiler.Environment.PRETTY_PRINTING_MODE;
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtType;
+import spoon.reflect.path.CtPath;
 import spoon.reflect.visitor.Filter;
+import spoon.support.JavaOutputProcessor;
 import fr.quentin.impactMiner.Position;
+import gumtree.spoon.diff.operations.DeleteOperation;
+import gumtree.spoon.diff.operations.InsertOperation;
+import gumtree.spoon.diff.operations.MoveOperation;
 import gumtree.spoon.diff.operations.Operation;
+import gumtree.spoon.diff.operations.UpdateOperation;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
@@ -335,15 +345,75 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         CoEvolutionsExtension currCoevolutions = currCoevolutions1;
         return currCoevolutions;
     }
-    // More controlled state, isolate compilation failures, but costly to instanciate
+
+    // More controlled state, isolate compilation failures, but costly to
+    // instanciate
     boolean PartiallyInstanciateState = false;
 
     private void applyEvolutions(SpoonAST ast_before, SpoonAST ast_after, Set<Evolution> set) {
-        ast_before.augmented.launcher.getModel().getRootPackage().replace((CtElement)set.iterator().next().getAfter().get(0).getTarget().getOriginal());
-        Operation<?> aaa = (Operation<?>) set.iterator().next().getOriginal();
-        aaa.getDstNode().getPosition().getCompilationUnit().toString();// tranformed
-        aaa.getDstNode().getPosition().getCompilationUnit().getOriginalSourceFragment();// ±original
-        aaa.getDstNode().getPosition().getCompilationUnit().updateAllParentsBelow();
+        MavenLauncher launcher = ast_before.augmented.launcher;
+        JavaOutputProcessor outWriter = launcher.createOutputWriter();
+        outWriter.getEnvironment().setSourceOutputDirectory(Paths.get("/tmp/").toFile());
+        outWriter.getEnvironment().setPrettyPrintingMode(PRETTY_PRINTING_MODE.AUTOIMPORT);
+        Map<String, CtType<?>> cloned = new HashMap<>();
+        for (Entry<String, CtType<?>> entry : ast_before.augmented.getTypesIndexByFileName().entrySet()) {
+            cloned.put(entry.getKey(), entry.getValue().clone());
+        }
+        for (Evolution evo : set) {
+            Object _ori = evo.getOriginal();
+            if (_ori == null) {
+                logger.warning("no origin for" + evo);
+            } else if (_ori instanceof Operation) {
+                Operation<?> ori = (Operation<?>) _ori;
+                if (_ori instanceof InsertOperation) {
+                    CtElement srcNode = ori.getSrcNode();
+                    CtElement p = ((InsertOperation) ori).getParent();
+                    CtType<?> topParent = computeTopLevel(p);
+                    CtPath relPath = p.getPath().relativePath(topParent);
+                    String filePath = topParent.getPosition().getFile().getPath();
+                    List<CtElement> clonedTargs = relPath.evaluateOn(cloned.get(filePath));
+                    for (CtElement targ : clonedTargs) {
+                        // targ;
+                    }
+                } else if (_ori instanceof DeleteOperation) {
+                    CtElement srcNode = ori.getSrcNode();
+                    CtType<?> topParent = computeTopLevel(srcNode);
+                    CtPath relPath = srcNode.getPath().relativePath(topParent);
+                    String filePath = topParent.getPosition().getFile().getPath();
+                    List<CtElement> clonedTargs = relPath.evaluateOn(cloned.get(filePath));
+                    for (CtElement targ : clonedTargs) {
+                        targ.delete();
+                    }
+                } else if (_ori instanceof MoveOperation) {
+                    CtElement p = ((MoveOperation)ori).getParent();
+                    CtElement srcNode = ori.getSrcNode();
+                    CtType<?> topParent = computeTopLevel(srcNode);
+                    CtPath relPath = p.getPath().relativePath(topParent);
+                    String filePath = topParent.getPosition().getFile().getPath();
+                    List<CtElement> clonedTargs = relPath.evaluateOn(cloned.get(filePath));
+                    for (CtElement targ : clonedTargs) {
+                    }
+                } else if (_ori instanceof UpdateOperation) {
+                }
+            } else if (_ori instanceof Refactoring) {
+
+            }
+        }
+        for (CtType<?> type : cloned.values()) {
+            type.updateAllParentsBelow();
+            outWriter.createJavaFile(type);
+        }
+    }
+
+    private CtType<?> computeTopLevel(CtElement srcNode) {
+        CtType<?> topParent = srcNode.getParent(CtType.class);
+        if (topParent != null) {
+            topParent = topParent.getTopLevelType();
+        } else if (srcNode instanceof CtType && ((CtType<?>) srcNode).isTopLevel()) {
+        } else {
+            logger.warning("did not find a top level on " + srcNode);
+        }
+        return topParent;
     }
 
     private void addJavaFiles(SpoonAST ast_before, Set<String> javaFiles) {
