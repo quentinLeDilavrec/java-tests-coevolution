@@ -231,7 +231,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         // System.out.println(smallestGroups);
 
-        for (Project<?>.AST.FileSnapshot.Range testBefore : currentImpacts.getImpactedTests()) {
+        for (Entry<Range, Set<Object>> entry : currentImpacts.getImpactedTests().entrySet()) {
+            Range testBefore = entry.getKey();
             Project<?>.AST.FileSnapshot.Range testAfter = currentDiff.map(testBefore, after_proj);
             if (PartiallyInstanciateState) {
                 Set<String> javaFiles = new HashSet<>();
@@ -257,7 +258,12 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             // apply all non .java from nextCommit
             // compile code ? compile tests ? execute test ? good : half : bad ;
             // apply all from subsets of reqAfter +testAfter file of test
-            applyEvolutions(ast_before, ast_after, atomizedRefactorings.get(null));
+            Set<Object> evoInGame = entry.getValue();
+            for (Entry<Evolution, Set<Evolution>> aaa : atomizedRefactorings.entrySet()) {
+                if (evoInGame.contains(aaa.getKey())) {
+                    applyEvolutions(ast_before, ast_after, aaa.getValue());
+                }
+            }
         }
         // TODO review + remove rest
 
@@ -273,7 +279,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 after_proj);
         MyCoEvolutionsMiner.CoEvolutionsExtension.Builder coevoBuilder = currCoevolutions1.createBuilder();
         coevoBuilder.setImpactsAfter(afterImpacts);
-        store.construct(coevoBuilder, currentImpacts.getImpactedTests());
+        // store.construct(coevoBuilder, currentImpacts.getImpactedTests());
         Set<CoEvolution> toValidate = new HashSet<>();
         for (CoEvolution entry : currCoevolutions1.getUnvalidated()) {
             // TODO loop on tests before to make checks with multiple set of properties
@@ -353,7 +359,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     private void applyEvolutions(SpoonAST ast_before, SpoonAST ast_after, Set<Evolution> set) {
         MavenLauncher launcher = ast_before.augmented.launcher;
         JavaOutputProcessor outWriter = launcher.createOutputWriter();
-        outWriter.getEnvironment().setSourceOutputDirectory(Paths.get("/tmp/").toFile());
+        outWriter.getEnvironment().setSourceOutputDirectory(Paths.get("/tmp/").toFile()); // TODO !!!!
         outWriter.getEnvironment().setPrettyPrintingMode(PRETTY_PRINTING_MODE.AUTOIMPORT);
         Map<String, CtType<?>> cloned = new HashMap<>();
         for (Entry<String, CtType<?>> entry : ast_before.augmented.getTypesIndexByFileName().entrySet()) {

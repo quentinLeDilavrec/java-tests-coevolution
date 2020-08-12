@@ -1,6 +1,7 @@
 package fr.quentin.coevolutionMiner.v2.sources;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -13,9 +14,11 @@ import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 public abstract class Sources {
 
     public final Specifier spec;
+    private Repository repository;
 
     public Sources(Specifier spec) {
         this.spec = spec;
+        this.repository = new Repository(spec.repository);
     }
 
     public abstract SourcesHelper open() throws Exception;
@@ -71,10 +74,12 @@ public abstract class Sources {
     }
 
     public Repository getRepository() {
-        return new Repository(spec.repository);
+        return repository;
     }
 
     public class Repository {
+        
+        Set<String> releases = new HashSet<>();
 
         Repository(String url) {
             this.url = url;
@@ -84,6 +89,14 @@ public abstract class Sources {
 
         public String getUrl() {
             return url;
+        }
+
+        public void addReleases(Collection<String> validReleases) {
+            this.releases.addAll(validReleases);
+        }
+
+        public Set<String> getReleases() {
+            return Collections.unmodifiableSet(releases);
         }
 
         @Override

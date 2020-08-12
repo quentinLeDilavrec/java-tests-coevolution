@@ -560,6 +560,7 @@ public class CLI {
         CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH);
         System.out.println("Starting batch from bdd");
         // TODO need to store releases given in csv from djamel for the folowing to work
+        
         List<String> lines = new ArrayList<>();
         lines.forEach(line -> {
             logger.info("(laucher start) CLI status " + Long.toString(executor.getTaskCount()) + " "

@@ -1,9 +1,13 @@
 package fr.quentin.coevolutionMiner.v2.utils;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon.SpoonAST;
@@ -91,4 +95,22 @@ public class Utils {
 		return ImpactAnalysis.isTest(p);
 	}
 
+	private static Map<String,String> memory = new HashMap<>();
+	
+    public static String memoizedReadResource(String resource) {
+        String tmp = memory.get(resource);
+        if (tmp == null) {
+            tmp = readResource(resource);
+            memory.put(resource, tmp);
+        }
+        return tmp;
+    }
+    
+    public static String readResource(String resource) {
+        try {
+            return new String(Files.readAllBytes(Paths.get(Utils.class.getClassLoader().getResource(resource).getFile())));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

@@ -38,7 +38,7 @@ public class ImpactHandler implements AutoCloseable {
     }
 
     public Impacts handle(Impacts.Specifier spec) {
-        return handle(spec, "Neo4j");
+        return handle(spec, null);
     }
 
     private Impacts handle(Impacts.Specifier spec, String storeName) {
@@ -51,56 +51,66 @@ public class ImpactHandler implements AutoCloseable {
             if (res != null) {
                 return res;
             }
-            ImpactsStorage db = null;
+            ImpactsStorage db = neo4jStore;
             switch (storeName) {
                 case "Neo4j":
-                    res = neo4jStore.get(spec);
                     db = neo4jStore;
+                    res = db.get(spec, astHandler, evoHandler);
                     break;
                 default:
                     break;
             }
+
             if (res != null) {
                 tmp.set(res);
                 return res;
             }
 
             // CAUTION miners should mind about circular deps of data given by handlers
-            switch (spec.miner) {
-                case "myMiner":
-                    MyImpactsMiner minerInst = new MyImpactsMiner(spec, astHandler, evoHandler);
-                    res = minerInst.compute();
-                    populate((MyImpactsMiner.ImpactsExtension)res);
-                    break;
-                default:
-                    throw new RuntimeException(spec.miner + " is not a registered impacts miner.");
-            }
+            ImpactsMiner minerInst = minerBuilder(spec, astHandler, evoHandler);
+
+            res = minerInst.compute();
+            populate((MyImpactsMiner.ImpactsExtension) res);
+
             if (db != null) {
                 db.put(res);
             }
             tmp.set(res);
             return res;
         } catch (Exception e) {
-			throw e;
-		} finally {
+            throw e;
+        } finally {
             tmp.lock.unlock();
         }
     }
 
-	private void populate(MyImpactsMiner.ImpactsExtension impacts) {
-		for (MyImpactsMiner.ImpactsExtension x : impacts.getModules()) {
-			memoizedImpacts.putIfAbsent(x.spec, new Data<>());
-			Data<Impacts> tmp = memoizedImpacts.get(x.spec);
-			tmp.lock.lock();
-			try {
-				tmp.set(x);
-			} finally {
-				tmp.lock.unlock();
+    public static final ImpactsMiner minerBuilder(Impacts.Specifier spec, ProjectHandler astHandler,
+            EvolutionHandler evoHandler) {
+        ImpactsMiner minerInst;
+        switch (spec.miner) {
+            case "myMiner":
+                minerInst = new MyImpactsMiner(spec, astHandler, evoHandler);
+                break;
+            default:
+                throw new RuntimeException(spec.miner + " is not a registered impacts miner.");
+        }
+        return minerInst;
+    }
+
+    private void populate(MyImpactsMiner.ImpactsExtension impacts) {
+        for (MyImpactsMiner.ImpactsExtension x : impacts.getModules()) {
+            memoizedImpacts.putIfAbsent(x.spec, new Data<>());
+            Data<Impacts> tmp = memoizedImpacts.get(x.spec);
+            tmp.lock.lock();
+            try {
+                tmp.set(x);
+            } finally {
+                tmp.lock.unlock();
             }
             populate(x);
-		}
+        }
     }
-    
+
     @Override
     public void close() throws Exception {
         neo4jStore.close();

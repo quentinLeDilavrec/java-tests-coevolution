@@ -37,14 +37,8 @@ public class SourcesHandler {
                 return res;
             }
             // CAUTION miners should mind about circular deps of data given by handlers
-            switch (spec.miner) {
-                case "JGit":
-                    JgitMiner minerInst = new JgitMiner(spec);
-                    res = minerInst.compute();
-                    break;
-                default:
-                    throw new RuntimeException(spec.miner + " is not a registered Sources miner.");
-            }
+            SourcesMiner minerInst = minerBuilder(spec);
+            res = minerInst.compute();
 
             tmp.set(res);
             return res;
@@ -53,5 +47,17 @@ public class SourcesHandler {
         } finally {
             tmp.lock.unlock();
         }
+    }
+
+    public static final SourcesMiner minerBuilder(Sources.Specifier spec) {
+        SourcesMiner minerInst;
+        switch (spec.miner) {
+            case "JGit":
+                minerInst = new JgitMiner(spec);
+                break;
+            default:
+                throw new RuntimeException(spec.miner + " is not a registered Sources miner.");
+        }
+        return minerInst;
     }
 }

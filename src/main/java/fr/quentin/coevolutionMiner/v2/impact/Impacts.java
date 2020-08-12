@@ -202,12 +202,12 @@ public abstract class Impacts {
         }
     }
 
-    public Set<Range> getImpactedTests() {
-        return Collections.unmodifiableSet(impactedTests);
+    public Map<Range,Set<Object>> getImpactedTests() {
+        return Collections.unmodifiableMap(impactedTests);
     }
 
     protected Map<Impact, Impact> impacts = new HashMap<>();
-    protected Set<Range> impactedTests = new HashSet<>();
+    protected Map<Range,Set<Object>> impactedTests = new HashMap<>();
     protected Map<Object, Set<Impact>> perRoot = new HashMap<>();
 
     protected Impact addImpact(String type, Set<Pair<Range, String>> idCauses, Set<Pair<Range, String>> idEffects) {

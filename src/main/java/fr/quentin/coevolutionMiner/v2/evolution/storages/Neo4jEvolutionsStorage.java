@@ -19,6 +19,7 @@ import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Specifier;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution.DescRange;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
+import fr.quentin.coevolutionMiner.v2.utils.Utils;
 import gr.uom.java.xmi.diff.CodeRange;
 import spoon.reflect.declaration.CtElement;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionsStorage;
@@ -120,8 +121,8 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
             e.getDescription();
             for (int i = 0; i < aaa.left.size(); i++) {
                 if (aaa.left.get(i).description.equals(e.getDescription())) {
-                    String tmp = e.getTarget().getFile().getPath() + ":" + Integer.toString(e.getTarget().getStart()) + "-"
-                            + Integer.toString(e.getTarget().getEnd());
+                    String tmp = e.getTarget().getFile().getPath() + ":" + Integer.toString(e.getTarget().getStart())
+                            + "-" + Integer.toString(e.getTarget().getEnd());
                     String key = Integer.toString(i);
                     List<String> tmp2 = before_e.getOrDefault(key, new ArrayList<>());
                     tmp2.add(tmp);
@@ -159,8 +160,8 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
             e.getDescription();
             for (int i = 0; i < aaa.right.size(); i++) {
                 if (aaa.right.get(i).description.equals(e.getDescription())) {
-                    String tmp = e.getTarget().getFile().getPath() + ":" + Integer.toString(e.getTarget().getStart()) + "-"
-                            + Integer.toString(e.getTarget().getEnd());
+                    String tmp = e.getTarget().getFile().getPath() + ":" + Integer.toString(e.getTarget().getStart())
+                            + "-" + Integer.toString(e.getTarget().getEnd());
                     String key = Integer.toString(i);
                     List<String> tmp2 = after_e.getOrDefault(key, new ArrayList<>());
                     tmp2.add(tmp);
@@ -235,8 +236,8 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
 
             for (int i = 0; i < aaa.left.size(); i++) {
                 if (aaa.left.get(i).description.equals(e.getDescription())) {
-                    String tmp = e.getTarget().getFile().getPath() + ":" + Integer.toString(e.getTarget().getStart()) + "-"
-                            + Integer.toString(e.getTarget().getEnd());
+                    String tmp = e.getTarget().getFile().getPath() + ":" + Integer.toString(e.getTarget().getStart())
+                            + "-" + Integer.toString(e.getTarget().getEnd());
                     String key = Integer.toString(i);
                     List<String> tmp2 = before_e.getOrDefault(key, new ArrayList<>());
                     tmp2.add(tmp);
@@ -276,8 +277,8 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
             e.getDescription();
             for (int i = 0; i < aaa.right.size(); i++) {
                 if (aaa.right.get(i).description.equals(e.getDescription())) {
-                    String tmp = e.getTarget().getFile().getPath() + ":" + Integer.toString(e.getTarget().getStart()) + "-"
-                            + Integer.toString(e.getTarget().getEnd());
+                    String tmp = e.getTarget().getFile().getPath() + ":" + Integer.toString(e.getTarget().getStart())
+                            + "-" + Integer.toString(e.getTarget().getEnd());
                     String key = Integer.toString(i);
                     List<String> tmp2 = after_e.getOrDefault(key, new ArrayList<>());
                     tmp2.add(tmp);
@@ -326,21 +327,11 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
     }
 
     private static String getCypher() {
-        try {
-            return new String(Files.readAllBytes(Paths.get(
-                    Neo4jEvolutionsStorage.class.getClassLoader().getResource("evolutions_cypher.sql").getFile())));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return Utils.memoizedReadResource("evolutions_cypher.sql");
     }
 
     protected String getCommitCypher() {
-        try {
-            return new String(Files.readAllBytes(Paths
-                    .get(Neo4jEvolutionsStorage.class.getClassLoader().getResource("commits_cypher.cql").getFile())));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return Utils.memoizedReadResource("commits_cypher.cql");
     }
 
     private static Map<String, EvoType> RefactoringTypes = null;

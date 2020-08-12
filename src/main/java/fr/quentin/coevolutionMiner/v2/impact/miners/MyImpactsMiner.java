@@ -76,8 +76,8 @@ public class MyImpactsMiner implements ImpactsMiner {
             return result;
         } catch (Exception e) {
             logger.log(Level.WARNING, e.getMessage(), e);
-            return new ImpactsExtension(new Impacts.Specifier(project.spec, spec.evoSpec, spec.miner),
-            project, project.getAst().rootDir, null);
+            return new ImpactsExtension(new Impacts.Specifier(project.spec, spec.evoSpec, spec.miner), project,
+                    project.getAst().rootDir, null);
         }
     }
 
@@ -112,8 +112,8 @@ public class MyImpactsMiner implements ImpactsMiner {
         ImpactAnalysis analyzer;
         Map<Path, ImpactsExtension> modules = new HashMap<>();
 
-        public void addImpactedTest(Range range) {
-            impactedTests.add(range);
+        public void addImpactedTest(Range range, Set<Object> evolutions) {
+            impactedTests.put(range, evolutions);
         }
 
         public void addModule(ImpactsExtension impacts) {
@@ -272,7 +272,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                     Position currIEPos = currIE.getPosition();
                     String relPath = ast.rootDir.relativize(Paths.get(currIEPos.getFilePath())).toString();
                     Project<CtElement>.AST.FileSnapshot.Range currRange = ast.getRange(relPath, currIEPos.getStart(),
-                            currIEPos.getEnd());
+                            currIEPos.getEnd(), currIE.getContent());
 
                     Set<ImpactElement> calls = rel.getEffects().get("call");
                     if (calls != null && calls.size() > 0) {
@@ -308,7 +308,7 @@ public class MyImpactsMiner implements ImpactsMiner {
             for (ImpactElement test : rawImpacts.getTests()) {
                 addImpactedTest(
                         ast.getRange(ast.rootDir.relativize(Paths.get(test.getPosition().getFilePath())).toString(),
-                                test.getPosition().getStart(), test.getPosition().getEnd(), test.getContent()));
+                                test.getPosition().getStart(), test.getPosition().getEnd(), test.getContent()),null); // TODO
             }
             return this;
         }

@@ -20,7 +20,10 @@ import org.neo4j.driver.TransactionWork;
 import org.neo4j.driver.exceptions.TransientException;
 
 import fr.quentin.coevolutionMiner.utils.MyProperties;
+import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
+import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts;
+import fr.quentin.coevolutionMiner.v2.impact.Impacts.Specifier;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactsStorage;
 
 public class Neo4jImpactsStorage implements ImpactsStorage {
@@ -34,7 +37,7 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
                 public String execute(Transaction tx) {
                     Result result = tx.run(getCypher(), value);
                     result.consume();
-                    return "done impact on "+impacts.spec.evoSpec.sources.repository;
+                    return "done impact on " + impacts.spec.evoSpec.sources.repository;
                 }
             });
             System.out.println(done);
@@ -52,13 +55,15 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
     }
 
     public Neo4jImpactsStorage() {
-        this(MyProperties.getPropValues().getProperty("neo4jAddress"), MyProperties.getPropValues().getProperty("neo4jId"), MyProperties.getPropValues().getProperty("neo4jPwd"));
+        this(MyProperties.getPropValues().getProperty("neo4jAddress"),
+                MyProperties.getPropValues().getProperty("neo4jId"),
+                MyProperties.getPropValues().getProperty("neo4jPwd"));
     }
 
     @Override
-    public Impacts get(Impacts.Specifier impacts_spec) {
+    public Impacts get(Specifier impacts_spec, ProjectHandler astHandler, EvolutionHandler evoHandler) {
         // TODO Auto-generated method stub
-        // TODO need to add root cause to impacts to be able to retrieve them, 
+        // TODO need to add root cause to impacts to be able to retrieve them,
         // maybe as a list in impacts
         return null;
     }
