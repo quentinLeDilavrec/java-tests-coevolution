@@ -270,6 +270,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     evosForThisTest.addAll(aaa.getValue());
                 }
             }
+            // TODO making sure that GTS ⊂ RM
             applyEvolutions(ast_before, ast_after, evosForThisTest);
         }
         // TODO review + remove rest
