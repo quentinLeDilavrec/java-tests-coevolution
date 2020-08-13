@@ -23,6 +23,7 @@ import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution.DescRange;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsMany;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts.Impact;
@@ -182,17 +183,18 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     private CoEvolutionsExtension computeDirectCoevolutions(Sources sourcesProvider, Commit currentCommit,
             Commit nextCommit) throws SmallMiningException, SeverMiningException {
 
+        Project.Specifier<SpoonMiner> before_ast_id = astHandler.buildSpec(spec.evoSpec.sources, currentCommit.getId());
+        Project.Specifier<SpoonMiner> after_ast_id = astHandler.buildSpec(spec.evoSpec.sources, nextCommit.getId());
+
         Evolutions.Specifier currEvoSpecGTS = EvolutionHandler.buildSpec(sourcesProvider.spec, currentCommit.getId(),
                 nextCommit.getId(), GumTreeSpoonMiner.class);
         Evolutions currentDiff = evoHandler.handle(currEvoSpecGTS);
-
+        
         Evolutions.Specifier currEvoSpecRM = EvolutionHandler.buildSpec(sourcesProvider.spec, currentCommit.getId(),
                 nextCommit.getId(), RefactoringMiner.class);
         Evolutions currentEvolutions = evoHandler.handle(currEvoSpecRM);
         logNaiveCostCoEvoValidation(currentEvolutions);
 
-        Project.Specifier<SpoonMiner> before_ast_id = astHandler.buildSpec(spec.evoSpec.sources, currentCommit.getId());
-        Project.Specifier<SpoonMiner> after_ast_id = astHandler.buildSpec(spec.evoSpec.sources, nextCommit.getId());
 
         Project<CtElement> before_proj = astHandler.handle(before_ast_id);
         if (before_proj.getAst().compilerException != null || !before_proj.getAst().isUsable()) {
@@ -231,6 +233,9 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         // System.out.println(smallestGroups);
 
+
+        EvolutionsMany efz = ((GumTreeSpoonMiner.EvolutionsMany)currentDiff);
+        // efz.getDiff(before_ast_id, after_ast_id, "").getOperationChildren(, arg1); // TODO
         for (Entry<Range, Set<Object>> entry : currentImpacts.getImpactedTests().entrySet()) {
             Range testBefore = entry.getKey();
             Project<?>.AST.FileSnapshot.Range testAfter = currentDiff.map(testBefore, after_proj);
@@ -259,11 +264,13 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             // compile code ? compile tests ? execute test ? good : half : bad ;
             // apply all from subsets of reqAfter +testAfter file of test
             Set<Object> evoInGame = entry.getValue();
+            Set<Evolution> evosForThisTest = new HashSet<>();
             for (Entry<Evolution, Set<Evolution>> aaa : atomizedRefactorings.entrySet()) {
                 if (evoInGame.contains(aaa.getKey())) {
-                    applyEvolutions(ast_before, ast_after, aaa.getValue());
+                    evosForThisTest.addAll(aaa.getValue());
                 }
             }
+            applyEvolutions(ast_before, ast_after, evosForThisTest);
         }
         // TODO review + remove rest
 
@@ -365,6 +372,14 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         for (Entry<String, CtType<?>> entry : ast_before.augmented.getTypesIndexByFileName().entrySet()) {
             cloned.put(entry.getKey(), entry.getValue().clone());
         }
+        applyEvolutions(set, cloned);
+        for (CtType<?> type : cloned.values()) {
+            type.updateAllParentsBelow();
+            outWriter.createJavaFile(type);
+        }
+    }
+
+    private void applyEvolutions(Set<Evolution> set, Map<String, CtType<?>> cloned) {
         for (Evolution evo : set) {
             Object _ori = evo.getOriginal();
             if (_ori == null) {
@@ -404,10 +419,6 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             } else if (_ori instanceof Refactoring) {
 
             }
-        }
-        for (CtType<?> type : cloned.values()) {
-            type.updateAllParentsBelow();
-            outWriter.createJavaFile(type);
         }
     }
 

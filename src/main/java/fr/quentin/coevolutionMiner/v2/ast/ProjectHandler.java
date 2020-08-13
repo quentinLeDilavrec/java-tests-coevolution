@@ -23,19 +23,12 @@ public class ProjectHandler {
 		this.srcHandler = srcHandler;
 	}
 
-	public Project.Specifier<SpoonMiner> buildSpec(Sources.Specifier sources, String commitId, Boolean isRelease) {
-		return buildSpec(sources, commitId, isRelease, SpoonMiner.class);
-	}
 	public Project.Specifier<SpoonMiner> buildSpec(Sources.Specifier sources, String commitId) {
-		return buildSpec(sources, commitId, null, SpoonMiner.class);
-	}
-
-	private <U,T extends ProjectMiner<U>> Project.Specifier<T> buildSpec(Sources.Specifier sources, String commitId, Boolean isRelease, Class<T> miner) {
-		return new Project.Specifier<>(sources, commitId, isRelease, miner);
+		return buildSpec(sources, commitId, SpoonMiner.class);
 	}
 
 	private <U,T extends ProjectMiner<U>> Project.Specifier<T> buildSpec(Sources.Specifier sources, String commitId, Class<T> miner) {
-		return new Project.Specifier<>(sources, commitId, null, miner);
+		return new Project.Specifier<>(sources, commitId, miner);
 	}
 
 	enum Miners {
