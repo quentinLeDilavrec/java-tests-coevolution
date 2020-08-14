@@ -141,6 +141,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         // }
         // launcher.getModelBuilder().addInputSource(resources);
         launcher.getEnvironment().setLevel("INFO");
+        launcher.getEnvironment().setCommentEnabled(false);
         launcher.getFactory().getEnvironment().setLevel("INFO");
         // List<String> modules = launcher.getPomFile().getModel().getModules();
         // System.out.println(modules.get(0));
