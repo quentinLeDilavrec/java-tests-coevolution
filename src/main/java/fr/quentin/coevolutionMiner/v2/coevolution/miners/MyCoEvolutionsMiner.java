@@ -214,7 +214,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         for (Entry<Evolution, Set<Evolution>> entry : atomizedRefactorings.entrySet()) {
             Evolution evo = entry.getKey();
-            System.out.println("---------------");
+            System.out.println("---------------"+ evo.getContainer().spec.miner.getSimpleName());
             System.out.println(evo.getType());
             for (Evolution atom : entry.getValue()) {
                 if (atom != evo) {
@@ -466,6 +466,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     private Map<Evolution, Set<Evolution>> decompose(Evolutions from, Evolutions by) {
         assert from != null;
         assert by != null;
+        HashSet<Evolutions.Evolution> notUsed = new HashSet<>(by.toSet());
         Map<Evolution, Set<Evolution>> result = new HashMap<>();
 
         for (Evolution evolution : from) {
@@ -486,9 +487,13 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     aux(acc, ele);
                 }
             }
+            notUsed.removeAll(acc);
             result.put(evolution, acc);
         }
-
+        // promote
+        for (Evolution evolution : notUsed) {
+            result.put(evolution, Collections.singleton(evolution));
+        }
         return result;
     }
 

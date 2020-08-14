@@ -12,6 +12,7 @@ import java.util.Map.Entry;
 
 import fr.quentin.impactMiner.Evolution;
 import fr.quentin.impactMiner.ImpactElement;
+import fr.quentin.impactMiner.ImpactType;
 import fr.quentin.impactMiner.Impacts.Relations;
 import fr.quentin.impactMiner.Position;
 import spoon.reflect.declaration.CtElement;
@@ -253,8 +254,8 @@ public class DbUtilsOld {
 	        ImpactElement rootCause, Relations vertice) {
 	    List<Map<String, Object>> res = new ArrayList<>();
 	
-	    for (Entry<String, Set<ImpactElement>> entry : vertice.getEffects().entrySet()) {
-	        if (entry.getKey().equals("call")) {
+	    for (Entry<ImpactType, Set<ImpactElement>> entry : vertice.getEffects().entrySet()) {
+	        if (entry.getKey().equals(ImpactType.CALL)) {
 	
 	            Map<String, Object> content = makeContent(repository, commitId, cause_rootDir,
 	                    vertice.getVertice());
@@ -271,7 +272,7 @@ public class DbUtilsOld {
 	                effects.add(o);
 	            }
 	            res.add(makeImpact(content, causes, effects));
-	        } else if (entry.getKey().equals("expand to executable")) {
+	        } else if (entry.getKey().equals(ImpactType.EXPAND)) {
 	            for (ImpactElement elem : entry.getValue()) {
 	                res.addAll(makeImpact(repository, commitId, cause_rootDir, vertice.getVertice(), elem,
 	                        "expand to executable", "effect"));

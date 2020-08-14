@@ -122,8 +122,8 @@ public class SourcesHelper implements AutoCloseable {
 		lock.lock();
 		try {
 			return GitHelper.cloneIfNotExists(Paths.get(REPOS_PATH, this.repoRawPath).toString(), // .substring(0,
-																									// repoRawPath.length()
-																									// - 4),
+					// repoRawPath.length()
+					// - 4),
 					gitRepoAddress);
 		} catch (Exception e) {
 			throw new Exception(e);
@@ -396,71 +396,71 @@ public class SourcesHelper implements AutoCloseable {
 			throws IOException, ImpactAnalysisException {
 		AugmentedAST<MavenLauncher> aug = new AugmentedAST<>(launcher);
 		ImpactAnalysis l = new ImpactAnalysis(aug);
-
-		logger.info("Number of executable refs mapped to positions " + evolutions.size());
-		List<ImpactChain> imptst1 = l.getImpactedTests(evolutions);
-		logger.info("Number of Impacted tests X number of evolutions " + imptst1.size());
-		logger.info("Assembling Impacts");
-		Impacts x = new Impacts(imptst1);
-		logger.info("Serializing Impacts");
-		logger.info(Integer.toString(x.getRoots().size()));
-		logger.info(new GsonBuilder().setPrettyPrinting().create().toJson(x.toJson()));
-		return x.toJson(new ToJson() {
-			public JsonElement apply(Object x) {
-				if (x instanceof JsonSerializable) {
-					JsonSerializable y = (JsonSerializable) x;
-					return y.toJson(this);
-				} else if (x instanceof CtMethod) {
-					CtMethod<?> y = (CtMethod<?>) x;
-					JsonObject o = new JsonObject();
-					o.addProperty("declType", y.getDeclaringType().getQualifiedName());
-					o.addProperty("signature", y.getSignature());
-					o.addProperty("name", y.getSimpleName());
-					JsonObject o2 = new JsonObject();
-					o2.addProperty("isTest", ImpactAnalysis.isTest(y));
-					o2.addProperty("file", root.relativize(y.getPosition().getFile().toPath()).toString());
-					o2.addProperty("start", y.getPosition().getSourceStart());
-					o2.addProperty("end", y.getPosition().getSourceEnd());
-					o.add("position", o2);
-					return o;
-				} else if (x instanceof CtConstructor) {
-					CtConstructor<?> y = (CtConstructor<?>) x;
-					JsonObject o = new JsonObject();
-					o.addProperty("declType", y.getDeclaringType().getQualifiedName());
-					o.addProperty("signature", y.getSignature());
-					o.addProperty("name", y.getSimpleName());
-					JsonObject o2 = new JsonObject();
-					o2.addProperty("file", root.relativize(y.getPosition().getFile().toPath()).toString());
-					o2.addProperty("start", y.getPosition().getSourceStart());
-					o2.addProperty("end", y.getPosition().getSourceEnd());
-					o.add("position", o2);
-					return o;
-				} else if (x instanceof CtExecutable) {
-					CtExecutable<?> y = (CtExecutable<?>) x;
-					return new JsonPrimitive("anonymous block" + y.getSignature());
-				} else if (x instanceof CtInvocation) {
-					CtInvocation<?> y = (CtInvocation<?>) x;
-					JsonObject o = new JsonObject();
-					o.add("sig", apply(y.getExecutable().getDeclaration()));
-					JsonObject oPos = new JsonObject();
-					oPos.addProperty("isTest", ImpactAnalysis.isTest(y.getParent(CtMethod.class)));
-					oPos.addProperty("file", root.relativize(y.getPosition().getFile().toPath()).toString());
-					oPos.addProperty("start", y.getPosition().getSourceStart());
-					oPos.addProperty("end", y.getPosition().getSourceEnd());
-					oPos.add("method", apply(y.getParent(CtMethod.class)));
-					o.add("position", oPos);
-					return o;
-				} else if (x instanceof Collection) {
-					JsonArray a = new JsonArray();
-					for (Object b : (Collection<?>) x) {
-						a.add(apply(b));
-					}
-					return a;
-				} else {
-					return new JsonPrimitive(x.getClass().toString());
-				}
-			}
-		});
+		return null;
+		// logger.info("Number of executable refs mapped to positions " + evolutions.size());
+		// List<ImpactChain> imptst1 = l.getImpactedTests(evolutions);
+		// logger.info("Number of Impacted tests X number of evolutions " + imptst1.size());
+		// logger.info("Assembling Impacts");
+		// Impacts x = new Impacts(imptst1);
+		// logger.info("Serializing Impacts");
+		// logger.info(Integer.toString(x.getRoots().size()));
+		// logger.info(new GsonBuilder().setPrettyPrinting().create().toJson(x.toJson()));
+		// return x.toJson(new ToJson() {
+		// 	public JsonElement apply(Object x) {
+		// 		if (x instanceof JsonSerializable) {
+		// 			JsonSerializable y = (JsonSerializable) x;
+		// 			return y.toJson(this);
+		// 		} else if (x instanceof CtMethod) {
+		// 			CtMethod<?> y = (CtMethod<?>) x;
+		// 			JsonObject o = new JsonObject();
+		// 			o.addProperty("declType", y.getDeclaringType().getQualifiedName());
+		// 			o.addProperty("signature", y.getSignature());
+		// 			o.addProperty("name", y.getSimpleName());
+		// 			JsonObject o2 = new JsonObject();
+		// 			o2.addProperty("isTest", ImpactAnalysis.isTest(y));
+		// 			o2.addProperty("file", root.relativize(y.getPosition().getFile().toPath()).toString());
+		// 			o2.addProperty("start", y.getPosition().getSourceStart());
+		// 			o2.addProperty("end", y.getPosition().getSourceEnd());
+		// 			o.add("position", o2);
+		// 			return o;
+		// 		} else if (x instanceof CtConstructor) {
+		// 			CtConstructor<?> y = (CtConstructor<?>) x;
+		// 			JsonObject o = new JsonObject();
+		// 			o.addProperty("declType", y.getDeclaringType().getQualifiedName());
+		// 			o.addProperty("signature", y.getSignature());
+		// 			o.addProperty("name", y.getSimpleName());
+		// 			JsonObject o2 = new JsonObject();
+		// 			o2.addProperty("file", root.relativize(y.getPosition().getFile().toPath()).toString());
+		// 			o2.addProperty("start", y.getPosition().getSourceStart());
+		// 			o2.addProperty("end", y.getPosition().getSourceEnd());
+		// 			o.add("position", o2);
+		// 			return o;
+		// 		} else if (x instanceof CtExecutable) {
+		// 			CtExecutable<?> y = (CtExecutable<?>) x;
+		// 			return new JsonPrimitive("anonymous block" + y.getSignature());
+		// 		} else if (x instanceof CtInvocation) {
+		// 			CtInvocation<?> y = (CtInvocation<?>) x;
+		// 			JsonObject o = new JsonObject();
+		// 			o.add("sig", apply(y.getExecutable().getDeclaration()));
+		// 			JsonObject oPos = new JsonObject();
+		// 			oPos.addProperty("isTest", ImpactAnalysis.isTest(y.getParent(CtMethod.class)));
+		// 			oPos.addProperty("file", root.relativize(y.getPosition().getFile().toPath()).toString());
+		// 			oPos.addProperty("start", y.getPosition().getSourceStart());
+		// 			oPos.addProperty("end", y.getPosition().getSourceEnd());
+		// 			oPos.add("method", apply(y.getParent(CtMethod.class)));
+		// 			o.add("position", oPos);
+		// 			return o;
+		// 		} else if (x instanceof Collection) {
+		// 			JsonArray a = new JsonArray();
+		// 			for (Object b : (Collection<?>) x) {
+		// 				a.add(apply(b));
+		// 			}
+		// 			return a;
+		// 		} else {
+		// 			return new JsonPrimitive(x.getClass().toString());
+		// 		}
+		// 	}
+		// });
 	}
 
 	public static InvocationResult executeTests(Path path, String filter) throws Exception {

@@ -172,6 +172,10 @@ public class Evolutions implements Iterable<Evolutions.Evolution>{
             return commitBefore;
         }
 
+        public Evolutions getContainer() {
+            return Evolutions.this;
+        }
+
         /**
          * @return the commitAfter
          */

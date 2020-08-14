@@ -23,6 +23,7 @@ import fr.quentin.coevolutionMiner.utils.FilePathFilter;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.impactMiner.AugmentedAST;
 import fr.quentin.impactMiner.Evolution;
+import fr.quentin.impactMiner.Explorer;
 import fr.quentin.impactMiner.ImpactAnalysis;
 import fr.quentin.impactMiner.ImpactChain;
 import fr.quentin.impactMiner.Impacts;
@@ -104,10 +105,10 @@ class AppTest {
             System.out.println("evolutions");
             System.out.println(evolutions);
             int MAX_EVO = 1000;
-            List<ImpactChain> imptst1 = l.getImpactedTests(evolutions.subList(0, Math.min(evolutions.size(), MAX_EVO)));
+            Explorer imptst1 = l.getImpactedTests(evolutions.subList(0, Math.min(evolutions.size(), MAX_EVO)));
             System.out.println("chains");
             System.out.println(imptst1);
-            Impacts x = new Impacts(imptst1);
+            Impacts x = new Impacts(imptst1.getFinishedChains(), imptst1.getRedundantChains());
             System.out.println(x);
         }
     }
@@ -188,10 +189,10 @@ class AppTest {
             System.out.println("evolutions");
             System.out.println(evolutions);
             int MAX_EVO = 1000;
-            List<ImpactChain> imptst1 = l.getImpactedTests(evolutions.subList(0, Math.min(evolutions.size(), MAX_EVO)));
+            Explorer imptst1 = l.getImpactedTests(evolutions.subList(0, Math.min(evolutions.size(), MAX_EVO)));
             System.out.println("chains");
             System.out.println(imptst1);
-            Impacts x = new Impacts(imptst1);
+            Impacts x = new Impacts(imptst1.getFinishedChains(), imptst1.getRedundantChains());
             System.out.println(x);
         }
     }
@@ -258,10 +259,10 @@ class AppTest {
             System.out.println("evolutions");
             System.out.println(evolutions);
             int MAX_EVO = 1000;
-            List<ImpactChain> imptst1 = l.getImpactedTests(evolutions.subList(0, Math.min(evolutions.size(), MAX_EVO)));
+            Explorer imptst1 = l.getImpactedTests(evolutions.subList(0, Math.min(evolutions.size(), MAX_EVO)));
             System.out.println("chains");
             System.out.println(imptst1);
-            Impacts x = new Impacts(imptst1);
+            Impacts x = new Impacts(imptst1.getFinishedChains(), imptst1.getRedundantChains());
             System.out.println(x);
         }
     }

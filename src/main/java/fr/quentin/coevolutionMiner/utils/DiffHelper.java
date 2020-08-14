@@ -118,70 +118,70 @@ public class DiffHelper {
 			allExecutableReference.add(m.getReference());
 		}
 		Logger.getLogger("ImpactAna").info("Number of executable refs " + allExecutableReference.size());
-
-		Logger.getLogger("ImpactAna").info("Number of executable refs mapped to positions " + evolutions.size());
-		List<ImpactChain> imptst1 = l.getImpactedTests(evolutions.subList(0, Math.min(evolutions.size(), 30)));
-		// List<ImpactChain> imptst2 = new ArrayList<>();
-		// for (ImpactChain impactChain : imptst1) {
-		// CtElement tmp = impactChain.getRoot().getContent();
-		// if (tmp instanceof SourcePositionHolder) {
-		// imptst2.add(impactChain);
-		// System.out.println(impactChain.toJson());
-		// }
-		// }
-		Logger.getLogger("ImpactAna").info("Number of Impacted tests X number of evolutions " + imptst1.size());
-		Logger.getLogger("ImpactAna").info("Assembling Impacts");
-		Impacts x = new Impacts(imptst1);
-		Logger.getLogger("ImpactAna").info("Serializing Impacts");
-		Logger.getLogger("ImpactAna").info(x.getRoots().size());
-		Logger.getLogger("ImpactAna").info(x.toJson());
-		return x.toJson(new ToJson() {
-			public JsonElement apply(Object x) {
-				if (x instanceof JsonSerializable) {
-					JsonSerializable y = (JsonSerializable) x;
-					return y.toJson(this);
-				} else if (x instanceof CtMethod) {
-					CtMethod<?> y = (CtMethod<?>) x;
-					JsonObject o = new JsonObject();
-					o.addProperty("declType", y.getDeclaringType().getQualifiedName());
-					o.addProperty("signature", y.getSignature());
-					o.addProperty("name", y.getSimpleName());
-					SourcePosition p = y.getPosition();
-					o.addProperty("id", p.hashCode());
-					return o;
-				} else if (x instanceof CtConstructor) {
-					CtConstructor<?> y = (CtConstructor<?>) x;
-					JsonObject o = new JsonObject();
-					o.addProperty("declType", y.getDeclaringType().getQualifiedName());
-					o.addProperty("signature", y.getSignature());
-					o.addProperty("name", y.getSimpleName());
-					return o;
-				} else if (x instanceof CtExecutable) {
-					CtExecutable<?> y = (CtExecutable<?>) x;
-					return new JsonPrimitive("anonymous block" + y.getSignature());
-				} else if (x instanceof CtInvocation) {
-					CtInvocation<?> y = (CtInvocation<?>) x;
-					JsonObject o = new JsonObject();
-					o.add("sig", apply(y.getExecutable().getDeclaration()));
-					JsonObject o2 = new JsonObject();
-					o2.addProperty("isTest", ImpactAnalysis.isTest(y.getParent(CtMethod.class)));
-					o2.addProperty("file", getPathBefore().relativize(y.getPosition().getFile().toPath()).toString());
-					o2.addProperty("start", y.getPosition().getSourceStart());
-					o2.addProperty("end", y.getPosition().getSourceEnd());
-					o2.add("method", apply(y.getParent(CtMethod.class)));
-					o.add("position", o2);
-					return o;
-				} else if (x instanceof Collection) {
-					JsonArray a = new JsonArray();
-					for (Object b : (Collection<?>) x) {
-						a.add(apply(b));
-					}
-					return a;
-				} else {
-					return new JsonPrimitive(x.getClass().toString());
-				}
-			}
-		});
+		return null;
+		// Logger.getLogger("ImpactAna").info("Number of executable refs mapped to positions " + evolutions.size());
+		// List<ImpactChain> imptst1 = l.getImpactedTests(evolutions.subList(0, Math.min(evolutions.size(), 30)));
+		// // List<ImpactChain> imptst2 = new ArrayList<>();
+		// // for (ImpactChain impactChain : imptst1) {
+		// // CtElement tmp = impactChain.getRoot().getContent();
+		// // if (tmp instanceof SourcePositionHolder) {
+		// // imptst2.add(impactChain);
+		// // System.out.println(impactChain.toJson());
+		// // }
+		// // }
+		// Logger.getLogger("ImpactAna").info("Number of Impacted tests X number of evolutions " + imptst1.size());
+		// Logger.getLogger("ImpactAna").info("Assembling Impacts");
+		// Impacts x = new Impacts(imptst1);
+		// Logger.getLogger("ImpactAna").info("Serializing Impacts");
+		// Logger.getLogger("ImpactAna").info(x.getRoots().size());
+		// Logger.getLogger("ImpactAna").info(x.toJson());
+		// return x.toJson(new ToJson() {
+		// 	public JsonElement apply(Object x) {
+		// 		if (x instanceof JsonSerializable) {
+		// 			JsonSerializable y = (JsonSerializable) x;
+		// 			return y.toJson(this);
+		// 		} else if (x instanceof CtMethod) {
+		// 			CtMethod<?> y = (CtMethod<?>) x;
+		// 			JsonObject o = new JsonObject();
+		// 			o.addProperty("declType", y.getDeclaringType().getQualifiedName());
+		// 			o.addProperty("signature", y.getSignature());
+		// 			o.addProperty("name", y.getSimpleName());
+		// 			SourcePosition p = y.getPosition();
+		// 			o.addProperty("id", p.hashCode());
+		// 			return o;
+		// 		} else if (x instanceof CtConstructor) {
+		// 			CtConstructor<?> y = (CtConstructor<?>) x;
+		// 			JsonObject o = new JsonObject();
+		// 			o.addProperty("declType", y.getDeclaringType().getQualifiedName());
+		// 			o.addProperty("signature", y.getSignature());
+		// 			o.addProperty("name", y.getSimpleName());
+		// 			return o;
+		// 		} else if (x instanceof CtExecutable) {
+		// 			CtExecutable<?> y = (CtExecutable<?>) x;
+		// 			return new JsonPrimitive("anonymous block" + y.getSignature());
+		// 		} else if (x instanceof CtInvocation) {
+		// 			CtInvocation<?> y = (CtInvocation<?>) x;
+		// 			JsonObject o = new JsonObject();
+		// 			o.add("sig", apply(y.getExecutable().getDeclaration()));
+		// 			JsonObject o2 = new JsonObject();
+		// 			o2.addProperty("isTest", ImpactAnalysis.isTest(y.getParent(CtMethod.class)));
+		// 			o2.addProperty("file", getPathBefore().relativize(y.getPosition().getFile().toPath()).toString());
+		// 			o2.addProperty("start", y.getPosition().getSourceStart());
+		// 			o2.addProperty("end", y.getPosition().getSourceEnd());
+		// 			o2.add("method", apply(y.getParent(CtMethod.class)));
+		// 			o.add("position", o2);
+		// 			return o;
+		// 		} else if (x instanceof Collection) {
+		// 			JsonArray a = new JsonArray();
+		// 			for (Object b : (Collection<?>) x) {
+		// 				a.add(apply(b));
+		// 			}
+		// 			return a;
+		// 		} else {
+		// 			return new JsonPrimitive(x.getClass().toString());
+		// 		}
+		// 	}
+		// });
 	}
 
 }

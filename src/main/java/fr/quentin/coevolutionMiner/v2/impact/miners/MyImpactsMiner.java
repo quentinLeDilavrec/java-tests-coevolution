@@ -36,9 +36,11 @@ import fr.quentin.coevolutionMiner.v2.impact.Impacts.Impact.DescRange;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactsMiner;
 import fr.quentin.coevolutionMiner.v2.utils.DbUtils;
 import fr.quentin.coevolutionMiner.v2.utils.Utils;
+import fr.quentin.impactMiner.Explorer;
 import fr.quentin.impactMiner.ImpactAnalysis;
 import fr.quentin.impactMiner.ImpactChain;
 import fr.quentin.impactMiner.ImpactElement;
+import fr.quentin.impactMiner.ImpactType;
 import fr.quentin.impactMiner.Impacts.Relations;
 import fr.quentin.impactMiner.Position;
 import fr.quentin.impactMiner.ImpactAnalysis.ImpactAnalysisException;
@@ -224,7 +226,7 @@ public class MyImpactsMiner implements ImpactsMiner {
 
         ImpactsExtension computeImpacts(boolean isOnBefore, SpoonAST ast, Evolutions evolutions) {
             logger.info("Number of executable refs mapped to positions " + evolutions.toSet().size());
-            List<ImpactChain> imptst1;
+            Explorer imptst1;
             try {
                 Set<ImmutablePair<Object, CtElement>> tmp = new HashSet<>();
                 for (Evolution evo : evolutions) {
@@ -244,9 +246,10 @@ public class MyImpactsMiner implements ImpactsMiner {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            logger.info("Number of Impacted tests X number of evolutions " + imptst1.size());
+            logger.info("Number of Impacted tests X number of evolutions " + imptst1.getFinishedChains().size());
             logger.info("Assembling Impacts");
-            fr.quentin.impactMiner.Impacts rawImpacts = new fr.quentin.impactMiner.Impacts(imptst1);
+            fr.quentin.impactMiner.Impacts rawImpacts = new fr.quentin.impactMiner.Impacts(imptst1.getFinishedChains(),
+                    imptst1.getAbortedChains());
             logger.info("Serializing Impacts");
             logger.info(Integer.toString(rawImpacts.getRoots().size()));
             logger.info(new GsonBuilder().setPrettyPrinting().create().toJson(rawImpacts.toJson()));
@@ -280,7 +283,8 @@ public class MyImpactsMiner implements ImpactsMiner {
                                 calls.stream().map(x -> extracted(ast, x)).collect(Collectors.toSet()));
                     }
 
-                    for (String key : rel.getCauses().keySet()) {
+                    for (ImpactType imp_t : rel.getCauses().keySet()) {
+                        String key = imp_t.toString();
                         Set<ImpactElement> others = rel.getCauses().get(key);
                         if (others == null) {
                             continue;
@@ -305,10 +309,11 @@ public class MyImpactsMiner implements ImpactsMiner {
                     }
                 }
             }
-            for (ImpactElement test : rawImpacts.getTests()) {
+            for (Entry<ImpactElement, Set<Object>> entry : rawImpacts.getTests().entrySet()) {
+                ImpactElement test = entry.getKey();
                 addImpactedTest(
                         ast.getRange(ast.rootDir.relativize(Paths.get(test.getPosition().getFilePath())).toString(),
-                                test.getPosition().getStart(), test.getPosition().getEnd(), test.getContent()),null); // TODO
+                                test.getPosition().getStart(), test.getPosition().getEnd(), test.getContent()),entry.getValue()); // TODO
             }
             return this;
         }
