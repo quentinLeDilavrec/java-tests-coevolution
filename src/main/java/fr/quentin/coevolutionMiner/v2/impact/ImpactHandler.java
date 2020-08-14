@@ -38,7 +38,7 @@ public class ImpactHandler implements AutoCloseable {
     }
 
     public Impacts handle(Impacts.Specifier spec) {
-        return handle(spec, null);
+        return handle(spec, "");
     }
 
     private Impacts handle(Impacts.Specifier spec, String storeName) {
