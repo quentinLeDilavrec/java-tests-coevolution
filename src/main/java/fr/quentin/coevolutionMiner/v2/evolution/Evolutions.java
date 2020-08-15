@@ -2,12 +2,15 @@ package fr.quentin.coevolutionMiner.v2.evolution;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.logging.Logger;
 
 import com.google.gson.JsonElement;
@@ -19,11 +22,13 @@ import org.refactoringminer.api.Refactoring;
 
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
+import fr.quentin.coevolutionMiner.v2.utils.Utils;
 import spoon.reflect.declaration.CtElement;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
+import fr.quentin.coevolutionMiner.v2.evolution.storages.Neo4jEvolutionsStorage;
 
-public class Evolutions implements Iterable<Evolutions.Evolution>{
+public class Evolutions implements Iterable<Evolutions.Evolution> {
 
     public static class Specifier {
         public final Sources.Specifier sources;
@@ -31,7 +36,8 @@ public class Evolutions implements Iterable<Evolutions.Evolution>{
         public final String commitIdBefore;
         public final String commitIdAfter;
 
-        public Specifier(Sources.Specifier sources, String commitIdBefore, String commitIdAfter, Class<? extends EvolutionsMiner> miner) {
+        public Specifier(final Sources.Specifier sources, final String commitIdBefore, final String commitIdAfter,
+                final Class<? extends EvolutionsMiner> miner) {
             this.sources = sources;
             this.commitIdBefore = commitIdBefore;
             this.commitIdAfter = commitIdAfter;
@@ -50,14 +56,14 @@ public class Evolutions implements Iterable<Evolutions.Evolution>{
         }
 
         @Override
-        public boolean equals(Object obj) {
+        public boolean equals(final Object obj) {
             if (this == obj)
                 return true;
             if (obj == null)
                 return false;
             if (getClass() != obj.getClass())
                 return false;
-            Specifier other = (Specifier) obj;
+            final Specifier other = (Specifier) obj;
             if (miner == null) {
                 if (other.miner != null)
                     return false;
@@ -106,15 +112,16 @@ public class Evolutions implements Iterable<Evolutions.Evolution>{
     // }
 
     protected final Set<Evolution> evolutions = new HashSet<>();
-    private Map<ImmutablePair<String, List<ImmutablePair<Range, String>>>, Evolution> evoByBeforeList = new HashMap<>();
+    private final Map<ImmutablePair<String, List<ImmutablePair<Range, String>>>, Evolution> evoByBeforeList = new HashMap<>();
     protected final Sources sources;
 
     public Sources getSources() {
         return sources;
     }
 
-    public Evolution getEvolution(String type, List<ImmutablePair<Range, String>> before, Project<?> target) {
-        Evolution tmp = evoByBeforeList.get(new ImmutablePair<>(type, before));
+    public Evolution getEvolution(final String type, final List<ImmutablePair<Range, String>> before,
+            final Project<?> target) {
+        final Evolution tmp = evoByBeforeList.get(new ImmutablePair<>(type, before));
         if (tmp == null) {
             throw new RuntimeException("evo of type " + type + " and " + before + " is not in list");
         }
@@ -122,22 +129,23 @@ public class Evolutions implements Iterable<Evolutions.Evolution>{
         return tmp;
     }
 
-    public Evolutions(Specifier spec, Sources sources) {
+    public Evolutions(final Specifier spec, final Sources sources) {
         this.spec = spec;
         this.sources = sources;
     }
 
-    protected final Evolution addEvolution(String type, List<ImmutablePair<Range, String>> before,
-            List<ImmutablePair<Range, String>> after, Commit commitBefore, Commit commitAfter, Object original) {
-        Evolution evo = new Evolutions.Evolution(original, type, commitBefore, commitAfter);
-        for (ImmutablePair<Range, String> immutablePair : before) {
+    protected final Evolution addEvolution(final String type, final List<ImmutablePair<Range, String>> before,
+            final List<ImmutablePair<Range, String>> after, final Commit commitBefore, final Commit commitAfter,
+            final Object original) {
+        final Evolution evo = new Evolutions.Evolution(original, type, commitBefore, commitAfter);
+        for (final ImmutablePair<Range, String> immutablePair : before) {
             evo.addBefore(immutablePair.getLeft(), immutablePair.getRight());
         }
-        for (ImmutablePair<Range, String> immutablePair : after) {
+        for (final ImmutablePair<Range, String> immutablePair : after) {
             evo.addAfter(immutablePair.getLeft(), immutablePair.getRight());
         }
         evolutions.add(evo);
-        Evolution old = evoByBeforeList.put(new ImmutablePair<>(type, before), evo);
+        final Evolution old = evoByBeforeList.put(new ImmutablePair<>(type, before), evo);
         if (old != null && evo.equals(old))
             Logger.getLogger("evo").info("evo sharing same type and before");
         return evo;
@@ -146,21 +154,22 @@ public class Evolutions implements Iterable<Evolutions.Evolution>{
     // @uniq // (also put relations as attributs)
     public class Evolution {
 
-        private Evolution(Object original, String type) {
+        private Evolution(final Object original, final String type) {
             this.original = original;
             this.type = type;
         }
 
-        Evolution(Object original, String type, Sources.Commit commitBefore, Sources.Commit commitAfter) {
+        protected Evolution(final Object original, final String type, final Sources.Commit commitBefore,
+                final Sources.Commit commitAfter) {
             this(original, type);
             this.commitBefore = commitBefore;
             this.commitAfter = commitAfter;
         }
 
-        private Object original;
-        private String type;
-        private List<DescRange> after = new ArrayList<>();
-        private List<DescRange> before = new ArrayList<>();
+        private final Object original;
+        private final String type;
+        private final List<DescRange> after = new ArrayList<>();
+        private final List<DescRange> before = new ArrayList<>();
 
         private Sources.Commit commitBefore;
         private Sources.Commit commitAfter;
@@ -207,11 +216,11 @@ public class Evolutions implements Iterable<Evolutions.Evolution>{
             return Collections.unmodifiableList(after);
         }
 
-        void addBefore(Range range, String description) {
+        void addBefore(final Range range, final String description) {
             before.add(new DescRange(range, description));
         }
 
-        void addAfter(Range range, String description) {
+        void addAfter(final Range range, final String description) {
             after.add(new DescRange(range, description));
         }
 
@@ -234,7 +243,7 @@ public class Evolutions implements Iterable<Evolutions.Evolution>{
             private final String description;
             private final Range range;
 
-            DescRange(Range range, String description) {
+            DescRange(final Range range, final String description) {
                 this.range = range;
                 this.description = description;
             }
@@ -263,14 +272,14 @@ public class Evolutions implements Iterable<Evolutions.Evolution>{
             }
 
             @Override
-            public boolean equals(Object obj) {
+            public boolean equals(final Object obj) {
                 if (this == obj)
                     return true;
                 if (obj == null)
                     return false;
                 if (getClass() != obj.getClass())
                     return false;
-                DescRange other = (DescRange) obj;
+                final DescRange other = (DescRange) obj;
                 if (description == null) {
                     if (other.description != null)
                         return false;
@@ -296,14 +305,14 @@ public class Evolutions implements Iterable<Evolutions.Evolution>{
         }
 
         @Override
-        public boolean equals(Object obj) {
+        public boolean equals(final Object obj) {
             if (this == obj)
                 return true;
             if (obj == null)
                 return false;
             if (getClass() != obj.getClass())
                 return false;
-            Evolution other = (Evolution) obj;
+            final Evolution other = (Evolution) obj;
             if (after == null) {
                 if (other.after != null)
                     return false;
@@ -325,14 +334,104 @@ public class Evolutions implements Iterable<Evolutions.Evolution>{
         private Evolutions getEnclosingInstance() {
             return Evolutions.this;
         }
+
+        protected void addUrl(Map<String, Object> map) {
+            final StringBuilder url = new StringBuilder();
+            Map<String, Object> content = (Map<String, Object>) map.get("content");
+            url.append("http://localhost:50000/?repo=" + content.get("repository"));
+            url.append("&before=" + content.get("commitIdBefore"));
+            url.append("&after=" + content.get("commitIdAfter"));
+            url.append("&type=" + content.get("type"));
+
+            for (Map<String, Object> descR : (List<Map<String, Object>>) map.get("leftSideLocations")) {
+                url.append("&before" + abrv((String) descR.get("description")) + "=" + rangeToString(descR));
+            }
+            for (Map<String, Object> descR : (List<Map<String, Object>>) map.get("rightSideLocations")) {
+                url.append("&after" + abrv((String) descR.get("description")) + "=" + rangeToString(descR));
+            }
+
+            content.put("url", url.toString());
+        }
+
+        private String rangeToString(Map<String, Object> descR) {
+            String string = descR.get("filePath") + ":" + descR.get("start") + "-" + descR.get("end");
+            return string;
+        }
+
+        protected String abrv(String str) {
+            StringBuilder strB = new StringBuilder();
+            for (String word : str.split(" ")) {
+                strB.append(word.substring(0, 1));
+            }
+            return strB.toString();
+        }
+
+        public Map<String, Object> asMap() {
+            final Map<String, Object> res = new HashMap<>();
+            final Map<String, Object> evofields = new HashMap<>();
+            res.put("content", evofields);
+            evofields.put("repository", getEnclosingInstance().spec.sources.repository);
+            evofields.put("commitIdBefore", getCommitBefore().getId());
+            evofields.put("commitIdAfter", getCommitAfter().getId());
+            evofields.put("type", getType());
+
+            final List<Object> leftSideLocations = new ArrayList<>();
+            res.put("leftSideLocations", leftSideLocations);
+            for (final DescRange e : getBefore()) { // TODO sort list
+                final Map<String, Object> o = new HashMap<>();
+                leftSideLocations.add(o);
+                o.put("filePath", e.getTarget().getFile().getPath());
+                o.put("start", e.getTarget().getStart());
+                o.put("end", e.getTarget().getEnd());
+                final CtElement e_ori = (CtElement) e.getTarget().getOriginal();
+                if (e_ori != null) {
+                    o.put("type", Utils.formatedType(e_ori));
+                } else {
+                    o.put("type", "evo null");
+                }
+                o.put("description", e.getDescription());
+                evofields.putIfAbsent("before_" + abrv(e.getDescription()), new ArrayList<>());
+                ((List<String>)evofields.get("before_" + abrv(e.getDescription()))).add(rangeToString(o));
+            }
+            final Map<String, List<String>> after_e = new HashMap<>();
+            final List<Object> rightSideLocations = new ArrayList<>();
+            res.put("rightSideLocations", rightSideLocations);
+            for (final DescRange e : getAfter()) { // TODO sort list
+                final Map<String, Object> o = new HashMap<>();
+                rightSideLocations.add(o);
+                o.put("filePath", e.getTarget().getFile().getPath());
+                o.put("start", e.getTarget().getStart());
+                o.put("end", e.getTarget().getEnd());
+                final CtElement e_ori = (CtElement) e.getTarget().getOriginal();
+                if (e_ori != null) {
+                    o.put("type", Utils.formatedType(e_ori));
+                } else {
+                    o.put("type", "evo null");
+                }
+                o.put("description", e.getDescription());
+                evofields.putIfAbsent("after_" + abrv(e.getDescription()), new ArrayList<>());
+                ((List<String>)evofields.get("after_" + abrv(e.getDescription()))).add(rangeToString(o));
+            }
+            addUrl(res);
+            return res;
+        }
     }
 
-	public Project<?>.AST.FileSnapshot.Range map(Project<?>.AST.FileSnapshot.Range testBefore, Project<?> target) {
-		return null;
-	}
+    public Project<?>.AST.FileSnapshot.Range map(final Project<?>.AST.FileSnapshot.Range testBefore,
+            final Project<?> target) {
+        return null;
+    }
 
     @Override
     public Iterator<Evolution> iterator() {
         return evolutions.iterator();
+    }
+
+    public List<Map<String, Object>> asListofMaps() {
+        List<Map<String, Object>> tmp = new ArrayList<>();
+        for (Evolution evolution : this) {
+            tmp.add(evolution.asMap());
+        }
+        return tmp;
     }
 }

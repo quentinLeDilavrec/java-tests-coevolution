@@ -49,8 +49,6 @@ import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.Specifier;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner.CoEvolutionsExtension;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
-import fr.quentin.coevolutionMiner.v2.evolution.storages.Neo4jEvolutionsStorage;
-import fr.quentin.coevolutionMiner.v2.evolution.storages.Neo4jEvolutionsStorage.EvoType;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.coevolutionMiner.v2.utils.Tuple;
@@ -87,12 +85,12 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         }
     }
 
-    private Map<String, Object> basifyCoevo(CoEvolution coevolution, boolean validated, String repository) {
+    private Map<String, Object> basifyCoevo(CoEvolution coevolution, boolean validated, String repository) { // TODO refactor
         Map<String, Object> coevo = new HashMap<>();
         List<String> causes_url = new ArrayList<>();
         List<Map<String, Object>> pointed = new ArrayList<>();
         for (Evolution evolution : coevolution.getCauses()) {
-            Map<String, Object> tmp = Neo4jEvolutionsStorage.basifyEvo(repository, evolution);
+            Map<String, Object> tmp = evolution.asMap();
             Map<String, Object> o = new HashMap<>();
             o.put("content", tmp);
             o.put("type", "cause");
@@ -101,7 +99,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         }
         List<String> resolutions_url = new ArrayList<>();
         for (Evolution evolution : coevolution.getResolutions()) {
-            Map<String, Object> tmp = Neo4jEvolutionsStorage.basifyEvo(repository, evolution);
+            Map<String, Object> tmp = evolution.asMap();
             Map<String, Object> o = new HashMap<>();
             o.put("content", tmp);
             o.put("type", "resolution");
@@ -136,12 +134,12 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         return null;
     }
 
-    private static boolean compareEvolution(String repository, Value value, Evolution other) {
-        if (other.getOriginal() instanceof Refactoring) {
-            return Neo4jEvolutionsStorage.makeEvoUrl(repository, (Evolution) other).equals(value.get("url").asString());
-        }
-        return false;
-    }
+    // private static boolean compareEvolution(String repository, Value value, Evolution other) {
+    //     if (other.getOriginal() instanceof Refactoring) {
+    //         return Evolution.makeEvoUrl(repository, (Evolution) other).equals(value.get("url").asString());
+    //     }
+    //     return false;
+    // }
 
     // private static Position toPosition(Value position) {
     // return new Position(position.get("path").asString(),

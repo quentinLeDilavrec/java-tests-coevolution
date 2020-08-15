@@ -56,7 +56,7 @@ public abstract class Impacts {
         return gson.toJsonTree(getValueCompressed());
     }
 
-    public final Map<String, Object> getValue() { // TODO SoftReference? memoize result?
+    public final Map<String, Object> asMap() { // TODO SoftReference? memoize result?
         Map<String, Object> res = new HashMap<>();
         List<Map<String, Object>> ranges_to_type = new ArrayList<>();
         res.put("rangesToType", ranges_to_type);

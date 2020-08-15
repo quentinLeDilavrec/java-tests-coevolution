@@ -2,6 +2,7 @@ package fr.quentin.coevolutionMiner.v2.evolution.miners;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -32,6 +33,8 @@ import fr.quentin.coevolutionMiner.v2.evolution.EvolutionsMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution.DescRange;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
+import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
+import fr.quentin.coevolutionMiner.v2.utils.Utils;
 import gr.uom.java.xmi.diff.CodeRange;
 import spoon.reflect.declaration.CtElement;
 
@@ -121,6 +124,121 @@ public class RefactoringMiner implements EvolutionsMiner {
         private EvolutionsExtension(Specifier spec, Sources sources, Set<Evolution> subSet) {
             this(spec, sources);
             evolutions.addAll(subSet);
+        }
+
+        class EvolutionExtension extends Evolutions.Evolution {
+
+            EvolutionExtension(Object original, String type, Commit commitBefore, Commit commitAfter) {
+                super(original, type, commitBefore, commitAfter);
+            }
+            @Override
+            public Map<String, Object> asMap() {
+                final Map<String, EvoType> evoTypesByName = getCRefactoringTypes();
+                final Map<String, Object> res = new HashMap<>();
+                final Map<String, Object> evofields = new HashMap<>();
+                res.put("content", evofields);
+                evofields.put("repository", EvolutionsExtension.this.spec.sources.repository);
+                evofields.put("commitIdBefore", this.getCommitBefore().getId());
+                evofields.put("commitIdAfter", this.getCommitAfter().getId());
+                // Refactoring ori = (Refactoring) this.getOriginal();
+                evofields.put("type", this.getType());
+
+                final StringBuilder url = new StringBuilder();
+                url.append("http://176.180.199.146:50000/?repo=" + EvolutionsExtension.this.spec.sources.repository);
+                url.append("&before=" + this.getCommitBefore().getId());
+                url.append("&after=" + this.getCommitAfter().getId());
+                url.append("&type=" + this.getType());
+                final EvoType aaa = evoTypesByName.get(this.getType());
+                final Map<String, List<String>> before_e = new HashMap<>();
+                final List<Object> leftSideLocations = new ArrayList<>();
+                res.put("leftSideLocations", leftSideLocations);
+                for (final DescRange e : this.getBefore()) {
+                    final Map<String, Object> o = new HashMap<>();
+                    leftSideLocations.add(o);
+                    o.put("filePath", e.getTarget().getFile().getPath());
+                    o.put("start", e.getTarget().getStart());
+                    o.put("end", e.getTarget().getEnd());
+                    final CtElement e_ori = (CtElement) e.getTarget().getOriginal();
+                    if (e_ori != null) {
+                        o.put("type", Utils.formatedType(e_ori));
+                    } else {
+                        o.put("type", "evo null");
+                    }
+                    o.put("description", e.getDescription());
+                    e.getDescription();
+
+                    for (int i = 0; i < aaa.left.size(); i++) {
+                        if (aaa.left.get(i).description.equals(e.getDescription())) {
+                            final String tmp = e.getTarget().getFile().getPath() + ":"
+                                    + Integer.toString(e.getTarget().getStart()) + "-"
+                                    + Integer.toString(e.getTarget().getEnd());
+                            final String key = Integer.toString(i);
+                            final List<String> tmp2 = before_e.getOrDefault(key, new ArrayList<>());
+                            tmp2.add(tmp);
+                            before_e.put(key, tmp2);
+                            break;
+                        }
+                    }
+                }
+                for (final Entry<String, List<String>> entry : before_e.entrySet()) {
+                    entry.getValue().sort(new Comparator<String>() {
+                        @Override
+                        public int compare(final String a, final String b) {
+                            return a.compareTo(b);
+                        }
+                    });
+                    evofields.put("before" + entry.getKey(), entry.getValue());
+                    for (final String s : entry.getValue()) {
+                        url.append("&before" + entry.getKey() + "=" + s);
+                    }
+                }
+                final Map<String, List<String>> after_e = new HashMap<>();
+                final List<Object> rightSideLocations = new ArrayList<>();
+                res.put("rightSideLocations", rightSideLocations);
+                for (final DescRange e : this.getAfter()) {
+                    final Map<String, Object> o = new HashMap<>();
+                    rightSideLocations.add(o);
+                    o.put("filePath", e.getTarget().getFile().getPath());
+                    o.put("start", e.getTarget().getStart());
+                    o.put("end", e.getTarget().getEnd());
+                    final CtElement e_ori = (CtElement) e.getTarget().getOriginal();
+                    if (e_ori != null) {
+                        o.put("type", Utils.formatedType(e_ori));
+                    } else {
+                        o.put("type", "evo null");
+                    }
+                    o.put("description", e.getDescription());
+                    e.getDescription();
+                    for (int i = 0; i < aaa.right.size(); i++) {
+                        if (aaa.right.get(i).description.equals(e.getDescription())) {
+                            final String tmp = e.getTarget().getFile().getPath() + ":"
+                                    + Integer.toString(e.getTarget().getStart()) + "-"
+                                    + Integer.toString(e.getTarget().getEnd());
+                            final String key = Integer.toString(i);
+                            final List<String> tmp2 = after_e.getOrDefault(key, new ArrayList<>());
+                            tmp2.add(tmp);
+                            after_e.put(key, tmp2);
+                            break;
+                        }
+                    }
+                }
+                for (final Entry<String, List<String>> entry : after_e.entrySet()) {
+                    entry.getValue().sort(new Comparator<String>() {
+                        @Override
+                        public int compare(final String a, final String b) {
+                            return a.compareTo(b);
+                        }
+                    });
+                    evofields.put("after" + entry.getKey(), entry.getValue());
+                    for (
+
+                    final String s : entry.getValue()) {
+                        url.append("&after" + entry.getKey() + "=" + s);
+                    }
+                }
+                evofields.put("url", url.toString());
+                return res;
+            }
         }
 
         void addEvolution(Refactoring refact, Project<?> astBefore, Project<?> astAfter) {
@@ -224,183 +342,32 @@ public class RefactoringMiner implements EvolutionsMiner {
         return sb.toString();
     }
 
-    // public final class EvolutionsExtensionOld extends Evolutions {
-    // private final List<Evolution<Refactoring>> evolutions;
+    private static Map<String, EvoType> RefactoringTypes = null;
 
-    // private EvolutionsExtensionOld(Specifier spec, List<Evolution<Refactoring>>
-    // evolutions) {
-    // super(spec);
-    // this.evolutions = evolutions;
-    // }
+    public static Map<String, EvoType> getCRefactoringTypes() {
+        if (RefactoringTypes != null) {
+            return RefactoringTypes;
+        }
+        Map<String, EvoType> res = new Gson().fromJson(Utils.memoizedReadResource("RefactoringTypes_named.json"),
+                new TypeToken<Map<String, EvoType>>() {
+                }.getType());
+        Map<String, EvoType> resByDN = new HashMap<>();
+        for (Entry<String, EvoType> e : res.entrySet()) {
+            e.getValue().name = e.getKey();
+            resByDN.put(e.getValue().displayName, e.getValue());
+        }
+        return resByDN;
+    }
 
-    // @Override
-    // public List<Evolution<Refactoring>> toList() {
-    // return evolutions;
-    // }
+    public static class Side {
+        public Boolean many;
+        public String description;
+    }
 
-    // @Override
-    // public JsonElement toJson() {
-    // // TODO optimize (serializing then deserializing is a dirty hack)
-    // Object diff = new Gson().fromJson(
-    // JSON(spec.sources.repository, spec.commitIdAfter,
-    // evolutions.stream().map(x -> x.getOriginal()).collect(Collectors.toList())),
-    // new TypeToken<Object>() {
-    // }.getType());
-    // return new Gson().toJsonTree(diff);
-    // }
-
-    // @Override
-    // public List<Evolutions> perBeforeCommit() {
-    // Map<String, List<Evolution<Refactoring>>> tmp = new HashMap<>();
-    // for (Evolution<Refactoring> evolution : toList()) {
-    // tmp.putIfAbsent(evolution.getCommitIdBefore(), new ArrayList<>());
-    // tmp.get(evolution.getCommitIdBefore()).add(evolution);
-    // }
-    // List<Evolutions> r = new ArrayList<>();
-    // for (List<Evolution<Refactoring>> evolutionsSubSet : tmp.values()) {
-    // if (evolutionsSubSet.size() == 0) {
-    // continue;
-    // }
-    // Evolutions newEvo = new
-    // EvolutionsExtensionOld(EvolutionHandler.buildSpec(spec.sources,
-    // evolutionsSubSet.get(0).getCommitIdBefore(),
-    // evolutionsSubSet.get(0).getCommitIdAfter()),
-    // evolutionsSubSet);
-    // r.add(newEvo);
-    // }
-    // return r;
-    // }
-    // }
-
-    // public static class OtherEvolution implements Evolution<Refactoring> {
-    // Set<Position> pre = new HashSet<>();
-    // Set<Position> post = new HashSet<>();
-    // Map<String, Set<Position>> preDesc = new HashMap<>();
-    // Map<String, Set<Position>> postDesc = new HashMap<>();
-    // private Refactoring op;
-    // private String commitIdBefore;
-    // private String commitIdAfter;
-
-    // OtherEvolution(Refactoring op, String commitIdBefore, String commitIdAfter) {
-    // this.op = op;
-    // this.commitIdBefore = commitIdBefore;
-    // this.commitIdAfter = commitIdAfter;
-    // for (CodeRange range : op.leftSide()) {
-    // Position pos = new Position(range.getFilePath(), range.getStartOffset(),
-    // range.getEndOffset());
-    // this.preDesc.putIfAbsent(range.getDescription(), new HashSet<>());
-    // this.preDesc.get(range.getDescription()).add(pos);
-    // this.pre.add(pos);
-    // }
-    // for (CodeRange range : op.rightSide()) {
-    // Position pos = new Position(range.getFilePath(), range.getStartOffset(),
-    // range.getEndOffset());
-    // this.postDesc.putIfAbsent(range.getDescription(), new HashSet<>());
-    // this.postDesc.get(range.getDescription()).add(pos);
-    // this.post.add(pos);
-    // }
-    // }
-
-    // public Map<String, Set<Position>> getPreEvolutionPositionsDesc() {
-    // return preDesc;
-    // }
-
-    // public Map<String, Set<Position>> getPostEvolutionPositionsDesc() {
-    // return postDesc;
-    // }
-
-    // @Override
-    // public Set<Position> getPreEvolutionPositions() {
-    // return pre;
-    // }
-
-    // @Override
-    // public Set<Position> getPostEvolutionPositions() {
-    // return post;
-    // }
-
-    // @Override
-    // public Refactoring getOriginal() {
-    // return op;
-    // }
-
-    // @Override
-    // public String getCommitIdBefore() {
-    // return commitIdBefore;
-    // }
-
-    // @Override
-    // public String getCommitIdAfter() {
-    // return commitIdAfter;
-    // }
-
-    // @Override
-    // public JsonObject toJson() {
-    // JsonObject r = new JsonObject();
-    // r.addProperty("type", op.getName());
-    // r.addProperty("commitIdBefore", getCommitIdBefore());
-    // r.addProperty("commitIdAfter", getCommitIdAfter());
-    // JsonArray before = new JsonArray();
-    // for (CodeRange p : op.leftSide()) {
-    // JsonObject o = new JsonObject();
-    // before.add(o);
-    // o.addProperty("file", p.getFilePath());
-    // o.addProperty("start", p.getStartOffset());
-    // o.addProperty("end", p.getEndOffset());
-    // o.addProperty("type", p.getCodeElementType().getName());
-    // o.addProperty("desc", p.getDescription());
-    // }
-    // r.add("before", before);
-    // JsonArray after = new JsonArray();
-    // for (CodeRange p : op.rightSide()) {
-    // JsonObject o = new JsonObject();
-    // after.add(o);
-    // o.addProperty("file", p.getFilePath());
-    // o.addProperty("start", p.getStartOffset());
-    // o.addProperty("end", p.getEndOffset());
-    // o.addProperty("type", p.getCodeElementType().getName());
-    // o.addProperty("desc", p.getDescription());
-    // }
-    // r.add("after", after);
-    // return r;
-    // }
-
-    // }
-
-    // public Evolutions computeOld() {
-    // Sources src = srcHandler.handle(spec.sources, "jgit");
-    // GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
-
-    // List<Refactoring> detectedRefactorings = new ArrayList<Refactoring>();
-    // List<Evolution<Refactoring>> evolutions = new
-    // ArrayList<Evolution<Refactoring>>();
-
-    // try (SourcesHelper helper = src.open()) {
-    // miner.detectBetweenCommits(helper.getRepo(), spec.commitIdBefore,
-    // spec.commitIdAfter,
-    // new RefactoringHandler() {
-    // @Override
-    // public void handle(String commitId, List<Refactoring> refactorings) {
-    // detectedRefactorings.addAll(refactorings);
-    // for (Refactoring op : refactorings) {
-    // String before;
-    // try {
-    // before = helper.getBeforeCommit(commitId);
-    // } catch (IOException e) {
-    // throw new RuntimeException(e);
-    // }
-    // OtherEvolution tmp = new OtherEvolution(op, before, commitId);
-    // evolutions.add(tmp);
-    // logger.info("O- " + tmp.op + "\n" + tmp.pre.size());
-    // }
-    // }
-
-    // });
-    // } catch (Exception e) {
-    // throw new RuntimeException(e);
-    // }
-
-    // return null;
-    // // return new EvolutionsExtension(spec, evolutions);
-    // }
+    public static class EvoType {
+        public String name;
+        public String displayName;
+        public List<Side> left;
+        public List<Side> right;
+    }
 }

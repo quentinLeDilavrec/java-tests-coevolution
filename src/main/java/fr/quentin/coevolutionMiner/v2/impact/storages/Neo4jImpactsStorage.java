@@ -30,7 +30,7 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
 
     @Override
     public void put(Impacts impacts) {
-        Map<String, Object> value = impacts.getValue();
+        Map<String, Object> value = impacts.asMap();
         try (Session session = driver.session()) {
             String done = session.writeTransaction(new TransactionWork<String>() {
                 @Override

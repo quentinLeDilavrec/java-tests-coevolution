@@ -113,4 +113,11 @@ public class Utils {
             throw new RuntimeException(e);
         }
     }
+
+	public static String formatedType(Object original) { // TODO put in utils
+	    String name = original.getClass().getSimpleName();
+	    name = name.endsWith("Impl") ? name.substring(0, name.length() - "Impl".length()) : name;
+	    name = name.startsWith("Ct") ? name.substring("Ct".length()) : name;
+	    return name;
+	}
 }

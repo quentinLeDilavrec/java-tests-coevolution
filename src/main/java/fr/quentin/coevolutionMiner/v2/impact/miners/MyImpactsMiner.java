@@ -198,7 +198,7 @@ public class MyImpactsMiner implements ImpactsMiner {
             Range target = descRange.getTarget();
             Object original = target.getOriginal();
             if (original != null) {
-                o.put("type", formatedType(original));
+                o.put("type", Utils.formatedType(original));
                 if (original instanceof CtExecutable) {
                     o.put("sig", ((CtExecutable<?>) original).getSignature());
                 }
@@ -215,13 +215,6 @@ public class MyImpactsMiner implements ImpactsMiner {
                 o.put("type", "imp_null");
             }
             return o;
-        }
-
-        private String formatedType(Object original) { // TODO put in utils
-            String name = original.getClass().getSimpleName();
-            name = name.endsWith("Impl") ? name.substring(0, name.length() - "Impl".length()) : name;
-            name = name.startsWith("Ct") ? name.substring("Ct".length()) : name;
-            return name;
         }
 
         ImpactsExtension computeImpacts(boolean isOnBefore, SpoonAST ast, Evolutions evolutions) {
