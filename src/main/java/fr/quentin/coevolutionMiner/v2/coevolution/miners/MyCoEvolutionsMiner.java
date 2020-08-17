@@ -371,16 +371,76 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         outWriter.getEnvironment().setPrettyPrintingMode(PRETTY_PRINTING_MODE.AUTOIMPORT);
         Map<String, CtType<?>> cloned = new HashMap<>();
         for (Entry<String, CtType<?>> entry : ast_before.augmented.getTypesIndexByFileName().entrySet()) {
+            cloned.put(entry.getKey(), entry.getValue().clone());
+        }
+        applyEvolutions(set, cloned);
+        for (CtType<?> type : cloned.values()) {
+            type.updateAllParentsBelow();
+            outWriter.createJavaFile(type); // pb from clone then using the cu, because the pack ref is  changed by DefaultJavaPrettyPrinter.java:2003
+        }
+    }
+
+    private void applyEvolutions(Set<Evolution> set, Map<String, CtType<?>> cloned) {
+        for (Evolution evo : set) {
+            Object _ori = evo.getOriginal();
+            if (_ori == null) {
+                logger.warning("no origin for" + evo);
+            } else if (_ori instanceof Operation) {
+                Operation<?> ori = (Operation<?>) _ori;
+                if (_ori instanceof InsertOperation) {
+                    CtElement srcNode = ori.getSrcNode();
+                    CtElement p = ((InsertOperation) ori).getParent();
+                    CtType<?> topParent = computeTopLevel(p);
+                    CtPath relPath = p.getPath().relativePath(topParent);
+                    String filePath = topParent.getPosition().getFile().getPath();
+                    List<CtElement> clonedTargs = relPath.evaluateOn(cloned.get(filePath));
+                    for (CtElement targ : clonedTargs) {
+                        // targ;
+                    }
+                } else if (_ori instanceof DeleteOperation) {
+                    CtElement srcNode = ori.getSrcNode();
+                    CtType<?> topParent = computeTopLevel(srcNode);
+                    CtPath relPath = srcNode.getPath().relativePath(topParent);
+                    String filePath = topParent.getPosition().getFile().getPath();
+                    List<CtElement> clonedTargs = relPath.evaluateOn(cloned.get(filePath));
+                    for (CtElement targ : clonedTargs) {
+                        targ.delete();
+                    }
+                } else if (_ori instanceof MoveOperation) {
+                    CtElement p = ((MoveOperation)ori).getParent();
+                    CtElement srcNode = ori.getSrcNode();
+                    CtType<?> topParent = computeTopLevel(srcNode);
+                    CtPath relPath = p.getPath().relativePath(topParent);
+                    String filePath = topParent.getPosition().getFile().getPath();
+                    List<CtElement> clonedTargs = relPath.evaluateOn(cloned.get(filePath));
+                    for (CtElement targ : clonedTargs) {
+                    }
+                } else if (_ori instanceof UpdateOperation) {
+                }
+            } else if (_ori instanceof Refactoring) {
+
+            }
+        }
+    }
+
+    // should not clone whole things, too complicated
+    private void applyEvolutionsOld(SpoonAST ast_before, SpoonAST ast_after, Set<Evolution> set) {
+        MavenLauncher launcher = ast_before.augmented.launcher;
+        JavaOutputProcessor outWriter = launcher.createOutputWriter();
+        outWriter.getEnvironment().setSourceOutputDirectory(Paths.get("/tmp/").toFile()); // TODO !!!!
+        outWriter.getEnvironment().setPrettyPrintingMode(PRETTY_PRINTING_MODE.AUTOIMPORT);
+        Map<String, CtType<?>> cloned = new HashMap<>();
+        for (Entry<String, CtType<?>> entry : ast_before.augmented.getTypesIndexByFileName().entrySet()) {
             cloned.put(entry.getKey(), entry.getValue().copyType()); // .clone()
         }
         applyEvolutions(set, cloned);
         for (CtType<?> type : cloned.values()) {
             type.updateAllParentsBelow();
-            outWriter.createJavaFile(type);
+            outWriter.createJavaFile(type); // pb from clone then using the cu, because the pack ref is  changed by DefaultJavaPrettyPrinter.java:2003
         }
     }
 
-    private void applyEvolutions(Set<Evolution> set, Map<String, CtType<?>> cloned) {
+    private void applyEvolutionsOld(Set<Evolution> set, Map<String, CtType<?>> cloned) {
         for (Evolution evo : set) {
             Object _ori = evo.getOriginal();
             if (_ori == null) {
