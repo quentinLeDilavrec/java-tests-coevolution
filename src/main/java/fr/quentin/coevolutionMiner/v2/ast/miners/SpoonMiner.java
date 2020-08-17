@@ -142,6 +142,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         // launcher.getModelBuilder().addInputSource(resources);
         launcher.getEnvironment().setLevel("INFO");
         launcher.getEnvironment().setCommentEnabled(false);
+        launcher.getFactory().getEnvironment().setCommentEnabled(false);
         launcher.getFactory().getEnvironment().setLevel("INFO");
         // List<String> modules = launcher.getPomFile().getModel().getModules();
         // System.out.println(modules.get(0));
@@ -193,6 +194,8 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                     : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.APP_SOURCE);
             launcherCode.getEnvironment().setLevel("INFO");
             launcherCode.getFactory().getEnvironment().setLevel("INFO");
+            launcherCode.getEnvironment().setCommentEnabled(false);
+            launcherCode.getFactory().getEnvironment().setCommentEnabled(false);
 
             InvocationResult preparedCode = SourcesHelper.prepare(path, ".");
             CommandLineException compilerExceptionCode = preparedCode.getExecutionException();
@@ -205,6 +208,8 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                     : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
             launcherAll.getEnvironment().setLevel("INFO");
             launcherAll.getFactory().getEnvironment().setLevel("INFO");
+            launcherAll.getEnvironment().setCommentEnabled(false);
+            launcherAll.getFactory().getEnvironment().setCommentEnabled(false);
 
             try {
                 launcherCode.buildModel();
