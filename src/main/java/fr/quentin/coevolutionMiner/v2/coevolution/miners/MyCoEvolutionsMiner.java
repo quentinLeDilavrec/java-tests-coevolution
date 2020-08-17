@@ -265,99 +265,15 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             // apply all from subsets of reqAfter +testAfter file of test
             Set<Object> evoInGame = entry.getValue();
             Set<Evolution> evosForThisTest = new HashSet<>();
-            for (Entry<Evolution, Set<Evolution>> aaa : atomizedRefactorings.entrySet()) {
-                if (evoInGame.contains(aaa.getKey())) {
-                    evosForThisTest.addAll(aaa.getValue());
-                }
+            for (Object obj : evoInGame) {
+                Evolution src = ((Evolutions.Evolution.DescRange) obj).getSource();
+                evosForThisTest.addAll(atomizedRefactorings.get(src));
             }
             // TODO making sure that GTS ⊂ RM
             applyEvolutions(ast_before, ast_after, evosForThisTest);
         }
-        // TODO review + remove rest
-
-        // Compile needed code and tests for each test potentially containing coevos
-        Exception beforeTestsCompileException = compileAllTests(sourcesProvider, before_proj.getAst().rootDir);
-        if (beforeTestsCompileException != null) {
-            throw new SmallMiningException("Before Tests Don't Build", beforeTestsCompileException);
-        }
-
-        Impacts afterImpacts = impactHandler.handle(impactHandler.buildSpec(after_ast_id, currEvoSpecRM));
-        CoEvolutions.Specifier coevoSpec = CoEvolutionHandler.buildSpec(sourcesProvider.spec, currEvoSpecRM);
-        CoEvolutionsExtension currCoevolutions1 = new CoEvolutionsExtension(coevoSpec, currentEvolutions, before_proj,
-                after_proj);
-        MyCoEvolutionsMiner.CoEvolutionsExtension.Builder coevoBuilder = currCoevolutions1.createBuilder();
-        coevoBuilder.setImpactsAfter(afterImpacts);
-        // store.construct(coevoBuilder, currentImpacts.getImpactedTests());
-        Set<CoEvolution> toValidate = new HashSet<>();
-        for (CoEvolution entry : currCoevolutions1.getUnvalidated()) {
-            // TODO loop on tests before to make checks with multiple set of properties
-            Project.AST.FileSnapshot.Range posBefore = null;
-            for (Project.AST.FileSnapshot.Range aefgzf : entry.getTestsBefore()) {
-                posBefore = aefgzf;
-                break;
-            }
-
-            CtMethod<?> testsBefore = (CtMethod<?>) before_proj.getAst().getOriginal(posBefore);
-            Exception resultTestBefore = executeTest(sourcesProvider, before_proj.getAst().rootDir,
-                    testsBefore.getDeclaringType().getQualifiedName(), testsBefore.getSimpleName());
-
-            // TODO idem
-            Project.AST.FileSnapshot.Range posAfter = null;
-            for (Project.AST.FileSnapshot.Range aefgzf : entry.getTestsAfter()) {
-                posAfter = aefgzf;
-                break;
-            }
-            if (posAfter == null) {
-                if (resultTestBefore != null) {
-                    logger.info("Test before evo failed");
-                } else {
-                    logger.info("Test before evo success but was not able to get test in after version");
-                }
-                continue;
-            }
-            CtMethod<?> testsAfter = (CtMethod<?>) after_proj.getAst().getOriginal(posAfter);
-            if (resultTestBefore != null) {
-                // TODO "mvn test "+ test.get(0).getDeclaringType() + "$" +
-                // test.get(0).getSimpleName();
-                Exception resultTestAfter = executeTest(sourcesProvider, after_proj.getAst().rootDir,
-                        testsAfter.getDeclaringType().getQualifiedName(), testsAfter.getSimpleName());
-                if (resultTestAfter != null) {
-                    logger.info("TestStayedFailed");
-                } else {
-                    logger.info("TestNowSuccessful");
-                    toValidate.add(entry);
-                }
-            } else {
-                // TODO execute a test without its co-evolution by modifying code
-                // Exception resultTestAfterWithoutResolutions =
-                // executeTestWithoutCoevo(sourcesProvider,nextCommit.id,entry.getValue(),resolutions);
-                if (testsAfter != null) {
-                    Exception resultTestAfter = executeTest(sourcesProvider, after_proj.getAst().rootDir,
-                            testsAfter.getDeclaringType().getQualifiedName(), testsAfter.getSimpleName());
-                    if (resultTestAfter != null) {
-                        logger.info("TestNowFail");
-                    } else {
-                        logger.info("TestStayedSuccessful");
-                        toValidate.add(entry); // TODO implement the deactivation of evolutions
-                        // for now here it does not garantie that this coevolution solves anythis (at
-                        // least it does not make it invalid)
-                    }
-                } else {
-                    logger.info("Test after not found");
-                    System.out.println(testsAfter);
-                    System.out.println(posAfter);
-                }
-                // logger.info(resultTestAfterWithoutResolutions!=null?resultTestAfter!=null?"TestNotResolved":"TestNowSuccessful":resultTestAfter!=null?"ResolutionMakeTestFail":"GoodResolution");
-            }
-        }
-        for (CoEvolution entry : toValidate) {
-            currCoevolutions1.validate(entry);
-        }
-        System.out.println("unvalidated found");
-        System.out.println(currCoevolutions1.getUnvalidated().size());
-
-        CoEvolutionsExtension currCoevolutions = currCoevolutions1;
-        return currCoevolutions;
+        oldEnd();
+        return null;
     }
 
     // More controlled state, isolate compilation failures, but costly to
@@ -365,13 +281,13 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     boolean PartiallyInstanciateState = false;
 
     private void applyEvolutions(SpoonAST ast_before, SpoonAST ast_after, Set<Evolution> set) {
-        MavenLauncher launcher = ast_before.augmented.launcher;
+        MavenLauncher launcher = ast_before.augmented.launcher; // launcher.createCompiler(launcher.createFactory()).build()
         JavaOutputProcessor outWriter = launcher.createOutputWriter();
         outWriter.getEnvironment().setSourceOutputDirectory(Paths.get("/tmp/").toFile()); // TODO !!!!
         outWriter.getEnvironment().setPrettyPrintingMode(PRETTY_PRINTING_MODE.AUTOIMPORT);
         Map<String, CtType<?>> cloned = new HashMap<>();
         for (Entry<String, CtType<?>> entry : ast_before.augmented.getTypesIndexByFileName().entrySet()) {
-            cloned.put(entry.getKey(), entry.getValue().clone());
+            cloned.put(entry.getKey(), entry.getValue());
         }
         applyEvolutions(set, cloned);
         for (CtType<?> type : cloned.values()) {
@@ -910,6 +826,97 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
             // res.add();
         }
+    }
+
+
+
+    void oldEnd(){
+
+        // // TODO review + remove rest
+
+        // // Compile needed code and tests for each test potentially containing coevos
+        // Exception beforeTestsCompileException = compileAllTests(sourcesProvider, before_proj.getAst().rootDir);
+        // if (beforeTestsCompileException != null) {
+        //     throw new SmallMiningException("Before Tests Don't Build", beforeTestsCompileException);
+        // }
+
+        // Impacts afterImpacts = impactHandler.handle(impactHandler.buildSpec(after_ast_id, currEvoSpecRM));
+        // CoEvolutions.Specifier coevoSpec = CoEvolutionHandler.buildSpec(sourcesProvider.spec, currEvoSpecRM);
+        // CoEvolutionsExtension currCoevolutions1 = new CoEvolutionsExtension(coevoSpec, currentEvolutions, before_proj,
+        //         after_proj);
+        // MyCoEvolutionsMiner.CoEvolutionsExtension.Builder coevoBuilder = currCoevolutions1.createBuilder();
+        // coevoBuilder.setImpactsAfter(afterImpacts);
+        // // store.construct(coevoBuilder, currentImpacts.getImpactedTests());
+        // Set<CoEvolution> toValidate = new HashSet<>();
+        // for (CoEvolution entry : currCoevolutions1.getUnvalidated()) {
+        //     // TODO loop on tests before to make checks with multiple set of properties
+        //     Project.AST.FileSnapshot.Range posBefore = null;
+        //     for (Project.AST.FileSnapshot.Range aefgzf : entry.getTestsBefore()) {
+        //         posBefore = aefgzf;
+        //         break;
+        //     }
+
+        //     CtMethod<?> testsBefore = (CtMethod<?>) before_proj.getAst().getOriginal(posBefore);
+        //     Exception resultTestBefore = executeTest(sourcesProvider, before_proj.getAst().rootDir,
+        //             testsBefore.getDeclaringType().getQualifiedName(), testsBefore.getSimpleName());
+
+        //     // TODO idem
+        //     Project.AST.FileSnapshot.Range posAfter = null;
+        //     for (Project.AST.FileSnapshot.Range aefgzf : entry.getTestsAfter()) {
+        //         posAfter = aefgzf;
+        //         break;
+        //     }
+        //     if (posAfter == null) {
+        //         if (resultTestBefore != null) {
+        //             logger.info("Test before evo failed");
+        //         } else {
+        //             logger.info("Test before evo success but was not able to get test in after version");
+        //         }
+        //         continue;
+        //     }
+        //     CtMethod<?> testsAfter = (CtMethod<?>) after_proj.getAst().getOriginal(posAfter);
+        //     if (resultTestBefore != null) {
+        //         // TODO "mvn test "+ test.get(0).getDeclaringType() + "$" +
+        //         // test.get(0).getSimpleName();
+        //         Exception resultTestAfter = executeTest(sourcesProvider, after_proj.getAst().rootDir,
+        //                 testsAfter.getDeclaringType().getQualifiedName(), testsAfter.getSimpleName());
+        //         if (resultTestAfter != null) {
+        //             logger.info("TestStayedFailed");
+        //         } else {
+        //             logger.info("TestNowSuccessful");
+        //             toValidate.add(entry);
+        //         }
+        //     } else {
+        //         // TODO execute a test without its co-evolution by modifying code
+        //         // Exception resultTestAfterWithoutResolutions =
+        //         // executeTestWithoutCoevo(sourcesProvider,nextCommit.id,entry.getValue(),resolutions);
+        //         if (testsAfter != null) {
+        //             Exception resultTestAfter = executeTest(sourcesProvider, after_proj.getAst().rootDir,
+        //                     testsAfter.getDeclaringType().getQualifiedName(), testsAfter.getSimpleName());
+        //             if (resultTestAfter != null) {
+        //                 logger.info("TestNowFail");
+        //             } else {
+        //                 logger.info("TestStayedSuccessful");
+        //                 toValidate.add(entry); // TODO implement the deactivation of evolutions
+        //                 // for now here it does not garantie that this coevolution solves anythis (at
+        //                 // least it does not make it invalid)
+        //             }
+        //         } else {
+        //             logger.info("Test after not found");
+        //             System.out.println(testsAfter);
+        //             System.out.println(posAfter);
+        //         }
+        //         // logger.info(resultTestAfterWithoutResolutions!=null?resultTestAfter!=null?"TestNotResolved":"TestNowSuccessful":resultTestAfter!=null?"ResolutionMakeTestFail":"GoodResolution");
+        //     }
+        // }
+        // for (CoEvolution entry : toValidate) {
+        //     currCoevolutions1.validate(entry);
+        // }
+        // System.out.println("unvalidated found");
+        // System.out.println(currCoevolutions1.getUnvalidated().size());
+
+        // CoEvolutionsExtension currCoevolutions = currCoevolutions1;
+        // return currCoevolutions;
     }
 
 }
