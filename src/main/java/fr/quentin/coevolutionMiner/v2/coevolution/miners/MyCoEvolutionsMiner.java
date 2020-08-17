@@ -371,7 +371,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         outWriter.getEnvironment().setPrettyPrintingMode(PRETTY_PRINTING_MODE.AUTOIMPORT);
         Map<String, CtType<?>> cloned = new HashMap<>();
         for (Entry<String, CtType<?>> entry : ast_before.augmented.getTypesIndexByFileName().entrySet()) {
-            cloned.put(entry.getKey(), entry.getValue().clone());
+            cloned.put(entry.getKey(), entry.getValue().copyType()); // .clone()
         }
         applyEvolutions(set, cloned);
         for (CtType<?> type : cloned.values()) {
