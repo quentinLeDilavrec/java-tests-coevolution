@@ -241,8 +241,7 @@ public class MyImpactsMiner implements ImpactsMiner {
             }
             logger.info("Number of Impacted tests X number of evolutions " + imptst1.getFinishedChains().size());
             logger.info("Assembling Impacts");
-            fr.quentin.impactMiner.Impacts rawImpacts = new fr.quentin.impactMiner.Impacts(imptst1.getFinishedChains(),
-                    imptst1.getAbortedChains());
+            fr.quentin.impactMiner.Impacts rawImpacts = new fr.quentin.impactMiner.Impacts(imptst1.getFinishedChains());
             logger.info("Serializing Impacts");
             logger.info(Integer.toString(rawImpacts.getRoots().size()));
             logger.info(new GsonBuilder().setPrettyPrinting().create().toJson(rawImpacts.toJson()));
