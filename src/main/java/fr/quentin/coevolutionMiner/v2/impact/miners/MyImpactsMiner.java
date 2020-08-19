@@ -254,7 +254,7 @@ public class MyImpactsMiner implements ImpactsMiner {
             Map<ImpactChain, Object> marched = new HashMap<>(); // Map<ImpactChain, Set<Evolutions.Evolution.DescRange> || ImpactChain>
             for (ImpactChain ic : imptst1.getFinishedChains()) {
                 ConcurrentLinkedQueue<ImmutablePair<ImpactChain, MySLL<ImpactChain>>> toProcess = new ConcurrentLinkedQueue<>();
-                toProcess.add(new ImmutablePair<>(ic, MySLL.EMPTY));
+                toProcess.add(new ImmutablePair<>(ic, MySLL.EMPTY.cons(ic)));
                 marched.putIfAbsent(ic, new HashSet<>());
                 Set<Object> rootsDescsForTest = (Set)marched.get(ic);
                 ImpactChain current;
@@ -268,7 +268,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                     MySLL<ImpactChain> prevsRedOrEnd = currentPair.right; // all since end of chain, in marched give Set<Evolutions.Evolution.DescRange>
                     for (;;) {
                         Object marchedVal = marched.get(current);
-                        if (marchedVal != null && prevsRedOrEnd != MySLL.EMPTY) {
+                        if (marchedVal != null && prevsRedOrEnd.tail != MySLL.EMPTY) {
                             if (marchedVal instanceof ImpactChain) {
                                 marchedVal = marched.get(marchedVal);
                             }
@@ -279,7 +279,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                             break;
                         }
                         ImpactElement last = current.getLast();
-                        if (prevsRedOrEnd.head != current) {
+                        if (prevsRedOrEnd.head != current || prevsRedOrEnd.tail != MySLL.EMPTY) {
                             HashSet<ImpactChain> redundants = last.getMD(ImpactElement.REDUNDANT,
                                     new HashSet<ImpactChain>());
                             if (redundants.size() > 0) { // current has redudant impacts
