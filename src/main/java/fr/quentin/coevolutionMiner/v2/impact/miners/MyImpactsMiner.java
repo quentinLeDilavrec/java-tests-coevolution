@@ -268,7 +268,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                     MySLL<ImpactChain> prevsRedOrEnd = currentPair.right; // all since end of chain, in marched give Set<Evolutions.Evolution.DescRange>
                     for (;;) {
                         Object marchedVal = marched.get(current);
-                        if (marchedVal != null) {
+                        if (marchedVal != null && prevsRedOrEnd != MySLL.EMPTY) {
                             if (marchedVal instanceof ImpactChain) {
                                 marchedVal = marched.get(marchedVal);
                             }
