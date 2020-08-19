@@ -300,7 +300,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                                         new HashSet<>());
                                 marched.put(current, commonSet);
                                 for (ImpactChain redu : redundants) {
-                                    Object bbbb = marched.put(current, commonSet);
+                                    Object bbbb = marched.put(redu, commonSet);
                                     assert bbbb == null : redu;
                                     toProcess.add(new ImmutablePair<>(redu, prevsRedOrEnd.cons(redu)));
                                 }
