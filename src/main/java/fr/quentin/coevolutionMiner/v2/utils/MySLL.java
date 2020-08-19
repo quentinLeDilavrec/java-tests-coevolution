@@ -14,7 +14,7 @@ public class MySLL<T> implements Iterable<T> {
     }
 
     public MySLL<T> cons(T head) {
-        return new MySLL<>(head, tail);
+        return new MySLL<>(head, this);
     }
 
     @Override
