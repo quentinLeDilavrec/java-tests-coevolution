@@ -146,6 +146,8 @@ public class CLI {
             }
         } catch (ParseException exp) {
             System.out.println("Unexpected exception:" + exp.getMessage());
+        } catch (Throwable exp) {
+            System.out.println("Unexpected exception:" + exp.getMessage());
         }
         System.exit(0);
     }
@@ -225,7 +227,7 @@ public class CLI {
                                 for (Project<?> x : project.getModules()) {
                                     printThings(releases, commitIdBefore, x);
                                 }
-                            } catch (Exception e) {
+                            } catch (Throwable e) {
                                 e.printStackTrace();
                                 logger.info("failed statistics " + releases.get(0));
                                 break;
@@ -246,7 +248,7 @@ public class CLI {
                                 + Long.toString(executor.getCompletedTaskCount()));
 
                         return 0;
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         String tmp = e.getMessage();
                         e.printStackTrace();
                         return 1;
@@ -273,7 +275,7 @@ public class CLI {
             executor.shutdownNow();
         } catch (InterruptedException e) {
             executor.shutdownNow();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             executor.shutdownNow();
         }
         // try {
@@ -386,7 +388,7 @@ public class CLI {
                                 System.out.println(
                                         Integer.toString(coevo.getValidated().size()) + " coevolutions found for "
                                                 + s.get(0) + " from " + commitIdBefore + " to " + commitIdAfter);
-                            } catch (Exception e) {
+                            } catch (Throwable e) {
                                 logger.info("failed impacts analysis for " + s.get(0));
                                 e.printStackTrace();
                             }
@@ -418,7 +420,7 @@ public class CLI {
             executor.shutdownNow();
         } catch (InterruptedException e) {
             executor.shutdownNow();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             executor.shutdownNow();
         }
         // try {
@@ -483,7 +485,7 @@ public class CLI {
                             try {
                                 evos = evoH.handle(evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter));
                                 logger.info("done evolution analysis " + s.get(0));
-                            } catch (Exception e) {
+                            } catch (Throwable e) {
                                 logger.log(Level.WARNING, "failed evolution analysis " + s.get(0), e);
                                 e.printStackTrace();
                                 break;
@@ -511,7 +513,7 @@ public class CLI {
                                 System.out.println(
                                         Integer.toString(impacts.getPerRootCause().size()) + " impacts found for "
                                                 + s.get(0) + " from " + commitIdBefore + " to " + commitIdAfter);
-                            } catch (Exception e) {
+                            } catch (Throwable e) {
                                 logger.info("failed impacts analysis for " + s.get(0));
                                 e.printStackTrace();
                             }
@@ -545,7 +547,7 @@ public class CLI {
             executor.shutdownNow();
         } catch (InterruptedException e) {
             executor.shutdownNow();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             executor.shutdownNow();
         }
     }
@@ -595,7 +597,7 @@ public class CLI {
                                 for (Project<?> x : project.getModules()) {
                                     printThings(s, commitIdBefore, x);
                                 }
-                            } catch (Exception e) {
+                            } catch (Throwable e) {
                                 e.printStackTrace();
                                 logger.info("failed statistics " + s.get(0));
                                 break;
@@ -604,7 +606,7 @@ public class CLI {
                             try {
                                 evos = evoH.handle(evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter));
                                 logger.info("done evolution analysis " + s.get(0));
-                            } catch (Exception e) {
+                            } catch (Throwable e) {
                                 logger.log(Level.WARNING, "failed evolution analysis " + s.get(0), e);
                                 e.printStackTrace();
                                 break;
@@ -632,7 +634,7 @@ public class CLI {
                                 System.out.println(
                                         Integer.toString(impacts.getPerRootCause().size()) + " impacts found for "
                                                 + s.get(0) + " from " + commitIdBefore + " to " + commitIdAfter);
-                            } catch (Exception e) {
+                            } catch (Throwable e) {
                                 logger.info("failed impacts analysis for " + s.get(0));
                                 e.printStackTrace();
                             }
@@ -666,7 +668,7 @@ public class CLI {
             executor.shutdownNow();
         } catch (InterruptedException e) {
             executor.shutdownNow();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             executor.shutdownNow();
         }
     }
@@ -697,7 +699,7 @@ public class CLI {
                 // Build Spoon model
                 try {
                     launcher.buildModel();
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcher.getModelBuilder()).getProblems()) {
                         logger.info(pb.toString());
                     }
@@ -708,7 +710,7 @@ public class CLI {
                 // .stream().map(x -> x.getQualifiedName()).reduce("",
                 // (a, b) -> a + " " + b);
 
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 throw new RuntimeException(e);
             }
         } else {
