@@ -118,7 +118,12 @@ public class MyImpactsMiner implements ImpactsMiner {
         Map<Path, ImpactsExtension> modules = new HashMap<>();
 
         public void addImpactedTest(Range range, Set<Object> evolutions) {
-            impactedTests.put(range, evolutions);
+            Set<Object> tmp = impactedTests.get(range);
+            if (tmp == null) {
+                tmp = new HashSet<>();
+                impactedTests.put(range, tmp);
+            }
+            impactedTests.get(range).addAll(evolutions);
         }
 
         public void addModule(ImpactsExtension impacts) {
@@ -256,7 +261,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                 ConcurrentLinkedQueue<ImmutablePair<ImpactChain, MySLL<ImpactChain>>> toProcess = new ConcurrentLinkedQueue<>();
                 toProcess.add(new ImmutablePair<>(ic, MySLL.EMPTY.cons(ic)));
                 marched.putIfAbsent(ic, new HashSet<>());
-                Set<Object> rootsDescsForTest = (Set)marched.get(ic);
+                Set<Object> rootsDescsForTest = (Set) marched.get(ic);
                 ImpactChain current;
                 for (;;) {
                     ImmutablePair<ImpactChain, MySLL<ImpactChain>> currentPair = toProcess.poll();
@@ -291,7 +296,8 @@ public class MyImpactsMiner implements ImpactsMiner {
                                 }
                                 sinceLastRedOrEnd = new ArrayList<>();
                                 prevsRedOrEnd = prevsRedOrEnd.cons(current);
-                                Set<Evolutions.Evolution.DescRange> commonSet = (Set) marched.getOrDefault(current,new HashSet<>());
+                                Set<Evolutions.Evolution.DescRange> commonSet = (Set) marched.getOrDefault(current,
+                                        new HashSet<>());
                                 marched.put(current, commonSet);
                                 for (ImpactChain redu : redundants) {
                                     Object bbbb = marched.put(current, commonSet);
@@ -343,10 +349,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                         current = prev;
                     }
                 }
-                addImpactedTest(ast.getRange(
-                        ast.rootDir.relativize(Paths.get(ic.getLast().getPosition().getFilePath())).toString(),
-                        ic.getLast().getPosition().getStart(), ic.getLast().getPosition().getEnd(),
-                        ic.getLast().getContent()), rootsDescsForTest);
+                addImpactedTest(extracted(ast, ic.getLast()), rootsDescsForTest);
                 // continue;
                 //     ImpactElement root = ic.getRoot();
                 //     Set<Object> roots = new HashSet<>();
