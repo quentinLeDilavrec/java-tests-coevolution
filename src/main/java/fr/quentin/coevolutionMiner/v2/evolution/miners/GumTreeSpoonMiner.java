@@ -159,7 +159,8 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 this.afterProj = afterProj;
                 AstComparator comp = new AstComparator();
                 String relPath = beforeProj.spec.relPath.toString();
-                assert relPath == afterProj.spec.relPath.toString();
+                assert relPath.equals(afterProj.spec.relPath.toString()):
+                    relPath;
                 Map<String, MutablePair<Project<?>, Project<?>>> modulesPairs = new HashMap<>();
                 for (Project<?> p : beforeProj.getModules()) {
                     modulesPairs.putIfAbsent(p.spec.relPath.toString(), new MutablePair<>());

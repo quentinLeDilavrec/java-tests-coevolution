@@ -272,7 +272,7 @@ public class ImpactRMinerHandler implements ImpactRoute {
 	// @Override
 	// public JsonObject toJson() {
 	// JsonObject r = (JsonObject) Evolution.super.toJson();
-	// assert (op.getName() == "Move Method");
+	// assert (op.getName().equals("Move Method"));
 	// r.addProperty("type", "Move Method");
 	// return r;
 	// }
