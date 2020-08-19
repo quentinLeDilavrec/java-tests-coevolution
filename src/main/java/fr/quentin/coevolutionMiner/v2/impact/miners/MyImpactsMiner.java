@@ -256,6 +256,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                 Set<Object> rootsDescsForTest = new HashSet<>();
                 ConcurrentLinkedQueue<ImmutablePair<ImpactChain, MySLL<ImpactChain>>> toProcess = new ConcurrentLinkedQueue<>();
                 toProcess.add(new ImmutablePair<>(ic, MySLL.EMPTY.cons(ic)));
+                marched.putIfAbsent(ic, new HashSet<>());
                 ImpactChain current;
                 for (;;) {
                     ImmutablePair<ImpactChain, MySLL<ImpactChain>> currentPair = toProcess.poll();
@@ -281,15 +282,16 @@ public class MyImpactsMiner implements ImpactsMiner {
                         if (redundants.size() > 0) { // current has redudant impacts
                             for (ImpactChain x : sinceLastRedOrEnd) {
                                 Object tmp = marched.get(x);
-                                if (tmp instanceof ImpactChain) {
+                                if (tmp==null || tmp instanceof ImpactChain) {
                                     marched.put(x, current);
                                 }
                             }
                             sinceLastRedOrEnd = new ArrayList<>();
                             prevsRedOrEnd = prevsRedOrEnd.cons(current);
-                        }
-                        for (ImpactChain redu : redundants) {
-                            toProcess.add(new ImmutablePair<>(redu, prevsRedOrEnd.cons(current)));
+                            marched.putIfAbsent(current, new HashSet<>());
+                            for (ImpactChain redu : redundants) {
+                                toProcess.add(new ImmutablePair<>(redu, prevsRedOrEnd.cons(current)));
+                            }
                         }
                         ImpactChain prev = current.getPrevious();
                         if (prev == null) {
@@ -308,6 +310,9 @@ public class MyImpactsMiner implements ImpactsMiner {
                                     addAdjusment(b.getKey(), target, source);
                                 }
                                 rootsDescsForTest.add((Evolutions.Evolution.DescRange) b.getKey());
+                                for (ImpactChain x : prevsRedOrEnd) {
+                                    ((Set)marched.get(x)).add(b.getKey());
+                                }
                             }
                             break;
                         }
