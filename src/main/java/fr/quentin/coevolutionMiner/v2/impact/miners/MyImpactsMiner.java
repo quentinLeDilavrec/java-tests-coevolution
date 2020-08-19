@@ -279,7 +279,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                             break;
                         }
                         ImpactElement last = current.getLast();
-                        if (prevsRedOrEnd.head != current || prevsRedOrEnd.tail != MySLL.EMPTY) {
+                        if (prevsRedOrEnd.head != current || prevsRedOrEnd.tail == MySLL.EMPTY) {
                             HashSet<ImpactChain> redundants = last.getMD(ImpactElement.REDUNDANT,
                                     new HashSet<ImpactChain>());
                             if (redundants.size() > 0) { // current has redudant impacts
