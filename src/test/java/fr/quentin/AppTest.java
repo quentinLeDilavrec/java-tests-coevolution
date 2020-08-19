@@ -108,8 +108,8 @@ class AppTest {
             Explorer imptst1 = l.getImpactedTests(evolutions.subList(0, Math.min(evolutions.size(), MAX_EVO)));
             System.out.println("chains");
             System.out.println(imptst1);
-            Impacts x = new Impacts(imptst1.getFinishedChains(), imptst1.getRedundantChains());
-            System.out.println(x);
+            // Impacts x = new Impacts(imptst1.getFinishedChains(), imptst1.getRedundantChains());
+            // System.out.println(x);
         }
     }
 
@@ -192,8 +192,8 @@ class AppTest {
             Explorer imptst1 = l.getImpactedTests(evolutions.subList(0, Math.min(evolutions.size(), MAX_EVO)));
             System.out.println("chains");
             System.out.println(imptst1);
-            Impacts x = new Impacts(imptst1.getFinishedChains(), imptst1.getRedundantChains());
-            System.out.println(x);
+            // Impacts x = new Impacts(imptst1.getFinishedChains(), imptst1.getRedundantChains());
+            // System.out.println(x);
         }
     }
 
@@ -262,8 +262,8 @@ class AppTest {
             Explorer imptst1 = l.getImpactedTests(evolutions.subList(0, Math.min(evolutions.size(), MAX_EVO)));
             System.out.println("chains");
             System.out.println(imptst1);
-            Impacts x = new Impacts(imptst1.getFinishedChains(), imptst1.getRedundantChains());
-            System.out.println(x);
+            // Impacts x = new Impacts(imptst1.getFinishedChains(), imptst1.getRedundantChains());
+            // System.out.println(x);
         }
     }
 
