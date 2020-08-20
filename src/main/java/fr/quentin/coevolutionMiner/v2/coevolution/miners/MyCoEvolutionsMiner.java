@@ -189,12 +189,11 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         Evolutions.Specifier currEvoSpecGTS = EvolutionHandler.buildSpec(sourcesProvider.spec, currentCommit.getId(),
                 nextCommit.getId(), GumTreeSpoonMiner.class);
         Evolutions currentDiff = evoHandler.handle(currEvoSpecGTS);
-        
+
         Evolutions.Specifier currEvoSpecRM = EvolutionHandler.buildSpec(sourcesProvider.spec, currentCommit.getId(),
                 nextCommit.getId(), RefactoringMiner.class);
         Evolutions currentEvolutions = evoHandler.handle(currEvoSpecRM);
         logNaiveCostCoEvoValidation(currentEvolutions);
-
 
         Project<CtElement> before_proj = astHandler.handle(before_ast_id);
         if (before_proj.getAst().compilerException != null || !before_proj.getAst().isUsable()) {
@@ -214,7 +213,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         for (Entry<Evolution, Set<Evolution>> entry : atomizedRefactorings.entrySet()) {
             Evolution evo = entry.getKey();
-            System.out.println("---------------"+ evo.getContainer().spec.miner.getSimpleName());
+            System.out.println("---------------" + evo.getContainer().spec.miner.getSimpleName());
             System.out.println(evo.getType());
             for (Evolution atom : entry.getValue()) {
                 if (atom != evo) {
@@ -233,29 +232,40 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         // System.out.println(smallestGroups);
 
-
-        EvolutionsMany efz = ((GumTreeSpoonMiner.EvolutionsMany)currentDiff);
+        EvolutionsMany efz = ((GumTreeSpoonMiner.EvolutionsMany) currentDiff);
         // efz.getDiff(before_ast_id, after_ast_id, "").getOperationChildren(, arg1); // TODO
         for (Entry<Range, Set<Object>> entry : currentImpacts.getImpactedTests().entrySet()) {
             Range testBefore = entry.getKey();
-            Project<?>.AST.FileSnapshot.Range testAfter = currentDiff.map(testBefore, after_proj);
-            if (PartiallyInstanciateState) {
-                Set<String> javaFiles = new HashSet<>();
-                // TODO add original if not here ?
-                Set<CtType> reqBefore = ast_before.augmented.needs((CtElement) testBefore.getOriginal());
-                Set<String> reqBeforeS = typesToRelPaths(reqBefore, ast_before.getProject().spec.relPath.toString());
-                System.out.println(reqBeforeS);
-                System.err.println(ast_after);
-                System.err.println(testAfter);
-                System.err.println(ast_after.augmented);
-                Set<CtType> reqAfter = ast_after.augmented.needs((CtElement) testAfter.getOriginal());
-                Set<String> reqAfterS = typesToRelPaths(reqAfter, ast_after.getProject().spec.relPath.toString());
-
-                Set<String> reqAdded = new HashSet<>(reqAfterS);
-                reqAdded.removeAll(reqBeforeS);
-                addJavaFiles(ast_before, javaFiles);
-                addJavaFiles(ast_after, javaFiles);
+            Set<Project<?>.AST.FileSnapshot.Range> testsAfter = new HashSet<>();
+            Project<?>.AST.FileSnapshot.Range qqqqqq = currentDiff.map(testBefore, after_proj);
+            if (qqqqqq != null) {
+                testsAfter.add(qqqqqq);
             }
+            Set<Evolutions.Evolution.DescRange> evosInGame = (Set) entry.getValue();
+            for (Evolutions.Evolution.DescRange descR : evosInGame) { // TODO there could be multiple testAfter
+                if (descR.getTarget() == testBefore) {
+                    if (descR.getSource().getType().equals("Move Method")) {
+                        testsAfter.add(descR.getSource().getAfter().get(0).getTarget());
+                    }
+                }
+            }
+            // if (PartiallyInstanciateState) {
+            //     Set<String> javaFiles = new HashSet<>();
+            //     // TODO add original if not here ?
+            //     Set<CtType> reqBefore = ast_before.augmented.needs((CtElement) testBefore.getOriginal());
+            //     Set<String> reqBeforeS = typesToRelPaths(reqBefore, ast_before.getProject().spec.relPath.toString());
+            //     System.out.println(reqBeforeS);
+            //     System.err.println(ast_after);
+            //     System.err.println(testsAfter);
+            //     System.err.println(ast_after.augmented);
+            //     Set<CtType> reqAfter = ast_after.augmented.needs((CtElement) testsAfter.getOriginal());
+            //     Set<String> reqAfterS = typesToRelPaths(reqAfter, ast_after.getProject().spec.relPath.toString());
+
+            //     Set<String> reqAdded = new HashSet<>(reqAfterS);
+            //     reqAdded.removeAll(reqBeforeS);
+            //     addJavaFiles(ast_before, javaFiles);
+            //     addJavaFiles(ast_after, javaFiles);
+            // }
             // set TMP DIR for test
             // put all non .java from currentCommit and all from reqBefore+current file of
             // test
@@ -263,14 +273,17 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             // apply all non .java from nextCommit
             // compile code ? compile tests ? execute test ? good : half : bad ;
             // apply all from subsets of reqAfter +testAfter file of test
-            Set<Object> evoInGame = entry.getValue();
             Set<Evolution> evosForThisTest = new HashSet<>();
-            for (Object obj : evoInGame) {
+            for (Evolutions.Evolution.DescRange obj : evosInGame) {
                 Evolution src = ((Evolutions.Evolution.DescRange) obj).getSource();
                 evosForThisTest.addAll(atomizedRefactorings.get(src));
             }
-            // TODO making sure that GTS ⊂ RM
             applyEvolutions(ast_before, ast_after, evosForThisTest);
+            for (Project<?>.AST.FileSnapshot.Range testAfter : testsAfter) {
+                // TODO making sure that GTS ⊂ RM
+                // execute testBefore and testAfter
+            }
+            // unapplyEvolutions
         }
         oldEnd();
         return null;
@@ -283,6 +296,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     private void applyEvolutions(SpoonAST ast_before, SpoonAST ast_after, Set<Evolution> set) {
         MavenLauncher launcher = ast_before.augmented.launcher; // launcher.createCompiler(launcher.createFactory()).build()
         JavaOutputProcessor outWriter = launcher.createOutputWriter();
+        System.out.println(outWriter.getEnvironment().getSourceOutputDirectory());
         outWriter.getEnvironment().setSourceOutputDirectory(Paths.get("/tmp/").toFile()); // TODO !!!!
         outWriter.getEnvironment().setPrettyPrintingMode(PRETTY_PRINTING_MODE.AUTOIMPORT);
         Map<String, CtType<?>> cloned = new HashMap<>();
@@ -323,7 +337,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         targ.delete();
                     }
                 } else if (_ori instanceof MoveOperation) {
-                    CtElement p = ((MoveOperation)ori).getParent();
+                    CtElement p = ((MoveOperation) ori).getParent();
                     CtElement srcNode = ori.getSrcNode();
                     CtType<?> topParent = computeTopLevel(srcNode);
                     CtPath relPath = p.getPath().relativePath(topParent);
@@ -383,7 +397,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         targ.delete();
                     }
                 } else if (_ori instanceof MoveOperation) {
-                    CtElement p = ((MoveOperation)ori).getParent();
+                    CtElement p = ((MoveOperation) ori).getParent();
                     CtElement srcNode = ori.getSrcNode();
                     CtType<?> topParent = computeTopLevel(srcNode);
                     CtPath relPath = p.getPath().relativePath(topParent);
@@ -828,9 +842,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
     }
 
-
-
-    void oldEnd(){
+    void oldEnd() {
 
         // // TODO review + remove rest
 
