@@ -284,26 +284,20 @@ public class MyImpactsMiner implements ImpactsMiner {
                             break;
                         }
                         ImpactElement last = current.getLast();
-                        if (prevsRedOrEnd.head != current || prevsRedOrEnd.tail == MySLL.EMPTY) {
-                            HashSet<ImpactChain> redundants = last.getMD(ImpactElement.REDUNDANT,
-                                    new HashSet<ImpactChain>());
-                            if (redundants.size() > 0) { // current has redudant impacts
-                                for (ImpactChain x : sinceLastRedOrEnd) {
-                                    Object tmp = marched.get(x);
-                                    if (tmp == null || tmp instanceof ImpactChain) {
-                                        marched.put(x, current);
-                                    }
+                        HashSet<ImpactChain> redundants = current.getMD(ImpactChain.REDUNDANT,
+                                new HashSet<ImpactChain>());
+                        if (redundants.size() > 0) { // current has redudant impacts
+                            for (ImpactChain x : sinceLastRedOrEnd) {
+                                Object tmp = marched.get(x);
+                                if (tmp == null || tmp instanceof ImpactChain) {
+                                    marched.put(x, current);
                                 }
-                                sinceLastRedOrEnd = new ArrayList<>();
-                                prevsRedOrEnd = prevsRedOrEnd.cons(current);
-                                Set<Evolutions.Evolution.DescRange> commonSet = (Set) marched.getOrDefault(current,
-                                        new HashSet<>());
-                                marched.put(current, commonSet);
-                                for (ImpactChain redu : redundants) {
-                                    Object bbbb = marched.put(redu, commonSet);
-                                    assert bbbb == null : redu;
-                                    toProcess.add(new ImmutablePair<>(redu, prevsRedOrEnd.cons(redu)));
-                                }
+                            }
+                            sinceLastRedOrEnd = new ArrayList<>();
+                            prevsRedOrEnd = prevsRedOrEnd.cons(current);
+                            marched.putIfAbsent(current, new HashSet<>());
+                            for (ImpactChain redu : redundants) {
+                                toProcess.add(new ImmutablePair<>(redu, prevsRedOrEnd));
                             }
                         }
                         ImpactChain prev = current.getPrevious();
