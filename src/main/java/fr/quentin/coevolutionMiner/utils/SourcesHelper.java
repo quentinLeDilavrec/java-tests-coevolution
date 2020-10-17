@@ -1,6 +1,7 @@
 package fr.quentin.coevolutionMiner.utils;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -267,6 +268,10 @@ public class SourcesHelper implements AutoCloseable {
 	}
 
 	public static InvocationResult prepare(Path path) throws Exception {
+		return prepare(path, (File) null);	
+	}
+
+	public static InvocationResult prepare(Path path, File MvnHome ) throws Exception {
 		InvocationRequest request = new DefaultInvocationRequest();
 		request.setBaseDirectory(path.toFile());
 		request.setGoals(Arrays.asList("compile", "clean"));
@@ -281,7 +286,7 @@ public class SourcesHelper implements AutoCloseable {
 		// invoker.setOutputHandler(new PrintStreamHandler(System.out, false));
 		// invoker.setErrorHandler(new PrintStreamHandler(System.err, false));
 		// invoker.getLogger().setThreshold(4);
-		invoker.setMavenHome(Paths.get("/usr").toFile());
+		invoker.setMavenHome(MvnHome);
 		try {
 			return invoker.execute(request);
 		} catch (MavenInvocationException e) {

@@ -1,12 +1,19 @@
 package fr.quentin;
 
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeNoException;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
+import java.util.Random;
 import java.util.concurrent.LinkedBlockingDeque;
 
 import com.github.gumtreediff.actions.model.Action;
@@ -16,6 +23,7 @@ import com.github.gumtreediff.actions.model.Move;
 import com.github.gumtreediff.actions.model.Update;
 import com.github.gumtreediff.tree.ITree;
 
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.junit.jupiter.api.Test;
 
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
@@ -33,8 +41,10 @@ import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.factory.Factory;
+import spoon.reflect.visitor.PrettyPrinter;
 import spoon.support.JavaOutputProcessor;
 import spoon.support.StandardEnvironment;
+import spoon.support.compiler.VirtualFile;
 
 /**
  * Unit test for spoon model builder.
@@ -45,13 +55,13 @@ class GumtreeSpoonTest {
                 try (SourcesHelper helper = new SourcesHelper(gitURL);) {
                         Path path = helper.materializePrev(commitId);
                         MavenLauncher launcher = new MavenLauncher(path.toString(),
-                                        MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
+                                        MavenLauncher.SOURCE_TYPE.ALL_SOURCE,"C:\\Users\\quentin\\.maven");
                         launcher.getEnvironment().setLevel("INFO");
                         launcher.getEnvironment().setCommentEnabled(false);
                         launcher.getFactory().getEnvironment().setLevel("INFO");
 
                         // Compile with maven to get deps
-                        SourcesHelper.prepare(path);
+                        SourcesHelper.prepare(path,Paths.get("C:\\Users\\quentin\\.maven").toFile());
 
                         // Build Spoon model
                         launcher.buildModel();
@@ -128,15 +138,145 @@ class GumtreeSpoonTest {
                         List<ITree> children = curr.getChildren();
                         tmp.addAll(children);
                 }
-                for (CtType c : middleE.getFactory().getModel().getAllTypes()) {
-                        System.out.println(c);
+                if (right instanceof CtType || right instanceof CtPackage) {
+                    CtPackage made1 = MyUtils.makeFactory(toVirtFiles(pp, middleE)).getModel().getRootPackage();
+                    CtPackage ori1 = MyUtils.makeFactory(toVirtFiles(pp, right)).getModel().getRootPackage();
+                    if (!ori1.equals(made1)) {
+                        final SpoonGumTreeBuilder scanner1 = new SpoonGumTreeBuilder();
+                        ITree srctree1;
+                        srctree1 = scanner1.getTree(made1);
+                        MultiDiffImpl mdiff1 = new MultiDiffImpl(srctree1);
+                        ITree dstTree1 = scanner1.getTree(ori1);
+                        DiffImpl diff1 = mdiff.compute(scanner1.getTreeContext(), dstTree1);
+                        for (Action action : diff1.getActionsList()) {
+                            System.err.println(action);
+                        }
+                        check1(right, pp, middleE);
+                    }
+                } else {
+                    check1(right, pp, middleE);
                 }
         }
 
+
         @Test
-        public void test() throws Exception {
+        public void test1() throws Exception {
                 change("https://github.com/INRIA/spoon.git", "4b42324566bdd0da145a647d136a2f555c533978",
                                 "904fb1e7001a8b686c6956e32c4cc0cdb6e2f80b");
+        }
+
+        @Test
+        public void test1r() throws Exception {
+                change("https://github.com/INRIA/spoon.git", "904fb1e7001a8b686c6956e32c4cc0cdb6e2f80b",
+                                "4b42324566bdd0da145a647d136a2f555c533978");
+        }
+
+        @Test
+        public void test2() throws Exception {
+                change("https://github.com/google/truth.git", "fb7f2fe21d8ca690daabedbd31a0ade99244f99c",
+                                "1768840bf1e69892fd2a23776817f620edfed536");
+        }
+
+        @Test
+        public void test2r() throws Exception {
+                change("https://github.com/google/truth.git", "1768840bf1e69892fd2a23776817f620edfed536",
+                                "fb7f2fe21d8ca690daabedbd31a0ade99244f99c");
+        }
+        
+        @Test
+        public void test3() throws Exception {
+                change("https://github.com/apache/hive.git", "42326958148c2558be9c3d4dfe44c9e735704617",
+                                "240097b78b70172e1cf9bc37876a566ddfb9e115");
+        }
+
+        @Test
+        public void test3r() throws Exception {
+                change("https://github.com/apache/hive.git", "240097b78b70172e1cf9bc37876a566ddfb9e115",
+                                "42326958148c2558be9c3d4dfe44c9e735704617");
+        }
+
+        @Test
+        public void test4() throws Exception {
+                change( "https://github.com/neo4j/neo4j.git", "5d73d6f87a7e5df53447a26c515ca5632466d374",
+                                "021d17c8234904dcb1d54596662352395927fe7b");
+        }
+
+        @Test
+        public void test4r() throws Exception {
+                change( "https://github.com/neo4j/neo4j.git", "021d17c8234904dcb1d54596662352395927fe7b",
+                                "5d73d6f87a7e5df53447a26c515ca5632466d374");
+        }
+
+        static int i = 0;
+        private static VirtualFile[] toVirtFiles(PrettyPrinter pp, CtElement ele) {
+            List<VirtualFile> l = new ArrayList<>();
+            if (ele instanceof CtType) {
+                l.add(new VirtualFile("q" + i++, pp.prettyprint(ele)));
+            } else {
+                for (CtType p : ((CtPackage) ele).getTypes()) {
+                    if (!p.isShadow()) {
+                        l.add(new VirtualFile("q" + i++, pp.prettyprint(p)));
+                    }
+                }
+            }
+            return l.toArray(new VirtualFile[l.size()]);
+        }
+    
+        private static void check1(CtElement right, spoon.reflect.visitor.PrettyPrinter pp, CtElement middleE) {
+            HashMap<String, MutablePair<CtType, CtType>> res = new HashMap<>();
+            synchro(pp, right, middleE, res);
+            for (MutablePair<CtType, CtType> p : res.values()) {
+                System.err.println(p.right.getClass());
+                System.err.println("*" + p.right.getQualifiedName() + "*");
+                try {
+                    System.err.println(pp.prettyprint(p.left));
+                } catch (Exception e) {
+                    assumeNoException(e);
+                }
+                // try {
+                //     System.err.println(pp.prettyprint(p.right));
+                // } catch (Exception e) {
+                // }
+            }
+            for (MutablePair<CtType, CtType> p : res.values()) {
+                assertEquals(pp.prettyprint(p.left), pp.prettyprint(p.right));
+            }
+        }
+    
+        private static void synchro(PrettyPrinter pp, CtElement right, CtElement middle,
+                Map<String, MutablePair<CtType, CtType>> res) {
+            if (right instanceof CtType) {
+                assertTrue(middle instanceof CtType);
+                res.put(((CtType) right).getQualifiedName(), new MutablePair(right, middle));
+            } else if (right instanceof CtPackage) {
+                assertTrue(middle.getClass().toString(), middle instanceof CtPackage);
+                Map<String, MutablePair<CtType, CtType>> m = new HashMap<>();
+                for (CtType<?> t : ((CtPackage) right).getTypes()) {
+                    m.put(t.getQualifiedName(), new MutablePair(t, null));
+                }
+                for (CtType<?> t : ((CtPackage) middle).getTypes()) {
+                    if (!t.isShadow()) {
+                        m.get(t.getQualifiedName()).setRight(t);
+                    }
+                }
+                for (MutablePair<CtType, CtType> p : m.values()) {
+                    assertNotNull(p.left);
+                    assertNotNull(p.right);
+                    synchro(pp, p.left, p.right, res);
+                }
+                Map<String, MutablePair<CtPackage, CtPackage>> m2 = new HashMap<>();
+                for (CtPackage t : ((CtPackage) right).getPackages()) {
+                    m2.put(t.getQualifiedName(), new MutablePair(t, null));
+                }
+                for (CtPackage t : ((CtPackage) middle).getPackages()) {
+                    m2.get(t.getQualifiedName()).setRight(t);
+                }
+                for (MutablePair<CtPackage, CtPackage> p : m2.values()) {
+                    assertNotNull(p.left);
+                    assertNotNull(p.right);
+                    synchro(pp, p.left, p.right, res);
+                }
+            }
         }
 
         /**
@@ -179,7 +319,7 @@ class GumtreeSpoonTest {
 
         @Test
         public void TruthModelShouldBuild() throws Exception {
-                MavenLauncher launcher = build("https:// github.com/google/truth.git",
+                MavenLauncher launcher = build("https://github.com/google/truth.git",
                                 "fb7f2fe21d8ca690daabedbd31a0ade99244f99c");
                 assertNotEquals(launcher.getFactory().Type().getAll().size(), 0,
                                 "At least one top-level type should exist.");
@@ -189,7 +329,7 @@ class GumtreeSpoonTest {
                  * at spoon.support.compiler.jdt.JDTBasedSpoonCompiler.reportProblem(
                  * JDTBasedSpoonCompiler.java:573)
                  */
-                MavenLauncher launcherAfter = build("https:// github.com/google/truth.git",
+                MavenLauncher launcherAfter = build("https://github.com/google/truth.git",
                                 "1768840bf1e69892fd2a23776817f620edfed536");
                 assertNotEquals(launcherAfter.getFactory().Type().getAll().size(), 0,
                                 "At least one top-level type should exist.");
