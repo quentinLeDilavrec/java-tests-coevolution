@@ -40,11 +40,13 @@ import spoon.compiler.Environment.PRETTY_PRINTING_MODE;
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
+import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.path.CtPath;
 import spoon.reflect.visitor.Filter;
 import spoon.support.JavaOutputProcessor;
 import fr.quentin.impactMiner.Position;
+import gumtree.spoon.diff.Diff;
 import gumtree.spoon.diff.operations.DeleteOperation;
 import gumtree.spoon.diff.operations.InsertOperation;
 import gumtree.spoon.diff.operations.MoveOperation;
@@ -278,7 +280,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 Evolution src = ((Evolutions.Evolution.DescRange) obj).getSource();
                 evosForThisTest.addAll(atomizedRefactorings.get(src));
             }
-            applyEvolutions(ast_before, ast_after, evosForThisTest);
+            applyEvolutions((GumTreeSpoonMiner.EvolutionsAtCommit) currentDiff, null, null);
             for (Project<?>.AST.FileSnapshot.Range testAfter : testsAfter) {
                 // TODO making sure that GTS ⊂ RM
                 // execute testBefore and testAfter
@@ -293,122 +295,38 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     // instanciate
     boolean PartiallyInstanciateState = false;
 
-    private void applyEvolutions(SpoonAST ast_before, SpoonAST ast_after, Set<Evolution> set) {
-        MavenLauncher launcher = ast_before.augmented.launcher; // launcher.createCompiler(launcher.createFactory()).build()
+    private void applyEvolutions(GumTreeSpoonMiner.EvolutionsAtCommit eac, Project before, Project after) {
+        // bug spoon while parsing comments
+        // make system tests that analyze spoon itself
+        // maven modules can be handled by the used, just need to open some api calls (access to SpoonPom childrens, MavenLauncher that takes an SpoonPom Instance)
+        // make spoon being able to be more in incremental, in the future use an incremental parser, would allow to scale to mining of whole git repo ?!?! interested?
+        // that is something like versioned visitors and accessors OR keep them as is but make a processor that can change the version of the ast
+        // make things more immutable in the future? solve part of the complexity of ChangeListener
+        // reversible / bijective
+        // avoid cloning whole ast
+        // keep original asts and found operations valid
+        // able to apply each atomic op
+        // what about move class / move package ?
+        // transformation into coming patch ?
+        // maintain an intermediary ast ? where we apply ops
+        // would it be easier to create an Itree instead of a spoon ast ?
+        // ability to apply and unapply op in any order
+        // able to serialize/prettyprint intermediary ast
+        // in general being able to manipulate the intermediary ast like a standard spoon ast
+        // avoid cloning the whole ast to create the intermediary tree
+        // is it possible to avoid using CtPath to go between left or right and intermediary
+        // ChangeListener can be used realistically? extends it to revert operations?
+        // as martin pointed out, it can be looked at like a merge for the creating of the intermediary,
+        // considering a left, middle and right ast, here left = middle, but we need to filter some evolutions coming from right.
+        GumTreeSpoonMiner.EvolutionsAtCommit.EvolutionsAtProj eap = eac.getModule(before.spec, after.spec);
+        CtElement r = ApplierHelper.applyEvolutions(eap.getScanner(), eap.getMdiff().getMiddle(), eap.getDiff());
+        MavenLauncher launcher = ((SpoonAST)before.getAst()).augmented.launcher; // launcher.createCompiler(launcher.createFactory()).build()
         JavaOutputProcessor outWriter = launcher.createOutputWriter();
-        System.out.println(outWriter.getEnvironment().getSourceOutputDirectory());
-        outWriter.getEnvironment().setSourceOutputDirectory(Paths.get("/tmp/").toFile()); // TODO !!!!
-        outWriter.getEnvironment().setPrettyPrintingMode(PRETTY_PRINTING_MODE.AUTOIMPORT);
-        Map<String, CtType<?>> cloned = new HashMap<>();
-        for (Entry<String, CtType<?>> entry : ast_before.augmented.getTypesIndexByFileName().entrySet()) {
-            cloned.put(entry.getKey(), entry.getValue());
-        }
-        applyEvolutions(set, cloned);
-        for (CtType<?> type : cloned.values()) {
-            type.updateAllParentsBelow();
-            outWriter.createJavaFile(type); // pb from clone then using the cu, because the pack ref is  changed by DefaultJavaPrettyPrinter.java:2003
-        }
-    }
+        outWriter.getEnvironment().setSourceOutputDirectory(Paths.get("/tmp/applyResult/").toFile()); // TODO go further!!!!
 
-    private void applyEvolutions(Set<Evolution> set, Map<String, CtType<?>> cloned) {
-        for (Evolution evo : set) {
-            Object _ori = evo.getOriginal();
-            if (_ori == null) {
-                logger.warning("no origin for" + evo);
-            } else if (_ori instanceof Operation) {
-                Operation<?> ori = (Operation<?>) _ori;
-                if (_ori instanceof InsertOperation) {
-                    CtElement srcNode = ori.getSrcNode();
-                    CtElement p = ((InsertOperation) ori).getParent();
-                    CtType<?> topParent = computeTopLevel(p);
-                    CtPath relPath = p.getPath().relativePath(topParent);
-                    String filePath = topParent.getPosition().getFile().getPath();
-                    List<CtElement> clonedTargs = relPath.evaluateOn(cloned.get(filePath));
-                    for (CtElement targ : clonedTargs) {
-                        // targ;
-                    }
-                } else if (_ori instanceof DeleteOperation) {
-                    CtElement srcNode = ori.getSrcNode();
-                    CtType<?> topParent = computeTopLevel(srcNode);
-                    CtPath relPath = srcNode.getPath().relativePath(topParent);
-                    String filePath = topParent.getPosition().getFile().getPath();
-                    List<CtElement> clonedTargs = relPath.evaluateOn(cloned.get(filePath));
-                    for (CtElement targ : clonedTargs) {
-                        targ.delete();
-                    }
-                } else if (_ori instanceof MoveOperation) {
-                    CtElement p = ((MoveOperation) ori).getParent();
-                    CtElement srcNode = ori.getSrcNode();
-                    CtType<?> topParent = computeTopLevel(srcNode);
-                    CtPath relPath = p.getPath().relativePath(topParent);
-                    String filePath = topParent.getPosition().getFile().getPath();
-                    List<CtElement> clonedTargs = relPath.evaluateOn(cloned.get(filePath));
-                    for (CtElement targ : clonedTargs) {
-                    }
-                } else if (_ori instanceof UpdateOperation) {
-                }
-            } else if (_ori instanceof Refactoring) {
-
-            }
-        }
-    }
-
-    // should not clone whole things, too complicated
-    private void applyEvolutionsOld(SpoonAST ast_before, SpoonAST ast_after, Set<Evolution> set) {
-        MavenLauncher launcher = ast_before.augmented.launcher;
-        JavaOutputProcessor outWriter = launcher.createOutputWriter();
-        outWriter.getEnvironment().setSourceOutputDirectory(Paths.get("/tmp/").toFile()); // TODO !!!!
-        outWriter.getEnvironment().setPrettyPrintingMode(PRETTY_PRINTING_MODE.AUTOIMPORT);
-        Map<String, CtType<?>> cloned = new HashMap<>();
-        for (Entry<String, CtType<?>> entry : ast_before.augmented.getTypesIndexByFileName().entrySet()) {
-            cloned.put(entry.getKey(), entry.getValue().copyType()); // .clone()
-        }
-        applyEvolutions(set, cloned);
-        for (CtType<?> type : cloned.values()) {
-            type.updateAllParentsBelow();
-            outWriter.createJavaFile(type); // pb from clone then using the cu, because the pack ref is  changed by DefaultJavaPrettyPrinter.java:2003
-        }
-    }
-
-    private void applyEvolutionsOld(Set<Evolution> set, Map<String, CtType<?>> cloned) {
-        for (Evolution evo : set) {
-            Object _ori = evo.getOriginal();
-            if (_ori == null) {
-                logger.warning("no origin for" + evo);
-            } else if (_ori instanceof Operation) {
-                Operation<?> ori = (Operation<?>) _ori;
-                if (_ori instanceof InsertOperation) {
-                    CtElement srcNode = ori.getSrcNode();
-                    CtElement p = ((InsertOperation) ori).getParent();
-                    CtType<?> topParent = computeTopLevel(p);
-                    CtPath relPath = p.getPath().relativePath(topParent);
-                    String filePath = topParent.getPosition().getFile().getPath();
-                    List<CtElement> clonedTargs = relPath.evaluateOn(cloned.get(filePath));
-                    for (CtElement targ : clonedTargs) {
-                        // targ;
-                    }
-                } else if (_ori instanceof DeleteOperation) {
-                    CtElement srcNode = ori.getSrcNode();
-                    CtType<?> topParent = computeTopLevel(srcNode);
-                    CtPath relPath = srcNode.getPath().relativePath(topParent);
-                    String filePath = topParent.getPosition().getFile().getPath();
-                    List<CtElement> clonedTargs = relPath.evaluateOn(cloned.get(filePath));
-                    for (CtElement targ : clonedTargs) {
-                        targ.delete();
-                    }
-                } else if (_ori instanceof MoveOperation) {
-                    CtElement p = ((MoveOperation) ori).getParent();
-                    CtElement srcNode = ori.getSrcNode();
-                    CtType<?> topParent = computeTopLevel(srcNode);
-                    CtPath relPath = p.getPath().relativePath(topParent);
-                    String filePath = topParent.getPosition().getFile().getPath();
-                    List<CtElement> clonedTargs = relPath.evaluateOn(cloned.get(filePath));
-                    for (CtElement targ : clonedTargs) {
-                    }
-                } else if (_ori instanceof UpdateOperation) {
-                }
-            } else if (_ori instanceof Refactoring) {
-
+        for (CtType p : ((CtPackage) r).getTypes()) {
+            if (!p.isShadow()) {
+                outWriter.createJavaFile(p);
             }
         }
     }

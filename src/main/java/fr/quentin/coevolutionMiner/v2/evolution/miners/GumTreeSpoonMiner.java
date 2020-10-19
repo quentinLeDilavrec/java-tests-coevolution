@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import com.github.gumtreediff.tree.ITree;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
@@ -36,11 +37,15 @@ import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import gumtree.spoon.AstComparator;
+import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.Diff;
+import gumtree.spoon.diff.DiffImpl;
+import gumtree.spoon.diff.MultiDiffImpl;
 import gumtree.spoon.diff.operations.Operation;
 import gumtree.spoon.diff.support.SpoonSupport;
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtElement;
+import spoon.reflect.declaration.CtPackage;
 
 public class GumTreeSpoonMiner implements EvolutionsMiner {
     Logger LOGGER = Logger.getLogger("ImpactGT commitHandler");
@@ -141,8 +146,22 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         public class EvolutionsAtProj extends Evolutions {
             List<EvolutionsAtProj> modules = new ArrayList<>();
             private Diff diff = null;
+            private MultiDiffImpl mdiff = null;
             private Project<?> beforeProj;
             private Project<?> afterProj;
+            private SpoonGumTreeBuilder scanner;
+
+            public Diff getDiff() {
+                return diff;
+            }
+
+            public MultiDiffImpl getMdiff() {
+                return mdiff;
+            }
+            
+            public SpoonGumTreeBuilder getScanner() {
+                return scanner;
+            }
 
             public EvolutionsAtProj(SpecificifierAtProj spec) {
                 super(spec, EvolutionsAtCommit.this.sources);
@@ -172,9 +191,18 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 }
 
                 if (beforeProj.getAst().isUsable() && afterProj.getAst().isUsable()) {
-                    this.diff = comp.compare(
-                            ((ProjectSpoon.SpoonAST) beforeProj.getAst()).launcher.getModel().getRootPackage(),
-                            ((ProjectSpoon.SpoonAST) afterProj.getAst()).launcher.getModel().getRootPackage());
+
+                    CtPackage left = ((ProjectSpoon.SpoonAST) beforeProj.getAst()).launcher.getModel().getRootPackage();
+                    CtPackage right = ((ProjectSpoon.SpoonAST) afterProj.getAst()).launcher.getModel().getRootPackage();
+                    this.scanner = new SpoonGumTreeBuilder();
+                    ITree srcTree;
+                    srcTree = scanner.getTree(left);
+                    this.mdiff = new MultiDiffImpl(srcTree);
+                    ITree dstTree = scanner.getTree(right);
+                    this.diff = mdiff.compute(scanner.getTreeContext(), dstTree);
+                    // this.diff = comp.compare(
+                    //         ((ProjectSpoon.SpoonAST) beforeProj.getAst()).launcher.getModel().getRootPackage(),
+                    //         ((ProjectSpoon.SpoonAST) afterProj.getAst()).launcher.getModel().getRootPackage());
                     for (Operation<?> op : diff.getRootOperations()) {
                         addEvolution(op, beforeProj, afterProj);
                         try {

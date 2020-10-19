@@ -10,7 +10,7 @@ import fr.quentin.coevolutionMiner.v2.ast.storages.Neo4jProjectStorage;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 
-public class ProjectHandler {
+public class ProjectHandler implements AutoCloseable {
 
 	private ProjectHandler astHandler;
 	private SourcesHandler srcHandler;
@@ -96,4 +96,9 @@ public class ProjectHandler {
 			}
 		}
 	}
+
+    @Override
+    public void close() throws Exception {
+        neo4jStore.close();
+    }
 }

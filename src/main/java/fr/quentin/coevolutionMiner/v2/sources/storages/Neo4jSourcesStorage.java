@@ -64,11 +64,11 @@ public class Neo4jSourcesStorage implements SourcesStorage {
             List<String> releases = session.readTransaction(new TransactionWork<List<String>>() {
                 @Override
                 public List<String> execute(Transaction tx) {
-                    Result result = tx.run(getCypher(), value);
-                    return result.list(x->x.get("releases").asString());
+                    Result result = tx.run(getMiner(), value);
+                    return result.list(x -> x.get("releases").asString());
                 }
             });
-        res.getRepository().addReleases(releases);
+            res.getRepository().addReleases(releases);
         } catch (TransientException e) {
             e.printStackTrace();
         } catch (Exception e) {
@@ -85,7 +85,7 @@ public class Neo4jSourcesStorage implements SourcesStorage {
         return Utils.memoizedReadResource("jgit_miner.cql");
     }
 
-    private final Driver driver;
+    public final Driver driver;
 
     public Neo4jSourcesStorage(String uri, String user, String password) {
         driver = GraphDatabase.driver(uri, AuthTokens.basic(user, password));

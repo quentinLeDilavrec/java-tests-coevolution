@@ -32,6 +32,7 @@ import fr.quentin.impactMiner.types.Evolution.Before;
 import gumtree.spoon.apply.AAction;
 import gumtree.spoon.apply.ActionApplier;
 import gumtree.spoon.apply.MyUtils;
+import gumtree.spoon.apply.WrongAstContextException;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.DiffImpl;
 import gumtree.spoon.diff.MultiDiffImpl;
@@ -93,42 +94,14 @@ class GumtreeSpoonTest {
                 List<Action> retryList = new ArrayList<>();
                 for (Action action : diff.getActionsList()) {
                         try {
-                                if (action instanceof Insert) {
-                                        ActionApplier.applyAInsert((Factory) middle.getMetadata("Factory"),
-                                                        scanner.getTreeContext(), (Insert & AAction<Insert>) action);
-                                } else if (action instanceof Delete) {
-                                        ActionApplier.applyADelete((Factory) middle.getMetadata("Factory"),
-                                                        scanner.getTreeContext(), (Delete & AAction<Delete>) action);
-                                } else if (action instanceof Update) {
-                                        ActionApplier.applyAUpdate((Factory) middle.getMetadata("Factory"),
-                                                        scanner.getTreeContext(), (Update & AAction<Update>) action);
-                                } else if (action instanceof Move) {
-                                        ActionApplier.applyAMove((Factory) middle.getMetadata("Factory"),
-                                                        scanner.getTreeContext(), (Move & AAction<Move>) action);
-                                } else {
-                                        throw null;
-                                }
+                                auxApply(scanner, middle, action);
                                 
                         } catch (gumtree.spoon.apply.WrongAstContextException e) {
                                 retryList.add(action);
                         }
                 }
                 for (Action action : retryList) {
-                        if (action instanceof Insert) {
-                                ActionApplier.applyAInsert((Factory) middle.getMetadata("Factory"),
-                                                scanner.getTreeContext(), (Insert & AAction<Insert>) action);
-                        } else if (action instanceof Delete) {
-                                ActionApplier.applyADelete((Factory) middle.getMetadata("Factory"),
-                                                scanner.getTreeContext(), (Delete & AAction<Delete>) action);
-                        } else if (action instanceof Update) {
-                                ActionApplier.applyAUpdate((Factory) middle.getMetadata("Factory"),
-                                                scanner.getTreeContext(), (Update & AAction<Update>) action);
-                        } else if (action instanceof Move) {
-                                ActionApplier.applyAMove((Factory) middle.getMetadata("Factory"),
-                                                scanner.getTreeContext(), (Move & AAction<Move>) action);
-                        } else {
-                                throw null;
-                        }
+                        auxApply(scanner, middle, action);
                 }
                 CtElement middleE = null;
                 Queue<ITree> tmp = new LinkedBlockingDeque<>();
@@ -157,6 +130,25 @@ class GumtreeSpoonTest {
                     }
                 } else {
                     check1(right, pp, middleE);
+                }
+        }
+
+        private void auxApply(final SpoonGumTreeBuilder scanner, ITree middle, Action action)
+                        throws WrongAstContextException {
+                if (action instanceof Insert) {
+                        ActionApplier.applyAInsert((Factory) middle.getMetadata("Factory"),
+                                        scanner.getTreeContext(), (Insert & AAction<Insert>) action);
+                } else if (action instanceof Delete) {
+                        ActionApplier.applyADelete((Factory) middle.getMetadata("Factory"),
+                                        scanner.getTreeContext(), (Delete & AAction<Delete>) action);
+                } else if (action instanceof Update) {
+                        ActionApplier.applyAUpdate((Factory) middle.getMetadata("Factory"),
+                                        scanner.getTreeContext(), (Update & AAction<Update>) action);
+                } else if (action instanceof Move) {
+                        ActionApplier.applyAMove((Factory) middle.getMetadata("Factory"),
+                                        scanner.getTreeContext(), (Move & AAction<Move>) action);
+                } else {
+                        throw null;
                 }
         }
 
