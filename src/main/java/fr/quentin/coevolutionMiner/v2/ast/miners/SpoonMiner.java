@@ -17,6 +17,7 @@ import org.apache.maven.shared.invoker.InvocationResult;
 import org.apache.maven.shared.utils.cli.CommandLineException;
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
 
+import fr.quentin.coevolutionMiner.utils.MyProperties;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 // import fr.quentin.coevolutionMiner.utils.SourcesHelper.MavenResult;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
@@ -118,7 +119,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         try (SourcesHelper helper = src.open();) {
             Path root = helper.materialize(spec.commitId);
             // Compile with maven
-            CommandLineException compilerException0 = SourcesHelper.prepare(root).getExecutionException();
+            CommandLineException compilerException0 = SourcesHelper.prepare(root,Paths.get(MyProperties.getPropValues().getProperty("mavenHome")).toFile()).getExecutionException();
             if (compilerException0 != null) {
                 compilerException0.printStackTrace();
             }
