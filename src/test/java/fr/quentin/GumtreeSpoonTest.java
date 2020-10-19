@@ -26,6 +26,7 @@ import com.github.gumtreediff.tree.ITree;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.junit.jupiter.api.Test;
 
+import fr.quentin.coevolutionMiner.utils.MyProperties;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.impactMiner.types.Evolution.Before;
 import gumtree.spoon.apply.AAction;
@@ -52,16 +53,17 @@ import spoon.support.compiler.VirtualFile;
 class GumtreeSpoonTest {
 
         public MavenLauncher build(String gitURL, String commitId) throws Exception {
+                String mvnHome = MyProperties.getPropValues().getProperty("mavenHome");
                 try (SourcesHelper helper = new SourcesHelper(gitURL);) {
                         Path path = helper.materializePrev(commitId);
                         MavenLauncher launcher = new MavenLauncher(path.toString(),
-                                        MavenLauncher.SOURCE_TYPE.ALL_SOURCE,"C:\\Users\\quentin\\.maven");
+                                        MavenLauncher.SOURCE_TYPE.ALL_SOURCE,mvnHome);
                         launcher.getEnvironment().setLevel("INFO");
                         launcher.getEnvironment().setCommentEnabled(false);
                         launcher.getFactory().getEnvironment().setLevel("INFO");
 
                         // Compile with maven to get deps
-                        SourcesHelper.prepare(path,Paths.get("C:\\Users\\quentin\\.maven").toFile());
+                        SourcesHelper.prepare(path,Paths.get(mvnHome).toFile());
 
                         // Build Spoon model
                         launcher.buildModel();
@@ -147,7 +149,7 @@ class GumtreeSpoonTest {
                         srctree1 = scanner1.getTree(made1);
                         MultiDiffImpl mdiff1 = new MultiDiffImpl(srctree1);
                         ITree dstTree1 = scanner1.getTree(ori1);
-                        DiffImpl diff1 = mdiff.compute(scanner1.getTreeContext(), dstTree1);
+                        DiffImpl diff1 = mdiff1.compute(scanner1.getTreeContext(), dstTree1);
                         for (Action action : diff1.getActionsList()) {
                             System.err.println(action);
                         }
