@@ -7,8 +7,13 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.function.Function;
+
+import com.sun.tools.javac.util.Iterators;
 
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
@@ -17,7 +22,7 @@ import fr.quentin.coevolutionMiner.v2.utils.Utils;
 import spoon.MavenLauncher;
 import spoon.reflect.declaration.CtElement;
 
-public class Project<T> {
+public class Project<T> implements Iterable<Project> {
     public final Specifier spec;
     public final Commit commit;
 
@@ -89,7 +94,6 @@ public class Project<T> {
             return true;
         }
 
-        
     }
 
     protected Project<T>.AST ast;
@@ -375,4 +379,69 @@ public class Project<T> {
         }
     }
 
+    public Iterator<Project> iterator() {
+        return Iterators2.createCompoundIterator(Project.this, (Project x) -> {
+            return x.getModules().iterator();
+        });
+    }
+
+    private static class Iterators2 {
+
+        public static <I> Iterator<I> createCompoundIterator(I input,
+                Function<I, Iterator<I>> convertor) {
+            return new CompoundIterator<>(input, convertor);
+        }
+
+        private static class CompoundIterator<I> implements Iterator<I> {
+
+            private final Iterator<I> inputs;
+            private final Function<I, Iterator<I>> convertor;
+            @SuppressWarnings("unchecked")
+            private Iterator<I> currentIterator = EMPTY;
+            private I input;
+
+            public CompoundIterator(I input, Function<I, Iterator<I>> convertor) {
+                this.input = input;
+                this.inputs = convertor.apply(input);
+                this.convertor = convertor;
+            }
+
+            public boolean hasNext() {
+                if (currentIterator != null && !currentIterator.hasNext()) {
+                    update();
+                }
+                return currentIterator != null;
+            }
+
+            public I next() {
+                if (currentIterator == EMPTY && !hasNext()) {
+                    throw new NoSuchElementException();
+                }
+                if (input != null) {
+                    I tmp = input;
+                    input = null;
+                    return tmp;
+                }
+                return currentIterator.next();
+            }
+
+            private void update() {
+                input = inputs.next();
+                currentIterator = convertor.apply(input);
+                currentIterator = null;
+            }
+        }
+
+        @SuppressWarnings("rawtypes")
+        private final static Iterator EMPTY = new Iterator() {
+            public boolean hasNext() {
+                return false;
+            }
+
+            @Override
+            public Object next() {
+                return null;
+            }
+        };
+    }
 }
