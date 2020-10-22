@@ -23,6 +23,8 @@ import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution.DescRange;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsAtCommit;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsAtCommit.EvolutionsAtProj;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsMany;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts;
@@ -47,6 +49,7 @@ import spoon.reflect.visitor.Filter;
 import spoon.support.JavaOutputProcessor;
 import fr.quentin.impactMiner.Position;
 import gumtree.spoon.diff.Diff;
+import gumtree.spoon.diff.DiffImpl;
 import gumtree.spoon.diff.operations.DeleteOperation;
 import gumtree.spoon.diff.operations.InsertOperation;
 import gumtree.spoon.diff.operations.MoveOperation;
@@ -234,68 +237,124 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         // System.out.println(smallestGroups);
 
-        EvolutionsMany efz = ((GumTreeSpoonMiner.EvolutionsMany) currentDiff);
+        GumTreeSpoonMiner.EvolutionsMany efz = (GumTreeSpoonMiner.EvolutionsMany) currentDiff;
+        EvolutionsAtCommit currEvoAtCommit = efz.getPerCommit(currentCommit.getId(), nextCommit.getId());
         // efz.getDiff(before_ast_id, after_ast_id, "").getOperationChildren(, arg1); // TODO
-        for (Entry<Range, Set<Object>> entry : currentImpacts.getImpactedTests().entrySet()) {
-            Range testBefore = entry.getKey();
-            Set<Project<?>.AST.FileSnapshot.Range> testsAfter = new HashSet<>();
-            Project<?>.AST.FileSnapshot.Range qqqqqq = currentDiff.map(testBefore, after_proj);
-            if (qqqqqq != null) {
-                testsAfter.add(qqqqqq);
-            }
-            Set<Evolutions.Evolution.DescRange> evosInGame = (Set) entry.getValue();
-            for (Evolutions.Evolution.DescRange descR : evosInGame) { // TODO there could be multiple testAfter
-                if (descR.getTarget() == testBefore) {
-                    if (descR.getSource().getType().equals("Move Method")) {
-                        testsAfter.add(descR.getSource().getAfter().get(0).getTarget());
+        Map<Project, Set<Entry<Range, Set<Object>>>> impactedTestsByProject = new HashMap<>();
+        for (Entry<Range, Set<Object>> impactedTests : currentImpacts.getImpactedTests().entrySet()) {
+            impactedTestsByProject.putIfAbsent(impactedTests.getKey().getFile().getAST().getProject(), new HashSet<>());
+            impactedTestsByProject.get(impactedTests.getKey().getFile().getAST().getProject()).add(impactedTests);
+        }
+        class InterestingCase {
+
+            public EvolutionsAtProj evolutionsAtProj;
+            public Project projectBefore;
+            public Object projectAfter;
+
+        }
+        Set<InterestingCase> interestingCases = new HashSet<>();
+        for (Entry<Project, Set<Entry<Range, Set<Object>>>> entry : impactedTestsByProject.entrySet()) {
+            Project projectBefore = entry.getKey();
+            for (Entry<Range, Set<Object>> impactedTest : entry.getValue()) {
+                Range testBefore = impactedTest.getKey();
+                Set<Project<?>.AST.FileSnapshot.Range> testsAfter = new HashSet<>();
+                Project<?>.AST.FileSnapshot.Range mappingResult = currentDiff.map(testBefore, after_proj);
+                if (mappingResult != null) {
+                    testsAfter.add(mappingResult);
+                }
+                Set<Evolutions.Evolution.DescRange> evosInGame = (Set) impactedTest.getValue();
+                for (Evolutions.Evolution.DescRange descR : evosInGame) {
+                    if (descR.getTarget() == testBefore) {
+                        if (descR.getSource().getType().equals("Move Method")) {
+                            testsAfter.add(descR.getSource().getAfter().get(0).getTarget());
+                        }
                     }
                 }
+                for (Project<?>.AST.FileSnapshot.Range testAfter : testsAfter) {
+                    Set<Evolution> evosForThisTest = new HashSet<>();
+                    for (Evolutions.Evolution.DescRange obj : evosInGame) {
+                        Evolution src = ((Evolutions.Evolution.DescRange) obj).getSource();
+                        evosForThisTest.addAll(atomizedRefactorings.get(src));
+                    }
+                    EvolutionsAtProj evolutionsAtProj = currEvoAtCommit.getModule(projectBefore.spec,
+                            testAfter.getFile().getAST().getProject().spec);
+                    InterestingCase curr = new InterestingCase();
+                    curr.evolutionsAtProj = evolutionsAtProj;
+                    curr.projectBefore = projectBefore;
+                    curr.projectAfter = testAfter.getFile().getAST().getProject();
+                    interestingCases.add(curr);
+                    applyEvolutions(evolutionsAtProj, evosForThisTest, atomizedRefactorings);
+                }
             }
-            // if (PartiallyInstanciateState) {
-            //     Set<String> javaFiles = new HashSet<>();
-            //     // TODO add original if not here ?
-            //     Set<CtType> reqBefore = ast_before.augmented.needs((CtElement) testBefore.getOriginal());
-            //     Set<String> reqBeforeS = typesToRelPaths(reqBefore, ast_before.getProject().spec.relPath.toString());
-            //     System.out.println(reqBeforeS);
-            //     System.err.println(ast_after);
-            //     System.err.println(testsAfter);
-            //     System.err.println(ast_after.augmented);
-            //     Set<CtType> reqAfter = ast_after.augmented.needs((CtElement) testsAfter.getOriginal());
-            //     Set<String> reqAfterS = typesToRelPaths(reqAfter, ast_after.getProject().spec.relPath.toString());
-
-            //     Set<String> reqAdded = new HashSet<>(reqAfterS);
-            //     reqAdded.removeAll(reqBeforeS);
-            //     addJavaFiles(ast_before, javaFiles);
-            //     addJavaFiles(ast_after, javaFiles);
-            // }
-            // set TMP DIR for test
-            // put all non .java from currentCommit and all from reqBefore+current file of
-            // test
-            // compile code ? compile tests ? execute test ? good : half : bad ;
-            // apply all non .java from nextCommit
-            // compile code ? compile tests ? execute test ? good : half : bad ;
-            // apply all from subsets of reqAfter +testAfter file of test
-            Set<Evolution> evosForThisTest = new HashSet<>();
-            for (Evolutions.Evolution.DescRange obj : evosInGame) {
-                Evolution src = ((Evolutions.Evolution.DescRange) obj).getSource();
-                evosForThisTest.addAll(atomizedRefactorings.get(src));
-            }
-            applyEvolutions((GumTreeSpoonMiner.EvolutionsAtCommit) currentDiff, null, null);
-            for (Project<?>.AST.FileSnapshot.Range testAfter : testsAfter) {
-                // TODO making sure that GTS ⊂ RM
-                // execute testBefore and testAfter
-            }
-            // unapplyEvolutions
         }
-        oldEnd();
+
+        // for (Entry<Range, Set<Object>> impactedTest : currentImpacts.getImpactedTests().entrySet()) {
+        //     Range testBefore = impactedTest.getKey();
+        //     Set<Evolutions.Evolution.DescRange> evosInGame = (Set) impactedTest.getValue();
+        //     Set<Project<?>.AST.FileSnapshot.Range> testsAfter = new HashSet<>();
+        //     Project<?>.AST.FileSnapshot.Range qqqqqq = currentDiff.map(testBefore, after_proj);
+        //     if (qqqqqq != null) {
+        //         testsAfter.add(qqqqqq);
+        //     }
+        //     for (Evolutions.Evolution.DescRange descR : evosInGame) { // TODO there could be multiple testAfter
+        //         if (descR.getTarget() == testBefore) {
+        //             if (descR.getSource().getType().equals("Move Method")) {
+        //                 testsAfter.add(descR.getSource().getAfter().get(0).getTarget());
+        //             }
+        //         }
+        //     }
+        //     // if (PartiallyInstanciateState) {
+        //     //     Set<String> javaFiles = new HashSet<>();
+        //     //     // TODO add original if not here ?
+        //     //     Set<CtType> reqBefore = ast_before.augmented.needs((CtElement) testBefore.getOriginal());
+        //     //     Set<String> reqBeforeS = typesToRelPaths(reqBefore, ast_before.getProject().spec.relPath.toString());
+        //     //     System.out.println(reqBeforeS);
+        //     //     System.err.println(ast_after);
+        //     //     System.err.println(testsAfter);
+        //     //     System.err.println(ast_after.augmented);
+        //     //     Set<CtType> reqAfter = ast_after.augmented.needs((CtElement) testsAfter.getOriginal());
+        //     //     Set<String> reqAfterS = typesToRelPaths(reqAfter, ast_after.getProject().spec.relPath.toString());
+
+        //     //     Set<String> reqAdded = new HashSet<>(reqAfterS);
+        //     //     reqAdded.removeAll(reqBeforeS);
+        //     //     addJavaFiles(ast_before, javaFiles);
+        //     //     addJavaFiles(ast_after, javaFiles);
+        //     // }
+        //     // set TMP DIR for test
+        //     // put all non .java from currentCommit and all from reqBefore+current file of
+        //     // test
+        //     // compile code ? compile tests ? execute test ? good : half : bad ;
+        //     // apply all non .java from nextCommit
+        //     // compile code ? compile tests ? execute test ? good : half : bad ;
+        //     // apply all from subsets of reqAfter +testAfter file of test
+        //     Set<Evolution> evosForThisTest = new HashSet<>();
+        //     for (Evolutions.Evolution.DescRange obj : evosInGame) {
+        //         Evolution src = ((Evolutions.Evolution.DescRange) obj).getSource();
+        //         evosForThisTest.addAll(atomizedRefactorings.get(src));
+        //     }
+        //     // applyEvolutions(
+        //     //         (GumTreeSpoonMiner.EvolutionsAtCommit) efz.getPerCommit(currentCommit.getId(), nextCommit.getId()),
+        //     //         null, null);
+        //     for (Project<?>.AST.FileSnapshot.Range testAfter : testsAfter) {
+        //         // TODO making sure that GTS ⊂ RM
+        //         // execute testBefore and testAfter
+        //     }
+        //     // unapplyEvolutions
+        // }
+        // oldEnd();
         return null;
+    }
+
+    public void test(int evolutions) {
+        // TODO
     }
 
     // More controlled state, isolate compilation failures, but costly to
     // instanciate
     boolean PartiallyInstanciateState = false;
 
-    private void applyEvolutions(GumTreeSpoonMiner.EvolutionsAtCommit eac, Project before, Project after) {
+    private static void applyEvolutions(EvolutionsAtProj eap, Set<Evolution> wantedEvos,
+            Map<Evolution, Set<Evolution>> atomizedRefactorings) {
         // bug spoon while parsing comments
         // make system tests that analyze spoon itself
         // maven modules can be handled by the used, just need to open some api calls (access to SpoonPom childrens, MavenLauncher that takes an SpoonPom Instance)
@@ -318,17 +377,20 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         // ChangeListener can be used realistically? extends it to revert operations?
         // as martin pointed out, it can be looked at like a merge for the creating of the intermediary,
         // considering a left, middle and right ast, here left = middle, but we need to filter some evolutions coming from right.
-        GumTreeSpoonMiner.EvolutionsAtCommit.EvolutionsAtProj eap = eac.getModule(before.spec, after.spec);
-        CtElement r = ApplierHelper.applyEvolutions(eap.getScanner(), eap.getMdiff().getMiddle(), eap.getDiff());
-        MavenLauncher launcher = ((SpoonAST)before.getAst()).augmented.launcher; // launcher.createCompiler(launcher.createFactory()).build()
-        JavaOutputProcessor outWriter = launcher.createOutputWriter();
-        outWriter.getEnvironment().setSourceOutputDirectory(Paths.get("/tmp/applyResult/").toFile()); // TODO go further!!!!
-
-        for (CtType p : ((CtPackage) r).getTypes()) {
-            if (!p.isShadow()) {
-                outWriter.createJavaFile(p);
+        try (ApplierHelper ah = new ApplierHelper(eap, wantedEvos,atomizedRefactorings);) {
+            CtElement r = ah.applyEvolutions(wantedEvos);
+            MavenLauncher launcher = ((SpoonAST) eap.getBeforeProj().getAst()).augmented.launcher;
+            JavaOutputProcessor outWriter = launcher.createOutputWriter();
+            outWriter.getEnvironment().setSourceOutputDirectory(Paths.get("/tmp/applyResult/").toFile()); // TODO go further!!!!
+            for (CtType p : ((CtPackage) r).getTypes()) {
+                if (!p.isShadow()) {
+                    outWriter.createJavaFile(p);
+                }
             }
+        } catch (Exception e) {
+            //TODO: handle exception
         }
+
     }
 
     private CtType<?> computeTopLevel(CtElement srcNode) {
