@@ -158,9 +158,17 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             public MultiDiffImpl getMdiff() {
                 return mdiff;
             }
-            
+
             public SpoonGumTreeBuilder getScanner() {
                 return scanner;
+            }
+
+            public Project<?> getBeforeProj() {
+                return beforeProj;
+            }
+            
+            public Project<?> getAfterProj() {
+                return afterProj;
             }
 
             public EvolutionsAtProj(SpecificifierAtProj spec) {
@@ -370,12 +378,12 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         }
 
         public Diff getDiff(Project.Specifier<?> before, Project.Specifier<?> after, String relPath) {
-            EvolutionsAtCommit tmp = getPerCommit(before, after);
+            EvolutionsAtCommit tmp = getPerCommit(before.commitId, after.commitId);
             return tmp.getDiff(before, after);
         }
 
-        private EvolutionsAtCommit getPerCommit(Project.Specifier<?> before, Project.Specifier<?> after) {
-            return perCommit.get(new ImmutablePair<>(before.commitId, after.commitId));
+        public EvolutionsAtCommit getPerCommit(String before, String after) {
+            return perCommit.get(new ImmutablePair<>(before, after));
         }
 
         EvolutionsMany compute() {
@@ -403,7 +411,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         @Override
         public Evolution getEvolution(String type, List<ImmutablePair<Range, String>> before, Project<?> target) {
             Project source = before.get(0).left.getFile().getAST().getProject();
-            return getPerCommit(source.spec, target.spec).getEvolution(type, before, target);
+            return getPerCommit(source.spec.commitId, target.spec.commitId).getEvolution(type, before, target);
         }
 
         Map<ImmutablePair<String, String>, EvolutionsAtCommit> perCommit = new HashMap<>();
