@@ -283,6 +283,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     curr.evosForThisTest = evosForThisTest;
                     interestingCases.putIfAbsent(evolutionsAtProj, new HashSet<>());
                     interestingCases.get(evolutionsAtProj).add(curr);
+                    evoPerProj.putIfAbsent(evolutionsAtProj, new HashSet<>());
+                    evoPerProj.get(evolutionsAtProj).addAll(evosForThisTest);
                 }
             }
         }
