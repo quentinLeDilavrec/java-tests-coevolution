@@ -386,6 +386,11 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             return perCommit.get(new ImmutablePair<>(before, after));
         }
 
+        @Override
+        public Project<?>.AST.FileSnapshot.Range map(Project<?>.AST.FileSnapshot.Range range, Project<?> target) {
+            return getPerCommit(range.getFile().getCommit().getId(), target.spec.commitId).map(range, target);
+        }
+
         EvolutionsMany compute() {
             List<Commit> commits;
             Commit beforeCom = null;
