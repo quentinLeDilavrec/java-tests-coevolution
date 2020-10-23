@@ -102,7 +102,7 @@ public class EvolutionHandler implements AutoCloseable {
 			tmp.set(res);
 			return res;
 		} catch (Exception e) {
-			throw new RuntimeException("Problem during Evolution mining ",e);
+			throw new RuntimeException(e);
 		} finally {
 			tmp.lock.unlock();
 		}
