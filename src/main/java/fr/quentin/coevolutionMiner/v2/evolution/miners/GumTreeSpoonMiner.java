@@ -286,7 +286,18 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 Project<?> source = range.getFile().getAST().getProject();
                 CtElement element = (CtElement) range.getOriginal();
                 boolean fromSource = source.spec.equals(((SpecificifierAtProj) spec).before_spec);
-                CtElement aaa = new SpoonSupport().getMappedElement(diff, (CtElement) element, fromSource);
+                CtElement aaa = null;
+                ITree tree = (ITree)element.getMetadata(SpoonGumTreeBuilder.GUMTREE_NODE);
+                if (tree!=null) {
+                    if (fromSource) {
+                        aaa = (CtElement)diff.getMappingsComp().getDst(tree).getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+                    } else {
+                        aaa = (CtElement)diff.getMappingsComp().getSrc(tree).getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+                    }
+                }
+                if(aaa==null) {
+                    aaa = new SpoonSupport().getMappedElement(diff, (CtElement) element, fromSource);
+                }
                 Project<?> outProj = fromSource ? afterProj : beforeProj;
                 SourcePosition position = aaa.getPosition();
                 return (Project<?>.AST.FileSnapshot.Range) outProj.getRange(position.getFile().getAbsolutePath(),
