@@ -37,16 +37,14 @@ import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsMiner;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsStorage;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.CoEvolution;
-import spoon.MavenLauncher;
+import spoon.Launcher;
 import spoon.compiler.Environment.PRETTY_PRINTING_MODE;
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
-import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.path.CtPath;
 import spoon.reflect.visitor.Filter;
-import spoon.support.JavaOutputProcessor;
 import fr.quentin.impactMiner.Position;
 import gumtree.spoon.diff.Diff;
 import gumtree.spoon.diff.DiffImpl;
@@ -246,13 +244,14 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             impactedTestsByProject.get(impactedTests.getKey().getFile().getAST().getProject()).add(impactedTests);
         }
         class InterestingCase {
-
             public EvolutionsAtProj evolutionsAtProj;
             public Project projectBefore;
-            public Object projectAfter;
+            public Project projectAfter;
+            public Set<Evolution> evosForThisTest;
 
         }
-        Set<InterestingCase> interestingCases = new HashSet<>();
+        Map<EvolutionsAtProj, Set<InterestingCase>> interestingCases = new HashMap<>();
+        Map<EvolutionsAtProj, Set<Evolution>> evoPerProj = new HashMap<>();
         for (Entry<Project, Set<Entry<Range, Set<Object>>>> entry : impactedTestsByProject.entrySet()) {
             Project projectBefore = entry.getKey();
             for (Entry<Range, Set<Object>> impactedTest : entry.getValue()) {
@@ -279,12 +278,23 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     EvolutionsAtProj evolutionsAtProj = currEvoAtCommit.getModule(projectBefore.spec,
                             testAfter.getFile().getAST().getProject().spec);
                     InterestingCase curr = new InterestingCase();
-                    curr.evolutionsAtProj = evolutionsAtProj;
                     curr.projectBefore = projectBefore;
                     curr.projectAfter = testAfter.getFile().getAST().getProject();
-                    interestingCases.add(curr);
-                    applyEvolutions(evolutionsAtProj, evosForThisTest, atomizedRefactorings);
+                    curr.evosForThisTest = evosForThisTest;
+                    interestingCases.putIfAbsent(evolutionsAtProj, new HashSet<>());
+                    interestingCases.get(evolutionsAtProj).add(curr);
                 }
+            }
+        }
+        for (EvolutionsAtProj k : interestingCases.keySet()) {
+            try (ApplierHelper ah = new ApplierHelper(k, evoPerProj.get(k), atomizedRefactorings);) {
+                for (InterestingCase c : interestingCases.get(k)) {
+                    ah.applyEvolutions(c.evosForThisTest);
+                    // ApplierHelper.applyEvolutions(c.evolutionsAtProj, c.evosForThisTest, atomizedRefactorings);
+                    ah.serialize(Paths.get("/tmp/applyResults/").toFile());
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
         }
 
@@ -345,53 +355,9 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         return null;
     }
 
-    public void test(int evolutions) {
-        // TODO
-    }
-
     // More controlled state, isolate compilation failures, but costly to
     // instanciate
     boolean PartiallyInstanciateState = false;
-
-    private static void applyEvolutions(EvolutionsAtProj eap, Set<Evolution> wantedEvos,
-            Map<Evolution, Set<Evolution>> atomizedRefactorings) {
-        // bug spoon while parsing comments
-        // make system tests that analyze spoon itself
-        // maven modules can be handled by the used, just need to open some api calls (access to SpoonPom childrens, MavenLauncher that takes an SpoonPom Instance)
-        // make spoon being able to be more in incremental, in the future use an incremental parser, would allow to scale to mining of whole git repo ?!?! interested?
-        // that is something like versioned visitors and accessors OR keep them as is but make a processor that can change the version of the ast
-        // make things more immutable in the future? solve part of the complexity of ChangeListener
-        // reversible / bijective
-        // avoid cloning whole ast
-        // keep original asts and found operations valid
-        // able to apply each atomic op
-        // what about move class / move package ?
-        // transformation into coming patch ?
-        // maintain an intermediary ast ? where we apply ops
-        // would it be easier to create an Itree instead of a spoon ast ?
-        // ability to apply and unapply op in any order
-        // able to serialize/prettyprint intermediary ast
-        // in general being able to manipulate the intermediary ast like a standard spoon ast
-        // avoid cloning the whole ast to create the intermediary tree
-        // is it possible to avoid using CtPath to go between left or right and intermediary
-        // ChangeListener can be used realistically? extends it to revert operations?
-        // as martin pointed out, it can be looked at like a merge for the creating of the intermediary,
-        // considering a left, middle and right ast, here left = middle, but we need to filter some evolutions coming from right.
-        try (ApplierHelper ah = new ApplierHelper(eap, wantedEvos,atomizedRefactorings);) {
-            CtElement r = ah.applyEvolutions(wantedEvos);
-            MavenLauncher launcher = ((SpoonAST) eap.getBeforeProj().getAst()).augmented.launcher;
-            JavaOutputProcessor outWriter = launcher.createOutputWriter();
-            outWriter.getEnvironment().setSourceOutputDirectory(Paths.get("/tmp/applyResult/").toFile()); // TODO go further!!!!
-            for (CtType p : ((CtPackage) r).getTypes()) {
-                if (!p.isShadow()) {
-                    outWriter.createJavaFile(p);
-                }
-            }
-        } catch (Exception e) {
-            //TODO: handle exception
-        }
-
-    }
 
     private CtType<?> computeTopLevel(CtElement srcNode) {
         CtType<?> topParent = srcNode.getParent(CtType.class);
