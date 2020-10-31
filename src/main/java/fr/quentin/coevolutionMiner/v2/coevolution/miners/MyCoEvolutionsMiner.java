@@ -17,6 +17,7 @@ import com.github.gumtreediff.tree.VersionedTree;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+import org.apache.commons.io.FileUtils;
 import org.refactoringminer.api.Refactoring;
 
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
@@ -48,6 +49,7 @@ import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.path.CtPath;
 import spoon.reflect.visitor.Filter;
+import spoon.support.JavaOutputProcessor;
 import fr.quentin.impactMiner.Position;
 import gumtree.spoon.diff.Diff;
 import gumtree.spoon.diff.DiffImpl;
@@ -294,12 +296,18 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 // }
             }
         }
+        Path path = Paths.get("/tmp/applyResults/");
+        Path oriPath = ((SpoonAST)currEvoAtCommit.getRootModule().getBeforeProj().getAst()).rootDir;
+        try {
+            FileUtils.copyDirectory(oriPath.toFile(), path.toFile());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
         for (EvolutionsAtProj k : interestingCases.keySet()) {
             try (ApplierHelper ah = new ApplierHelper(k, evoPerProj.get(k), atomizedRefactorings);) {
                 for (InterestingCase c : interestingCases.get(k)) {
                     ITree treeTest = (ITree)((CtElement)c.testBefore.getOriginal()).getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
                     CtElement[] testsBefore = ah.watchApply(currEvoAtCommit.beforeVersion,treeTest);
-                    Path path = Paths.get("/tmp/applyResults/");
                     ah.serialize(path.toFile());
                     Exception resBefore = executeTest(sourcesProvider, path, ((CtMethod)testsBefore[0]).getDeclaringType().getQualifiedName(), ((CtMethod)testsBefore[0]).getSimpleName());
                     ah.applyEvolutions(c.evosForThisTest);

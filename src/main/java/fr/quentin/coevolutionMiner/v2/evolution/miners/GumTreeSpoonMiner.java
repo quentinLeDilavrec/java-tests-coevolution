@@ -137,6 +137,10 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             return projSpecMapping.get(spec);
         }
 
+        public EvolutionsAtProj getRootModule() {
+            return rootModule;
+        }
+
         public EvolutionsAtCommit(Specifier spec, Sources sources, Commit beforeCom, Commit commit) {
             super(spec, sources);
             this.beforeVersion = VersionCommit.build(sources.getCommit(spec.commitIdBefore));
