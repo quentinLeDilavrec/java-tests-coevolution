@@ -189,6 +189,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             public EvolutionsAtProj compute() {
                 Project<?> beforeProj = astHandler.handle(((SpecificifierAtProj) spec).before_spec);
                 Project<?> afterProj = astHandler.handle(((SpecificifierAtProj) spec).after_spec);
+                linkProjSpecs(beforeProj.spec, afterProj.spec);
                 return compute(beforeProj, afterProj);
             }
 
