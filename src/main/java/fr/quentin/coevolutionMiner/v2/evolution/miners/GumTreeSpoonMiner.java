@@ -1,6 +1,7 @@
 package fr.quentin.coevolutionMiner.v2.evolution.miners;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -14,6 +15,8 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import com.github.gumtreediff.tree.ITree;
+import com.github.gumtreediff.tree.Version;
+import com.github.gumtreediff.tree.VersionInt;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
@@ -125,11 +128,19 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
 
     public class EvolutionsAtCommit extends Evolutions {
         Map<SpecificifierAtProj, EvolutionsAtProj> modules = new HashMap<>();
+        Map<Project.Specifier<?>, Project.Specifier<?>> projSpecMapping = new HashMap<>();
         private EvolutionsAtProj rootModule;
+        public final VersionCommit beforeVersion;
+        public final VersionCommit afterVersion;
+
+        public Project.Specifier getProjectSpec(Project.Specifier spec) {
+            return projSpecMapping.get(spec);
+        }
 
         public EvolutionsAtCommit(Specifier spec, Sources sources, Commit beforeCom, Commit commit) {
             super(spec, sources);
-            // TODO Auto-generated constructor stub
+            this.beforeVersion = VersionCommit.build(sources.getCommit(spec.commitIdBefore));
+            this.afterVersion = VersionCommit.build(sources.getCommit(spec.commitIdAfter));
         }
 
         private EvolutionsAtProj compute() {
@@ -166,7 +177,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             public Project<?> getBeforeProj() {
                 return beforeProj;
             }
-            
+
             public Project<?> getAfterProj() {
                 return afterProj;
             }
@@ -184,10 +195,9 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             private EvolutionsAtProj compute(Project<?> beforeProj, Project<?> afterProj) {
                 this.beforeProj = beforeProj;
                 this.afterProj = afterProj;
-                AstComparator comp = new AstComparator();
+                // AstComparator comp = new AstComparator();
                 String relPath = beforeProj.spec.relPath.toString();
-                assert relPath.equals(afterProj.spec.relPath.toString()):
-                    relPath;
+                assert relPath.equals(afterProj.spec.relPath.toString()) : relPath;
                 Map<String, MutablePair<Project<?>, Project<?>>> modulesPairs = new HashMap<>();
                 for (Project<?> p : beforeProj.getModules()) {
                     modulesPairs.putIfAbsent(p.spec.relPath.toString(), new MutablePair<>());
@@ -199,15 +209,14 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 }
 
                 if (beforeProj.getAst().isUsable() && afterProj.getAst().isUsable()) {
-
                     CtPackage left = ((ProjectSpoon.SpoonAST) beforeProj.getAst()).launcher.getModel().getRootPackage();
                     CtPackage right = ((ProjectSpoon.SpoonAST) afterProj.getAst()).launcher.getModel().getRootPackage();
                     this.scanner = new SpoonGumTreeBuilder();
                     ITree srcTree;
                     srcTree = scanner.getTree(left);
-                    this.mdiff = new MultiDiffImpl(srcTree);
+                    this.mdiff = new MultiDiffImpl(srcTree, beforeVersion);
                     ITree dstTree = scanner.getTree(right);
-                    this.diff = mdiff.compute(scanner.getTreeContext(), dstTree);
+                    this.diff = mdiff.compute(scanner.getTreeContext(), dstTree, afterVersion);
                     // this.diff = comp.compare(
                     //         ((ProjectSpoon.SpoonAST) beforeProj.getAst()).launcher.getModel().getRootPackage(),
                     //         ((ProjectSpoon.SpoonAST) afterProj.getAst()).launcher.getModel().getRootPackage());
@@ -229,8 +238,14 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     modules.add(child.compute(value.left, value.right));
                     EvolutionsAtCommit.this.modules.put((SpecificifierAtProj) spec,
                             child.compute(value.left, value.right));
+                    linkProjSpecs(value.left.spec, value.right.spec);
                 }
                 return this;
+            }
+
+            private void linkProjSpecs(Project.Specifier a, Project.Specifier b) {
+                EvolutionsAtCommit.this.projSpecMapping.put(a, b);
+                EvolutionsAtCommit.this.projSpecMapping.put(b, a);
             }
 
             void addEvolution(Operation<?> op, Project<?> astBefore, Project<?> astAfter) {
@@ -287,21 +302,21 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 CtElement element = (CtElement) range.getOriginal();
                 boolean fromSource = source.spec.equals(((SpecificifierAtProj) spec).before_spec);
                 CtElement aaa = null;
-                ITree tree = (ITree)element.getMetadata(SpoonGumTreeBuilder.GUMTREE_NODE);
-                if (tree!=null) {
+                ITree tree = (ITree) element.getMetadata(SpoonGumTreeBuilder.GUMTREE_NODE);
+                if (tree != null) {
                     if (fromSource) {
                         ITree tmp = diff.getMappingsComp().getDst(tree);
-                        if (tmp!=null) {
-                            aaa = (CtElement)tmp.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+                        if (tmp != null) {
+                            aaa = (CtElement) tmp.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
                         }
                     } else {
                         ITree tmp = diff.getMappingsComp().getSrc(tree);
-                        if (tmp!=null) {
-                            aaa = (CtElement)tmp.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+                        if (tmp != null) {
+                            aaa = (CtElement) tmp.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
                         }
                     }
                 } else {
-                    if(aaa==null) {
+                    if (aaa == null) {
                         aaa = new SpoonSupport().getMappedElement(diff, (CtElement) element, fromSource);
                     }
                 }
@@ -528,5 +543,85 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         StringBuilder sb = new StringBuilder();
         // TODO
         return sb.toString();
+    }
+
+    public static class VersionCommit implements Version {
+
+        @Override
+        public COMP_RES partiallyCompareTo(Version other) {
+            if (other instanceof VersionCommit) {
+                VersionCommit o = (VersionCommit) other;
+                if (this == o) {
+                    return COMP_RES.EQUAL;
+                } else if (isAncestor(o)) {
+                    return COMP_RES.SUPERIOR;
+                } else if (isDescendant(o)) {
+                    return COMP_RES.INFERIOR;
+                } else {
+                    return COMP_RES.PARALLEL;
+                }
+            } else {
+                return null;
+            }
+        }
+
+        private boolean isDescendant(VersionCommit o) {
+            for (Commit x : this.commit.getChildrens()) {
+                VersionCommit y = commitsToVersions.get(x);
+                if (o == y) {
+                    return true;
+                } else if (y.isDescendant(o)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private boolean isAncestor(VersionCommit o) {
+            for (Commit x : this.commit.getParents()) {
+                VersionCommit y = commitsToVersions.get(x);
+                if (o == y) {
+                    return true;
+                } else if (y.isAncestor(o)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        static Map<Commit, VersionCommit> commitsToVersions = new HashMap<>();
+        public final Sources.Commit commit;
+
+        private VersionCommit(Sources.Commit commit) {
+            this.commit = commit;
+        }
+
+        public static VersionCommit build(Sources.Commit commit) {
+            VersionCommit res = new VersionCommit(commit);
+            commitsToVersions.put(commit, res);
+            return res;
+        }
+
+        // // negTopo | posTopo
+        // private static final ArrayList<Collection<VersionCommit>> posTopo = new ArrayList<>(); 
+        // private static final ArrayList<Collection<VersionCommit>> negTopo = new ArrayList<>(); 
+
+        // private Collection<VersionCommit> getCut(int topoIndex) {
+        //     if (topoIndex<0) {
+        //         return negTopo.get(-topoIndex);
+        //     } else {
+        //         return posTopo.get(topoIndex);
+        //     }
+        // }
+
+        // private boolean add(VersionCommit v) {
+        //     if (posTopo.size()==0) {
+        //         ArrayList<VersionCommit> tmp = new ArrayList<>();
+        //         tmp.add(v);
+        //         return posTopo.add(tmp);
+        //     } else {
+        //         return posTopo.get(topoIndex);
+        //     }
+        // }
     }
 }

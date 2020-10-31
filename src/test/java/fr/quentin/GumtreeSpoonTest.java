@@ -22,6 +22,8 @@ import com.github.gumtreediff.actions.model.Insert;
 import com.github.gumtreediff.actions.model.Move;
 import com.github.gumtreediff.actions.model.Update;
 import com.github.gumtreediff.tree.ITree;
+import com.github.gumtreediff.tree.Version;
+import com.github.gumtreediff.tree.VersionInt;
 
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.junit.jupiter.api.Test;
@@ -80,12 +82,14 @@ class GumtreeSpoonTest {
                 MavenLauncher after = build(gitURL, commitIdAfter);
                 CtPackage left = before.getModel().getRootPackage();
                 CtPackage right = after.getModel().getRootPackage();
+                final Version leftV = new VersionInt(0);
+                final Version rightV = new VersionInt(1);
                 final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
                 ITree srcTree;
                 srcTree = scanner.getTree(left);
-                MultiDiffImpl mdiff = new MultiDiffImpl(srcTree);
+                MultiDiffImpl mdiff = new MultiDiffImpl(srcTree, leftV);
                 ITree dstTree = scanner.getTree(right);
-                DiffImpl diff = mdiff.compute(scanner.getTreeContext(), dstTree);
+                DiffImpl diff = mdiff.compute(scanner.getTreeContext(), dstTree, rightV);
 
                 ITree middle = mdiff.getMiddle();
                 // System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), srcTree));
@@ -120,9 +124,9 @@ class GumtreeSpoonTest {
                         final SpoonGumTreeBuilder scanner1 = new SpoonGumTreeBuilder();
                         ITree srctree1;
                         srctree1 = scanner1.getTree(made1);
-                        MultiDiffImpl mdiff1 = new MultiDiffImpl(srctree1);
+                        MultiDiffImpl mdiff1 = new MultiDiffImpl(srctree1, leftV);
                         ITree dstTree1 = scanner1.getTree(ori1);
-                        DiffImpl diff1 = mdiff1.compute(scanner1.getTreeContext(), dstTree1);
+                        DiffImpl diff1 = mdiff1.compute(scanner1.getTreeContext(), dstTree1, rightV);
                         for (Action action : diff1.getActionsList()) {
                             System.err.println(action);
                         }

@@ -1,5 +1,6 @@
 package fr.quentin.coevolutionMiner.v2.sources;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -149,8 +150,8 @@ public abstract class Sources {
     }
 
     public class Commit {
-        final Set<Commit> parents = new HashSet<>();
-        final Set<Commit> childrens = new HashSet<>();
+        final List<Commit> parents = new ArrayList<>();
+        final List<Commit> childrens = new ArrayList<>();
         private final String id;
 
         public Repository getRepository() {
@@ -167,15 +168,15 @@ public abstract class Sources {
         /**
          * @return the parents
          */
-        public Set<Commit> getParents() {
-            return Collections.unmodifiableSet(parents);
+        public List<Commit> getParents() {
+            return Collections.unmodifiableList(parents);
         }
 
         /**
          * @return the childrens
          */
-        public Set<Commit> getChildrens() {
-            return Collections.unmodifiableSet(childrens);
+        public List<Commit> getChildrens() {
+            return Collections.unmodifiableList(childrens);
         }
 
         Commit(String id) {

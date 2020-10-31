@@ -11,6 +11,9 @@ import java.util.Set;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import com.github.gumtreediff.tree.ITree;
+import com.github.gumtreediff.tree.VersionedTree;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
@@ -245,55 +248,64 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
         class InterestingCase {
             public EvolutionsAtProj evolutionsAtProj;
-            public Project projectBefore;
-            public Project projectAfter;
             public Set<Evolution> evosForThisTest;
-
+            public Range testBefore;
         }
         Map<EvolutionsAtProj, Set<InterestingCase>> interestingCases = new HashMap<>();
         Map<EvolutionsAtProj, Set<Evolution>> evoPerProj = new HashMap<>();
+        Map<EvolutionsAtProj, Set<Range>> impactedTestserProj = new HashMap<>();
         for (Entry<Project, Set<Entry<Range, Set<Object>>>> entry : impactedTestsByProject.entrySet()) {
             Project projectBefore = entry.getKey();
+            Project.Specifier projectSpecAfter = currEvoAtCommit.getProjectSpec(projectBefore.spec);
             for (Entry<Range, Set<Object>> impactedTest : entry.getValue()) {
                 Range testBefore = impactedTest.getKey();
-                Set<Project<?>.AST.FileSnapshot.Range> testsAfter = new HashSet<>();
-                Project<?>.AST.FileSnapshot.Range mappingResult = currentDiff.map(testBefore, after_proj);
-                if (mappingResult != null) {
-                    testsAfter.add(mappingResult);
-                }
+                // Set<Project<?>.AST.FileSnapshot.Range> testsAfter = new HashSet<>();
+                // Project<?>.AST.FileSnapshot.Range mappingResult = currentDiff.map(testBefore, after_proj);
+                // if (mappingResult != null) {
+                //     testsAfter.add(mappingResult);
+                // }
                 Set<Evolutions.Evolution.DescRange> evosInGame = (Set) impactedTest.getValue();
-                for (Evolutions.Evolution.DescRange descR : evosInGame) {
-                    if (descR.getTarget() == testBefore) {
-                        if (descR.getSource().getType().equals("Move Method")) {
-                            testsAfter.add(descR.getSource().getAfter().get(0).getTarget());
-                        }
-                    }
+                // for (Evolutions.Evolution.DescRange descR : evosInGame) {
+                //     if (descR.getTarget() == testBefore) {
+                //         if (descR.getSource().getType().equals("Move Method")) {
+                //             testsAfter.add(descR.getSource().getAfter().get(0).getTarget());
+                //         }
+                //     }
+                // }
+                // for (Project<?>.AST.FileSnapshot.Range testAfter : testsAfter) {
+                Set<Evolution> evosForThisTest = new HashSet<>();
+                for (Evolutions.Evolution.DescRange obj : evosInGame) {
+                    Evolution src = ((Evolutions.Evolution.DescRange) obj).getSource();
+                    evosForThisTest.addAll(atomizedRefactorings.get(src));
                 }
-                for (Project<?>.AST.FileSnapshot.Range testAfter : testsAfter) {
-                    Set<Evolution> evosForThisTest = new HashSet<>();
-                    for (Evolutions.Evolution.DescRange obj : evosInGame) {
-                        Evolution src = ((Evolutions.Evolution.DescRange) obj).getSource();
-                        evosForThisTest.addAll(atomizedRefactorings.get(src));
-                    }
-                    EvolutionsAtProj evolutionsAtProj = currEvoAtCommit.getModule(projectBefore.spec,
-                            testAfter.getFile().getAST().getProject().spec);
-                    InterestingCase curr = new InterestingCase();
-                    curr.projectBefore = projectBefore;
-                    curr.projectAfter = testAfter.getFile().getAST().getProject();
-                    curr.evosForThisTest = evosForThisTest;
-                    interestingCases.putIfAbsent(evolutionsAtProj, new HashSet<>());
-                    interestingCases.get(evolutionsAtProj).add(curr);
-                    evoPerProj.putIfAbsent(evolutionsAtProj, new HashSet<>());
-                    evoPerProj.get(evolutionsAtProj).addAll(evosForThisTest);
-                }
+                EvolutionsAtProj evolutionsAtProj = currEvoAtCommit.getModule(projectBefore.spec, projectSpecAfter);
+
+                InterestingCase curr = new InterestingCase();
+                // curr.projectBefore = projectBefore;
+                // curr.projectAfter = evolutionsAtProj.getAfterProj();//testAfter.getFile().getAST().getProject();
+                curr.evosForThisTest = evosForThisTest;
+                curr.testBefore = testBefore;
+
+                interestingCases.putIfAbsent(evolutionsAtProj, new HashSet<>());
+                interestingCases.get(evolutionsAtProj).add(curr);
+
+                evoPerProj.putIfAbsent(evolutionsAtProj, new HashSet<>());
+                evoPerProj.get(evolutionsAtProj).addAll(evosForThisTest);
+                // }
             }
         }
         for (EvolutionsAtProj k : interestingCases.keySet()) {
             try (ApplierHelper ah = new ApplierHelper(k, evoPerProj.get(k), atomizedRefactorings);) {
                 for (InterestingCase c : interestingCases.get(k)) {
+                    ITree treeTest = (ITree)((CtElement)c.testBefore.getOriginal()).getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
+                    CtElement[] testsBefore = ah.watchApply(currEvoAtCommit.beforeVersion,treeTest);
+                    Path path = Paths.get("/tmp/applyResults/");
+                    ah.serialize(path.toFile());
+                    Exception resBefore = executeTest(sourcesProvider, path, ((CtMethod)testsBefore[0]).getDeclaringType().getQualifiedName(), ((CtMethod)testsBefore[0]).getSimpleName());
                     ah.applyEvolutions(c.evosForThisTest);
-                    // ApplierHelper.applyEvolutions(c.evolutionsAtProj, c.evosForThisTest, atomizedRefactorings);
-                    ah.serialize(Paths.get("/tmp/applyResults/").toFile());
+                    CtElement[] testsAfter = ah.getUpdatedElement(currEvoAtCommit.beforeVersion, treeTest);
+                    Exception resAfter = executeTest(sourcesProvider, path, ((CtMethod)testsAfter[0]).getDeclaringType().getQualifiedName(), ((CtMethod)testsAfter[0]).getSimpleName());
+                    ah.serialize(path.toFile());
                 }
             } catch (Exception e) {
                 throw new RuntimeException(e);

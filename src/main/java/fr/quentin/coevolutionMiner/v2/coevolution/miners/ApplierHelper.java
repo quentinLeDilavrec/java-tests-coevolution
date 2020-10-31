@@ -21,15 +21,20 @@ import com.github.gumtreediff.actions.model.Move;
 import com.github.gumtreediff.actions.model.Update;
 import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.ITree;
+import com.github.gumtreediff.tree.VersionedTree;
 
 import org.apache.commons.compress.utils.Iterators;
+import org.eclipse.jetty.util.MultiMap;
 
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon.SpoonAST;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.VersionCommit;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsAtCommit.EvolutionsAtProj;
 import gumtree.spoon.apply.AAction;
 import gumtree.spoon.apply.ActionApplier;
 import gumtree.spoon.apply.WrongAstContextException;
+import gumtree.spoon.apply.operations.MyScriptGenerator;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.Diff;
 import gumtree.spoon.diff.DiffImpl;
@@ -57,6 +62,7 @@ public class ApplierHelper implements AutoCloseable {
     public final Map<Evolution, Set<Evolution>> evoToEvo;
     private Factory factory;
     private Launcher launcher;
+    private MultiDiffImpl mdiff;
 
     class EvoStateMaintainer {
         private Map<Evolution, Integer> evoState = new HashMap<>();
@@ -114,10 +120,12 @@ public class ApplierHelper implements AutoCloseable {
         private void markRequirements(AAction a, Collection<Evolution> e) {
             if (a instanceof Delete) {
                 markDeleteRequirements(a, e);
+                // } else if (a instanceof Move) {
+                //     markSourceRequirements(a, e);
+                //     markInsertRequirements(a, e);
             } else {
                 markInsertRequirements(a, e);
-                markSourceRequirements(a, e);
-                markContextRequirements(a, e);
+                // markContextRequirements(a, e);
             }
         }
 
@@ -138,16 +146,27 @@ public class ApplierHelper implements AutoCloseable {
             }
         }
 
-        private void markSourceRequirements(AAction<Move> a, Collection<Evolution> e) {
-            // TODO
-        }
+        // /**
+        //  * For a move, the insertion must be done before the deletion.
+        //  * Thus the inserted node must be populated before the removed node is unpopulated. 
+        //  * @param a
+        //  * @param e
+        //  */
+        // private void markSourceRequirements(AAction<Move> a, Collection<Evolution> e) {
+        //     AbstractVersionedTree s = (AbstractVersionedTree)a.getSource();
+        //     AbstractVersionedTree t = a.getTarget();
+        //     assert (t != null);
+        //     assert (s != null);
+        //     presentMap.putIfAbsent(s, new HashSet<>());
+        //     presentMap.get(s).addAll(e);
+        // }
 
-        private void markContextRequirements(AAction<?> a, Collection<Evolution> e) {
-            // TODO
-        }
+        // private void markContextRequirements(AAction<?> a, Collection<Evolution> e) {
+        //     // TODO
+        // }
     }
 
-    public ApplierHelper(SpoonGumTreeBuilder scanner, ITree middle, Diff diff,
+    private ApplierHelper(SpoonGumTreeBuilder scanner, ITree middle, Diff diff,
             Collection<Evolution> allPossiblyConsideredEvos, Map<Evolution, Set<Evolution>> atomizedRefactorings) {
         this.scanner = scanner;
         this.middle = middle;
@@ -161,14 +180,15 @@ public class ApplierHelper implements AutoCloseable {
 
     public ApplierHelper(EvolutionsAtProj eap, Collection<Evolution> allPossiblyConsideredEvos,
             Map<Evolution, Set<Evolution>> atomizedRefactorings) {
-        this(eap.getScanner(), eap.getMdiff().getMiddle(), (eap.getDiff()), allPossiblyConsideredEvos,
+        this(eap.getScanner(), eap.getMdiff().getMiddle(), eap.getDiff(), allPossiblyConsideredEvos,
                 atomizedRefactorings);
+        this.mdiff = eap.getMdiff();
     }
 
     public Launcher applyEvolutions(Set<Evolution> wantedEvos) {
         List<AAction> acts = new ArrayList<>();
         for (Evolution evolution : wantedEvos) {
-            acts.add((AAction)evolution.getOriginal());
+            acts.add((AAction) evolution.getOriginal());
         }
         return applyActions(acts); // TODO
     }
@@ -196,10 +216,19 @@ public class ApplierHelper implements AutoCloseable {
         return launcher;
     }
 
-    public static void auxApply(final SpoonGumTreeBuilder scanner, Factory facto, AAction action)
+    public void auxApply(final SpoonGumTreeBuilder scanner, Factory facto, AAction action)
             throws WrongAstContextException {
         if (action instanceof Insert) {
             ActionApplier.applyAInsert(facto, scanner.getTreeContext(), (Insert & AAction<Insert>) action);
+            // Object dst = action.getTarget().getMetadata(MyScriptGenerator.MOVE_DST_ACTION);
+            AbstractVersionedTree dst = action.getTarget();
+            AAction<Move> mact = (AAction<Move>) dst.getMetadata(MyScriptGenerator.MOVE_SRC_ACTION);
+            if (mact != null) {
+                ITree src = mact.getSource();
+                if (watching.containsKey(src)) {
+                    watching.put(src, dst);
+                }
+            }
         } else if (action instanceof Delete) {
             ActionApplier.applyADelete(facto, scanner.getTreeContext(), (Delete & AAction<Delete>) action);
         } else if (action instanceof Update) {
@@ -262,6 +291,36 @@ public class ApplierHelper implements AutoCloseable {
                 outWriter.createJavaFile(p);
             }
         }
+    }
+
+    private Map<ITree, ITree> watching = new HashMap<>();
+
+    public CtElement[] watchApply(VersionCommit beforeVersion, ITree... treeTest) {
+        CtElement[] r = new CtElement[treeTest.length];
+        for (int i = 0; i < treeTest.length; i++) {
+            ITree x = treeTest[i];
+            watching.put(x, x);
+            CtElement ele = (CtElement) x.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+            if (ele == null) {
+                ele = (CtElement) x.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+            }
+            r[i] = ele;
+        }
+        return r;
+    }
+
+    public CtElement[] getUpdatedElement(VersionCommit beforeVersion, ITree... treeTest) {
+        CtElement[] r = new CtElement[treeTest.length];
+        for (int i = 0; i < treeTest.length; i++) {
+            ITree xx = treeTest[i];
+            ITree x = watching.getOrDefault(xx, xx);
+            CtElement ele = (CtElement) x.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+            if (ele == null) {
+                ele = (CtElement) x.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+            }
+            r[i] = ele;
+        }
+        return r;
     }
 
 }
