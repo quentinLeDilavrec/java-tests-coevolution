@@ -236,7 +236,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                             value.right.spec, spec.miner);
                     EvolutionsAtProj child = new EvolutionsAtProj(projSpec);
                     modules.add(child.compute(value.left, value.right));
-                    EvolutionsAtCommit.this.modules.put((SpecificifierAtProj) spec,
+                    EvolutionsAtCommit.this.modules.put(projSpec,
                             child.compute(value.left, value.right));
                     linkProjSpecs(value.left.spec, value.right.spec);
                 }
