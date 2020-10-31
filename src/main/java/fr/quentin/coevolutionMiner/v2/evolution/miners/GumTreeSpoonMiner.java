@@ -545,6 +545,11 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         return sb.toString();
     }
 
+    /**
+     * Only consider added nodes
+     * to find a path between 2 VersionCommit
+     * at least one of the path must have all its Commit wrapped as VersionCommit
+     */
     public static class VersionCommit implements Version {
 
         @Override
@@ -568,7 +573,9 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         private boolean isDescendant(VersionCommit o) {
             for (Commit x : this.commit.getChildrens()) {
                 VersionCommit y = commitsToVersions.get(x);
-                if (o == y) {
+                if (y == null) {
+                    return false;
+                } else if (o == y) {
                     return true;
                 } else if (y.isDescendant(o)) {
                     return true;
@@ -580,8 +587,10 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         private boolean isAncestor(VersionCommit o) {
             for (Commit x : this.commit.getParents()) {
                 VersionCommit y = commitsToVersions.get(x);
-                if (o == y) {
-                    return true;
+                if (y == null) {
+                    return false;
+                } else if (o == y) {
+                        return true;
                 } else if (y.isAncestor(o)) {
                     return true;
                 }
