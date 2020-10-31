@@ -39,6 +39,7 @@ import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.Diff;
 import gumtree.spoon.diff.DiffImpl;
 import gumtree.spoon.diff.MultiDiffImpl;
+import gumtree.spoon.diff.operations.Operation;
 import spoon.Launcher;
 import spoon.MavenLauncher;
 import spoon.compiler.Environment;
@@ -114,7 +115,10 @@ public class ApplierHelper implements AutoCloseable {
             Set<Evolution> compo =  evoToEvo.get(evos.curr);
             if (compo != null) {
                 for (Evolution e : compo) {
-                    markRequirements((AAction) e.getOriginal(), evos);
+                    Object original = e.getOriginal();
+                    if (original instanceof Operation) {
+                        markRequirements((AAction) ((Operation) original).getAction(), evos);
+                    }
                     markRequirements(new Chain<>(this, e, evos));
                 }
             }
@@ -191,7 +195,10 @@ public class ApplierHelper implements AutoCloseable {
     public Launcher applyEvolutions(Set<Evolution> wantedEvos) {
         List<AAction> acts = new ArrayList<>();
         for (Evolution evolution : wantedEvos) {
-            acts.add((AAction) evolution.getOriginal());
+            Object original = evolution.getOriginal();
+            if (original instanceof Operation) {
+                acts.add((AAction) ((Operation) original).getAction());
+            }
         }
         return applyActions(acts); // TODO
     }
