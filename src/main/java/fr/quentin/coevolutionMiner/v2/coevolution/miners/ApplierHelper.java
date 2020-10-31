@@ -111,9 +111,12 @@ public class ApplierHelper implements AutoCloseable {
         }
 
         private void markRequirements(Chain<Evolution> evos) {
-            for (Evolution e : evoToEvo.get(evos.curr)) {
-                markRequirements((AAction) e.getOriginal(), evos);
-                markRequirements(new Chain<>(this, e, evos));
+            Set<Evolution> compo =  evoToEvo.get(evos.curr);
+            if (compo != null) {
+                for (Evolution e : compo) {
+                    markRequirements((AAction) e.getOriginal(), evos);
+                    markRequirements(new Chain<>(this, e, evos));
+                }
             }
         }
 
