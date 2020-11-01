@@ -277,9 +277,17 @@ public class MyImpactsMiner implements ImpactsMiner {
                             if (marchedVal instanceof ImpactChain) {
                                 marchedVal = marched.get(marchedVal);
                             }
-                            assert marchedVal instanceof Set;
-                            for (ImpactChain x : prevsRedOrEnd) {
-                                ((Set) marched.get(x)).addAll((Set) marchedVal);
+                            if (marchedVal instanceof Set) {
+                                for (ImpactChain x : prevsRedOrEnd) {
+                                    Object object = marched.get(x);
+                                    if (object instanceof Set) {
+                                        ((Set) object).addAll((Set) marchedVal); // TODO can be an impact chain???
+                                    } else {
+                                        throw new RuntimeException("marchedVal should be a set but was"+ object.getClass());
+                                    }
+                                }
+                            } else {
+                                throw new RuntimeException("marchedVal should be a set but was"+ marchedVal.getClass());
                             }
                             break;
                         }
@@ -290,7 +298,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                             for (ImpactChain x : sinceLastRedOrEnd) {
                                 Object tmp = marched.get(x);
                                 if (tmp == null || tmp instanceof ImpactChain) {
-                                    marched.put(x, current);
+                                    marched.put(x, current); // TODO strange
                                 }
                             }
                             sinceLastRedOrEnd = new ArrayList<>();
@@ -327,23 +335,23 @@ public class MyImpactsMiner implements ImpactsMiner {
                             case CALL:
                                 imp = addImpact(current.getType().toString(), // TODO try to put more metadata here
                                         Collections.singleton(
-                                                new ImmutablePair<>(extracted(ast, prev.getLast()), "declaration")),
+                                                new ImmutablePair<>(ie2range(ast, prev.getLast()), "declaration")),
                                         Collections.emptySet());
-                                addEffect(imp, extracted(ast, last), "reference");
+                                addEffect(imp, ie2range(ast, last), "reference");
                                 break;
                             default:
                                 imp = addImpact(current.getType().toString(), // TODO try to put more metadata here
                                         Collections.singleton(
-                                                new ImmutablePair<>(extracted(ast, prev.getLast()), "cause")),
+                                                new ImmutablePair<>(ie2range(ast, prev.getLast()), "cause")),
                                         Collections.singleton(
-                                                new ImmutablePair<>(extracted(ast, ic.getLast()), "effect")));
+                                                new ImmutablePair<>(ie2range(ast, ic.getLast()), "effect")));
                                 break;
                         }
                         sinceLastRedOrEnd.add(current);
                         current = prev;
                     }
                 }
-                addImpactedTest(extracted(ast, ic.getLast()), rootsDescsForTest);
+                addImpactedTest(ie2range(ast, ic.getLast()), rootsDescsForTest);
                 // continue;
                 //     ImpactElement root = ic.getRoot();
                 //     Set<Object> roots = new HashSet<>();
@@ -408,7 +416,7 @@ public class MyImpactsMiner implements ImpactsMiner {
             return this;
         }
 
-        private Project<CtElement>.AST.FileSnapshot.Range extracted(SpoonAST ast, ImpactElement x) {
+        private Project<CtElement>.AST.FileSnapshot.Range ie2range(SpoonAST ast, ImpactElement x) {
             return ast.getRange(ast.rootDir.relativize(Paths.get(x.getPosition().getFilePath())).toString(),
                     x.getPosition().getStart(), x.getPosition().getEnd(), x.getContent());
         }
