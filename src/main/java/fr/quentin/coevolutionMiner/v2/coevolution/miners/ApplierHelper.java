@@ -499,12 +499,12 @@ public class ApplierHelper implements AutoCloseable {
         for (int i = 0; i < treeTest.length; i++) {
             ITree xx = treeTest[i];
             ITree x = watching.getOrDefault(xx, xx);
-            Map<VersionCommit, CtElement> map = (Map<VersionCommit, CtElement>) x
-                    .getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION);
+            // Map<VersionCommit, CtElement> map = (Map<VersionCommit, CtElement>) x
+            //         .getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION);
             CtElement ele = null;
-            if (map != null) {
-                ele = map.get(afterVersion);
-            }
+            // if (map != null) {
+            //     ele = map.get(afterVersion);
+            // }
             if (ele == null) {
                 ele = (CtElement) x.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
             }

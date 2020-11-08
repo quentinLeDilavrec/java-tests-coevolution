@@ -301,7 +301,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
         // Validation phase, by compiling and running tests
         Path path = Paths.get("/tmp/applyResults/");
-        Path oriPath = ((SpoonAST)currEvoAtCommit.getRootModule().getBeforeProj().getAst()).rootDir;
+        Path oriPath = ((SpoonAST) currEvoAtCommit.getRootModule().getBeforeProj().getAst()).rootDir;
         try {
             FileUtils.copyDirectory(oriPath.toFile(), path.toFile());
         } catch (Exception e) {
@@ -326,6 +326,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     public Range testBefore;
                     public Set<Evolution> evosForThisTest;
                     public CtMethod elementTestBefore;
+                    public String sigTestBefore;
 
                 }
                 FunctionalImpactHelper consumer = new FunctionalImpactHelper() {
@@ -335,27 +336,33 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                                 .getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
                         CtMethod elementTestAfter = (CtMethod) ah.getUpdatedElement(currEvoAtCommit.afterVersion,
                                 treeTestBefore)[0];
+                        String testSig = elementTestAfter.getDeclaringType().getQualifiedName() + "#"
+                                + elementTestAfter.getSimpleName();
                         String resInitial = initialTestsStatus.get(this.testBefore);
                         String testClassQualName = elementTestAfter.getDeclaringType().getQualifiedName();
                         String testSimpName = elementTestAfter.getSimpleName();
-                        String testSignature = elementTestAfter.getSignature();
-                        boolean isSameTestNameAndPlace = testClassQualName
-                                .equals(elementTestBefore.getDeclaringType().getQualifiedName())
-                                && testSimpName.equals(elementTestBefore.getSimpleName());
-                        boolean isSameTestSig = testSignature.equals(elementTestBefore.getSignature());
+                        // String testSignature = elementTestAfter.getSignature();
+                        // boolean isSameTestNameAndPlace = testClassQualName
+                        // .equals(elementTestBefore.getDeclaringType().getQualifiedName())
+                        // && testSimpName.equals(elementTestBefore.getSimpleName());
+                        boolean isSameTestSig = testSig.equals(sigTestBefore);
                         SourcePosition position = elementTestAfter.getPosition();
                         if (position == null || !position.isValidPosition()) {
                             throw new RuntimeException(); // TODO make it less hard, but it shouldn't append anyway
                         }
                         // need to get the new Range corresponding the the test
-                        Range testAfter = k.getAfterProj().getRange(
-                                k.getAfterProj().getAst().rootDir.relativize(position.getFile().toPath()).toString(),
-                                position.getSourceStart(), position.getSourceEnd(), elementTestAfter);
-                        if (testAfter == null)
-                            throw new RuntimeException();
-                        if (isSameTestNameAndPlace) {
+                        Range testToExec;
+                        if (isSameTestSig) {
                             // can point to the original test ?
+                            testToExec = testBefore;
                         } else {
+                            Range testAfter = k.getAfterProj().getRange(
+                                    k.getAfterProj().getAst().rootDir.relativize(position.getFile().toPath())
+                                            .toString(),
+                                    position.getSourceStart(), position.getSourceEnd(), elementTestAfter);
+                            if (testAfter == null)
+                                throw new RuntimeException();
+                            testToExec = testAfter;
                             // TODO save that testBefore --> testAfter
                         }
                         // DescRange descRange = (Evolution.DescRange) elementTestAfter
@@ -363,15 +370,12 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         // if (descRange.getTarget().equals(testBefore)) {
 
                         // }
-                        ApplierHelper.serialize(ast_after.launcher, path.toFile());
                         ah.serialize(path.toFile());
                         String res = executeTest(sourcesProvider, path, testClassQualName, testSimpName);
                         EImpact eimpact = new EImpact();
-                        eimpact.tests.put(testBefore, new HashMap<>());
-                        eimpact.tests.get(testBefore).put(testAfter, res);
+                        eimpact.tests.put(testBefore, new ImmutablePair<>(testToExec, res));
                         for (Evolution e : t) {
                             eimpact.evolutions.put(e, ah.evoState.ratio(e));
-
                         }
                         if (res == null) {
                             // test passed
@@ -392,6 +396,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                             .getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
                     consumer.elementTestBefore = (CtMethod) ah.watchApply(currEvoAtCommit.beforeVersion,
                             treeTestBefore)[0];
+                    consumer.sigTestBefore = consumer.elementTestBefore.getDeclaringType().getQualifiedName() + "#"
+                            + consumer.elementTestBefore.getSimpleName();
                     // ITree treeTestBefore = (ITree) ((CtElement) testBefore.getOriginal())
                     // .getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
                     // CtElement[] testsBefore = ah.watchApply(currEvoAtCommit.beforeVersion,
@@ -682,9 +688,9 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         public void addEImpacts(Map<Set<Evolution>, Set<EImpact>> eImpacts) {
             for (Entry<Set<Evolution>, Set<EImpact>> aaa : eImpacts.entrySet()) {
                 for (EImpact ei : aaa.getValue()) {
-                    for (Entry<Range, Map<Range, String>> bbb : ei.tests.entrySet()) {
+                    for (Entry<Range, ImmutablePair<Range, String>> bbb : ei.tests.entrySet()) {
                         String resInitial = initialTestsStatus.get(bbb.getKey());
-                        for (Entry<Range, String> ccc : bbb.getValue().entrySet()) {
+                            ImmutablePair<Range, String> ccc = bbb.getValue();
                             String resAfter = ccc.getValue();
                             if (resInitial == null && resAfter == null) { // V V
                                 // probable resolution
@@ -851,7 +857,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             StringBuilder r = new StringBuilder();
             InvocationResult res = SourcesHelper.executeTests(path, declaringClass + "#" + name, x -> {
                 System.out.println(x);
-                r.append(x+"\n");
+                r.append(x + "\n");
             });
             CommandLineException executionException = res.getExecutionException();
             if (executionException != null) {
@@ -1058,7 +1064,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
     static class EImpact {
 
-        public final Map<Range, Map<Range, String>> tests = new HashMap<>();
+        public final Map<Range, ImmutablePair<Range, String>> tests = new HashMap<>();
         public final Map<Evolution, Fraction> evolutions = new HashMap<>();
 
         @Override
