@@ -37,6 +37,7 @@ import org.refactoringminer.api.Refactoring;
 
 import fr.quentin.coevolutionMiner.utils.MyProperties;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
+import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 // import fr.quentin.impactMiner.ImpactAnalysis;
 // import fr.quentin.impactMiner.ImpactChain;
 // import fr.quentin.impactMiner.ImpactElement;
@@ -46,12 +47,17 @@ import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.CoEvolution;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.Specifier;
+import fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner.CoEvolutionsExtension;
+import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
+import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts;
+import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.coevolutionMiner.v2.utils.Tuple;
+import fr.quentin.coevolutionMiner.v2.utils.Utils;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsStorage;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtExecutable;
@@ -61,14 +67,10 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
 
     @Override
     public void put(CoEvolutions value) {
-        Set<CoEvolution> validated_coevos = value.getValidated();
-        Set<CoEvolution> unvalidated_coevos = value.getUnvalidated();
+        Set<CoEvolution> coevos = value.getCoEvolutions();
         List<Map<String, Object>> tmp = new ArrayList<>();
-        for (CoEvolution coevolution : validated_coevos) {
+        for (CoEvolution coevolution : coevos) {
             tmp.add(basifyCoevo(coevolution, true, value.spec.srcSpec.repository));
-        }
-        for (CoEvolution coevolution : unvalidated_coevos) {
-            tmp.add(basifyCoevo(coevolution, false, value.spec.srcSpec.repository));
         }
         try (Session session = driver.session()) {
             String done = session.writeTransaction(new TransactionWork<String>() {
@@ -85,7 +87,8 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         }
     }
 
-    private Map<String, Object> basifyCoevo(CoEvolution coevolution, boolean validated, String repository) { // TODO refactor
+    private Map<String, Object> basifyCoevo(CoEvolution coevolution, boolean validated, String repository) { // TODO
+                                                                                                             // refactor
         Map<String, Object> coevo = new HashMap<>();
         List<String> causes_url = new ArrayList<>();
         List<Map<String, Object>> pointed = new ArrayList<>();
@@ -117,15 +120,24 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
     }
 
     private final Driver driver;
+    private ProjectHandler astHandler;
+    private EvolutionHandler evoHandler;
+    private SourcesHandler sourcesHandler;
+    private ImpactHandler impactHandler;
 
     public Neo4jCoEvolutionsStorage(String uri, String user, String password) {
         driver = GraphDatabase.driver(uri, AuthTokens.basic(user, password));
     }
 
-    public Neo4jCoEvolutionsStorage() {
+    public Neo4jCoEvolutionsStorage(SourcesHandler sourcesHandler, ProjectHandler astHandler,
+            EvolutionHandler evoHandler, ImpactHandler impactHandler) {
         this(MyProperties.getPropValues().getProperty("neo4jAddress"),
                 MyProperties.getPropValues().getProperty("neo4jId"),
                 MyProperties.getPropValues().getProperty("neo4jPwd"));
+        this.astHandler = astHandler;
+        this.evoHandler = evoHandler;
+        this.sourcesHandler = sourcesHandler;
+        this.impactHandler = impactHandler;
     }
 
     @Override
@@ -134,11 +146,13 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         return null;
     }
 
-    // private static boolean compareEvolution(String repository, Value value, Evolution other) {
-    //     if (other.getOriginal() instanceof Refactoring) {
-    //         return Evolution.makeEvoUrl(repository, (Evolution) other).equals(value.get("url").asString());
-    //     }
-    //     return false;
+    // private static boolean compareEvolution(String repository, Value value,
+    // Evolution other) {
+    // if (other.getOriginal() instanceof Refactoring) {
+    // return Evolution.makeEvoUrl(repository, (Evolution)
+    // other).equals(value.get("url").asString());
+    // }
+    // return false;
     // }
 
     // private static Position toPosition(Value position) {
@@ -192,21 +206,21 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
      * Evolutions is on a single commit
      */
     @Override
-    public void construct(CoEvolutionsExtension.Builder coevoBuilder, Set<Range> startingTests) {
-        // public CoEvolutions get(CoEvolutions.Specifier spec, Set<Range>
-        // startingTests, Evolutions evolutions, AST astBefore, AST astAfter) {
-        List<Map<String, Object>> list = startingTests.stream().map(x -> {
+    public void construct(CoEvolutions.Specifier spec) {
+        Evolutions evolutions = evoHandler.handle(spec.evoSpec);
+        Project astBefore = astHandler.handle(astHandler.buildSpec(spec.srcSpec, spec.evoSpec.commitIdBefore));
+        Project astAfter = astHandler.handle(astHandler.buildSpec(spec.srcSpec, spec.evoSpec.commitIdAfter));
+        Set<Range> startingTests = null;
+        final List<Map<String, Object>> list = startingTests.stream().map(x -> {
             Map<String, Object> r = new HashMap<>();
-            r.put("repo", coevoBuilder.getSpec().srcSpec.repository);
-            r.put("commitId", coevoBuilder.getSpec().evoSpec.commitIdBefore);
+            r.put("repo", spec.srcSpec.repository);
+            r.put("commitId", spec.evoSpec.commitIdBefore);
             r.put("path", x.getFile().getPath());
             r.put("start", x.getStart());
             r.put("end", x.getEnd());
             return r;
         }).collect(Collectors.toList());
-        Evolutions evolutions = coevoBuilder.getEvolutions();
-        Project astBefore = coevoBuilder.getAstBefore();
-        Project astAfter = coevoBuilder.getAstAfter();
+        CoEvolutionsExtension r = new CoEvolutionsExtension(spec, evolutions, astBefore, astAfter);
         try (Session session = driver.session()) {
             List<CoEvolution> done = session.readTransaction(new TransactionWork<List<CoEvolution>>() {
                 @Override
@@ -241,7 +255,8 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                         // }
                         // }
 
-                        coevoBuilder.addCoevolution(causes, evosLong, evosShort, evosShortAdjusted, testBefore);
+                        r.addCoevolution(causes, evosLong, evosShort, evosShortAdjusted,
+                                Collections.singleton(testBefore), null);
 
                         return null;
                     });
@@ -289,21 +304,11 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
     }
 
     public static String getMinerCypher() {
-        try {
-            return new String(Files.readAllBytes(Paths.get(
-                    Neo4jCoEvolutionsStorage.class.getClassLoader().getResource("coevolution_miner.cql").getFile())));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return Utils.memoizedReadResource("coevolution_miner.cql");
     }
 
     private static String getCypher() {
-        try {
-            return new String(Files.readAllBytes(Paths.get(
-                    Neo4jCoEvolutionsStorage.class.getClassLoader().getResource("coevolutions_cypher.cql").getFile())));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return Utils.memoizedReadResource("coevolutions_cypher.cql");
     }
 
     @Override

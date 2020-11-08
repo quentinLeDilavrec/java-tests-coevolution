@@ -45,21 +45,33 @@ public class RMxGTS_Miner implements EvolutionsMiner {
     // TODO instanciate filters correctly and make use of them
     private List<Object> filters;
 
+    private GumTreeSpoonMiner gtsMiner;
+    private RefactoringMiner rmMiner;
+
     public RMxGTS_Miner(Evolutions.Specifier spec, SourcesHandler srcHandler, ProjectHandler astHandler) {
         this.spec = spec;
         this.astHandler = astHandler;
         this.srcHandler = srcHandler;
+        this.gtsMiner = new GumTreeSpoonMiner(spec, srcHandler, astHandler);
+        this.rmMiner = new RefactoringMiner(spec, srcHandler, astHandler);
     }
 
     public RMxGTS_Miner(Evolutions.Specifier spec, SourcesHandler srcHandler, ProjectHandler astHandler,
             List<Object> filters) {
         this(spec, srcHandler, astHandler);
         this.filters = filters;
+        this.gtsMiner = new GumTreeSpoonMiner(spec, srcHandler, astHandler, filters);
+        this.rmMiner = new RefactoringMiner(spec, srcHandler, astHandler, filters);
     }
 
     @Override
     public Evolutions compute() {
-        return null;
+        Sources src = srcHandler.handle(spec.sources, "jgit");
+        return new Evolutions(spec, src) {
+            GumTreeSpoonMiner.EvolutionsMany gtsEvos = (GumTreeSpoonMiner.EvolutionsMany)gtsMiner.compute();
+            Evolutions rmEvos = rmMiner.compute();
+
+        };
     }
 
 }

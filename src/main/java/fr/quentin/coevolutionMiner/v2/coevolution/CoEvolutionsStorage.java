@@ -15,6 +15,6 @@ public interface CoEvolutionsStorage extends AutoCloseable {
 
     public CoEvolutions get(CoEvolutions.Specifier impacts_spec);
 
-	public void construct(CoEvolutionsExtension.Builder coevoBuilder, Set<Range> startingTests);
+	public void construct(CoEvolutions.Specifier spec);
 
 }

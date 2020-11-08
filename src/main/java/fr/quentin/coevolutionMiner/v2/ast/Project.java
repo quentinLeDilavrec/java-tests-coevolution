@@ -320,6 +320,9 @@ public class Project<T> implements Iterable<Project> {
                     r.put("file", file.getPath());
                     r.put("start", getStart());
                     r.put("end", getEnd());
+                    if (original instanceof CtElement) {
+                        r.put("astPath", ((CtElement) original).getPath().toString());
+                    }
                     return r;
                 }
             }
@@ -387,8 +390,7 @@ public class Project<T> implements Iterable<Project> {
 
     private static class Iterators2 {
 
-        public static <I> Iterator<I> createCompoundIterator(I input,
-                Function<I, Iterator<I>> convertor) {
+        public static <I> Iterator<I> createCompoundIterator(I input, Function<I, Iterator<I>> convertor) {
             return new CompoundIterator<>(input, convertor);
         }
 

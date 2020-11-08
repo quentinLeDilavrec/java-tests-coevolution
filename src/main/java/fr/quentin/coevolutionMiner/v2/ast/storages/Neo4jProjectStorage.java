@@ -3,6 +3,7 @@ package fr.quentin.coevolutionMiner.v2.ast.storages;
 import static org.neo4j.driver.Values.parameters;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -30,6 +31,7 @@ import fr.quentin.coevolutionMiner.v2.ast.ProjectStorage;
 import fr.quentin.coevolutionMiner.v2.ast.Stats;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
+import fr.quentin.coevolutionMiner.v2.utils.Utils;
 
 public class Neo4jProjectStorage implements ProjectStorage {
 
@@ -45,7 +47,8 @@ public class Neo4jProjectStorage implements ProjectStorage {
             String done = session.writeTransaction(new TransactionWork<String>() {
                 @Override
                 public String execute(Transaction tx) {
-                    Result result = tx.run(getCypher(), parameters("json", tmp, "tool", value.spec.miner.getSimpleName()));
+                    Result result = tx.run(getCypher(),
+                            parameters("json", tmp, "tool", value.spec.miner.getSimpleName()));
                     result.consume();
                     // Result result2 = tx.run(getCommitCypher(), parameters("commits", commits));
                     // result2.consume();
@@ -78,7 +81,7 @@ public class Neo4jProjectStorage implements ProjectStorage {
 
     private <T> Map<String, Object> projectToMap(ProjectSpoon project) {
         Map<String, Object> r = new HashMap<>();
-        ProjectSpoon.SpoonAST ast = (ProjectSpoon.SpoonAST)project.getAst();
+        ProjectSpoon.SpoonAST ast = (ProjectSpoon.SpoonAST) project.getAst();
         Stats stats = ast.getGlobalStats();
         r.put("stats", stats.toMap());
         Commit commit = project.commit;
@@ -160,32 +163,12 @@ public class Neo4jProjectStorage implements ProjectStorage {
                 MyProperties.getPropValues().getProperty("neo4jPwd"));
     }
 
-    private static String cypher = null;
-
     private static String getCypher() {
-        if (cypher != null) {
-            return cypher;
-        }
-        try {
-            return new String(Files.readAllBytes(
-                    Paths.get(Neo4jProjectStorage.class.getClassLoader().getResource("project_cypher.cql").getFile())));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return Utils.memoizedReadResource("project_cypher.cql");
     }
 
-    private static String commitCypher = null;
-
     protected String getCommitCypher() {
-        if (commitCypher != null) {
-            return commitCypher;
-        }
-        try {
-            return new String(Files.readAllBytes(
-                    Paths.get(Neo4jProjectStorage.class.getClassLoader().getResource("commits_cypher.cql").getFile())));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return Utils.memoizedReadResource("commits_cypher.cql");
     }
 
     @Override

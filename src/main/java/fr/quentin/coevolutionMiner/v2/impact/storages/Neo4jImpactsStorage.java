@@ -24,6 +24,7 @@ import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts.Specifier;
+import fr.quentin.coevolutionMiner.v2.utils.Utils;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactsStorage;
 
 public class Neo4jImpactsStorage implements ImpactsStorage {
@@ -69,12 +70,7 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
     }
 
     private static String getCypher() {
-        try {
-            return new String(Files.readAllBytes(
-                    Paths.get(Neo4jImpactsStorage.class.getClassLoader().getResource("impacts_cypher.sql").getFile())));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return Utils.memoizedReadResource("impacts_cypher.sql");
     }
 
     @Override

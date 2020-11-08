@@ -115,6 +115,8 @@ public class EvolutionHandler implements AutoCloseable {
 			tmp.lock.lock();
 			try {
 				tmp.set(x);
+			} catch (Exception e) {
+				throw new RuntimeException(e);
 			} finally {
 				tmp.lock.unlock();
 			}

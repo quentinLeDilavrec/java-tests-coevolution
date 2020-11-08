@@ -1,6 +1,7 @@
 package fr.quentin.coevolutionMiner.v2.utils;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -95,21 +96,22 @@ public class Utils {
 		return ImpactAnalysis.isTest(p);
 	}
 
-	private static Map<String,String> memory = new HashMap<>();
-	
-    public static String memoizedReadResource(String resource) {
-        String tmp = memory.get(resource);
-        if (tmp == null) {
-            tmp = readResource(resource);
-            memory.put(resource, tmp);
-        }
-        return tmp;
-    }
-    
-    public static String readResource(String resource) {
-        try {
-            return new String(Files.readAllBytes(Paths.get(Utils.class.getClassLoader().getResource(resource).getFile())));
-        } catch (IOException e) {
+	private static Map<String, String> memory = new HashMap<>();
+
+	public static String memoizedReadResource(String resource) {
+		String tmp = memory.get(resource);
+		if (tmp == null) {
+			tmp = readResource(resource);
+			memory.put(resource, tmp);
+		}
+		return tmp;
+	}
+
+	public static String readResource(String resource) {
+		try {
+			return new String(
+					Files.readAllBytes(Paths.get(Utils.class.getClassLoader().getResource(resource).toURI())));
+		} catch (IOException | URISyntaxException e) {
             throw new RuntimeException(e);
         }
     }

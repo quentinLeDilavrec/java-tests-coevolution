@@ -18,6 +18,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.google.gson.GsonBuilder;
@@ -77,6 +78,11 @@ import spoon.reflect.visitor.filter.TypeFilter;
  * SourcesHelper
  */
 public class SourcesHelper implements AutoCloseable {
+
+	/**
+	 *
+	 */
+	public static final String MVN_HOME = MyProperties.getPropValues().getProperty("mavenHome");
 
 	static Logger logger = Logger.getLogger("ImpactAna");
 
@@ -199,7 +205,11 @@ public class SourcesHelper implements AutoCloseable {
 			}
 		} catch (Exception e) {
 			// rm -fr .git
-			runCommand(Paths.get(REPOS_PATH), "rm", "-rf", this.repoRawPath);
+			try {
+				runCommand(Paths.get(REPOS_PATH), "rm", "-rf", this.repoRawPath);
+			} catch (Exception ee) {
+				logger.log(Level.WARNING, "normal if on windows", ee);
+			}
 			// runCommand(Paths.get(REPOS_PATH + this.repoRawPath),"git", "reset",
 			// "--hard");
 			// runCommand(Paths.get(REPOS_PATH + this.repoRawPath),"git", "fsck");
@@ -230,6 +240,7 @@ public class SourcesHelper implements AutoCloseable {
 		if (!Files.exists(directory)) {
 			throw new RuntimeException("can't run command in non-existing directory '" + directory + "'");
 		}
+		logger.info("In "+directory+" running: "+ String.join(" ", command));
 		ProcessBuilder pb = new ProcessBuilder().command(command).directory(directory.toFile());
 		Process p = pb.start();
 		StreamGobbler errorGobbler = new StreamGobbler(p.getErrorStream(), "ERROR");
@@ -362,7 +373,7 @@ public class SourcesHelper implements AutoCloseable {
 		// invoker.setOutputHandler(new PrintStreamHandler(System.out, false));
 		// invoker.setErrorHandler(new PrintStreamHandler(System.err, false));
 		// invoker.getLogger().setThreshold(4);
-		invoker.setMavenHome(Paths.get("/usr").toFile());
+		invoker.setMavenHome(Paths.get(MVN_HOME).toFile());
 		try {
 			// final MavenResult r = new MavenResult();
 			// InvocationResult res = invoker.setOutputHandler(new InvocationOutputHandler()
@@ -468,13 +479,15 @@ public class SourcesHelper implements AutoCloseable {
 		// });
 	}
 
-	public static InvocationResult executeTests(Path path, String filter) throws Exception {
+	public static InvocationResult executeTests(Path path, String filter, InvocationOutputHandler outputHandler)
+			throws Exception {
 		InvocationRequest request = new DefaultInvocationRequest();
 		request.setBaseDirectory(path.toFile());
 		request.setGoals(Arrays.asList("test"));
 		request.setMavenOpts("-Dtest=" + filter);
+		request.setOutputHandler(outputHandler);
 		Invoker invoker = new DefaultInvoker();
-		invoker.setMavenHome(Paths.get("/usr").toFile());
+		invoker.setMavenHome(Paths.get(MVN_HOME).toFile());
 		try {
 			return invoker.execute(request);
 		} catch (MavenInvocationException e) {
@@ -482,12 +495,12 @@ public class SourcesHelper implements AutoCloseable {
 		}
 	}
 
-	public static InvocationResult compileAllTests(Path path) throws Exception {
+	public static InvocationResult compileAllTests(Path path, InvocationOutputHandler outputHandler) throws Exception {
 		InvocationRequest request = new DefaultInvocationRequest();
 		request.setBaseDirectory(path.toFile());
 		request.setGoals(Arrays.asList("test-compile"));
 		Invoker invoker = new DefaultInvoker();
-		invoker.setMavenHome(Paths.get("/usr").toFile());
+		invoker.setMavenHome(Paths.get(MVN_HOME).toFile());
 		try {
 			return invoker.execute(request);
 		} catch (MavenInvocationException e) {

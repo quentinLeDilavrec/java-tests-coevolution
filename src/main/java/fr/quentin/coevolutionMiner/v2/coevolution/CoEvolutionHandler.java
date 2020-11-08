@@ -25,11 +25,11 @@ public class CoEvolutionHandler implements AutoCloseable {
     private ImpactHandler impactHandler;
 
     public CoEvolutionHandler(SourcesHandler sourcesHandler, ProjectHandler astHandler, EvolutionHandler evoHandler, ImpactHandler impactHandler) {
-        this.neo4jStore = new Neo4jCoEvolutionsStorage();
         this.astHandler = astHandler;
         this.evoHandler = evoHandler;
         this.sourcesHandler = sourcesHandler;
         this.impactHandler = impactHandler;
+        this.neo4jStore = new Neo4jCoEvolutionsStorage(sourcesHandler,astHandler,evoHandler,impactHandler);
     }
 
     public static CoEvolutions.Specifier buildSpec(Sources.Specifier src_id, Evolutions.Specifier evo_id) {

@@ -1,5 +1,6 @@
 package fr.quentin;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeNoException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -9,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +30,7 @@ import com.github.gumtreediff.tree.VersionInt;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.junit.jupiter.api.Test;
 
+import fr.quentin.coevolutionMiner.CLI;
 import fr.quentin.coevolutionMiner.utils.MyProperties;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.impactMiner.types.Evolution.Before;
@@ -96,7 +99,7 @@ class GumtreeSpoonTest {
                 // System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), dstTree));
                 // System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), middle));
                 List<Action> retryList = new ArrayList<>();
-                for (Action action : diff.getActionsList()) {
+                for (Action action : diff.getAtomicActions()) {
                         try {
                                 auxApply(scanner, middle, action);
                                 
@@ -127,7 +130,7 @@ class GumtreeSpoonTest {
                         MultiDiffImpl mdiff1 = new MultiDiffImpl(srctree1, leftV);
                         ITree dstTree1 = scanner1.getTree(ori1);
                         DiffImpl diff1 = mdiff1.compute(scanner1.getTreeContext(), dstTree1, rightV);
-                        for (Action action : diff1.getActionsList()) {
+                        for (Action action : diff1.getAtomicActions()) {
                             System.err.println(action);
                         }
                         check1(right, pp, middleE);
@@ -154,6 +157,15 @@ class GumtreeSpoonTest {
                 } else {
                         throw null;
                 }
+        }
+
+
+        @Test
+        public void test42() throws Exception {
+                CLI.batch(
+                    Arrays.asList(
+                    "https://github.com/quentinLeDilavrec/dummyCoevo1 0 cd0c256da4f6670fa2512a85325f84b1ac61b24e da0be38f50616019175f32c89e0a52fafcaf516f").stream(), 
+                    1, 10);
         }
 
 

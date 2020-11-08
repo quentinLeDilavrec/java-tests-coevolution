@@ -1,5 +1,6 @@
 package fr.quentin.coevolutionMiner.v2.evolution.miners;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -17,6 +18,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.hamcrest.Matcher;
 import org.refactoringminer.api.GitHistoryRefactoringMiner;
 import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringHandler;
@@ -40,6 +42,7 @@ import spoon.reflect.declaration.CtElement;
 
 public class RefactoringMiner implements EvolutionsMiner {
     Logger LOGGER = Logger.getLogger("ImpactRM commitHandler");
+    private static final String systemFileSeparator = java.util.regex.Matcher.quoteReplacement(File.separator);
 
     private ProjectHandler astHandler;
     private SourcesHandler srcHandler;
@@ -259,7 +262,7 @@ public class RefactoringMiner implements EvolutionsMiner {
         }
 
         private ImmutablePair<Range, String> toRange(Project proj, CodeRange range) {
-            Range tmp = proj.getRange(range.getFilePath(), range.getStartOffset(), range.getEndOffset() - 1);
+            Range tmp = proj.getRange(range.getFilePath().replaceAll("/", systemFileSeparator), range.getStartOffset(), range.getEndOffset() - 1);
             if (tmp == null) {
                 return null;
             }

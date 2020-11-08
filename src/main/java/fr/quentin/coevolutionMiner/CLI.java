@@ -366,7 +366,7 @@ public class CLI {
                                     CoEvolutions coevo = coevoH.handle(CoEvolutionHandler.buildSpec(srcSpec,
                                             EvolutionHandler.buildSpec(srcSpec, commitIdBefore, commitIdAfter)));
                                     System.out.println(
-                                            Integer.toString(coevo.getValidated().size()) + " coevolutions found for "
+                                            Integer.toString(coevo.getCoEvolutions().size()) + " coevolutions found for "
                                                     + s.get(0) + " from " + commitIdBefore + " to " + commitIdAfter);
                                 } catch (Throwable e) {
                                     logger.info("failed impacts analysis for " + s.get(0));

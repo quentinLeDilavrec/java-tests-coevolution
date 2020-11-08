@@ -1,6 +1,7 @@
 package fr.quentin.coevolutionMiner.v2.coevolution;
 
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -21,11 +22,11 @@ import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 
 // TODO try to extends Evolutions or make an interface for inner class Evolution and implement it with CoEvolution
-public class CoEvolutions {
+public abstract class CoEvolutions {
 
     public final Specifier spec;
 
-    public CoEvolutions(Specifier spec) {
+    protected CoEvolutions(Specifier spec) {
         this.spec = spec;
     }
 
@@ -73,28 +74,35 @@ public class CoEvolutions {
         }
     }
 
-    public static class CoEvolution {
-        protected Set<Evolution> causes;
-        protected Set<Evolution> resolutions;
-        public Set<Evolution> getCauses() {
+    public abstract class CoEvolution {
+        protected final Set<Evolution> causes;
+        protected final Set<Evolution> resolutions;
+
+        protected final Set<Range> testsBefore;
+        protected final Set<Range> testsAfter;
+
+        public CoEvolution(Set<Evolution> causes, Set<Evolution> resolutions, Set<Range> testsBefore,
+                Set<Range> testsAfter) {
+            this.causes = causes;
+            this.resolutions = resolutions;
+            this.testsBefore = testsBefore;
+            this.testsAfter = testsAfter;
+        }
+
+        public final Set<Evolution> getCauses() {
             return causes;
         }
-        public Set<Evolution> getResolutions() {
+
+        public final Set<Evolution> getResolutions() {
             return resolutions;
         }
-        // public AST.FileSnapshot.Range TestBefore;
-        // public AST.FileSnapshot.Range TestAfter;
-		public Set<Range> getTestsBefore() {
-            // for (Evolution aaa : evosLong) {
-            //     if (aaa.getType().equals("Move Method")||aaa.getType().equals("Change Variable Type")||aaa.getType().equals("Rename Variable")) {
-            //         tmp.TestAfter = aaa.getAfter().get(0).getTarget();
-            //     }
-            // }
-			return null;
+
+        public final Set<Range> getTestsBefore() {
+            return Collections.unmodifiableSet(testsBefore);
         }
-        
-		public Set<Range> getTestsAfter() {
-			return null;
+
+        public final Set<Range> getTestsAfter() {
+            return Collections.unmodifiableSet(testsAfter);
         }
 
         @Override
@@ -127,36 +135,9 @@ public class CoEvolutions {
                 return false;
             return true;
         }
-
-        enum Validation {
-            NONE,
-            VALIDATED,
-            NOT_CONCLUSIVE
-        }
-
-        private Validation validation = Validation.NONE;
-
-        public Validation getValidation() {
-            return validation;
-        }
-
-        public void validate() {
-            this.validation = Validation.VALIDATED;
-        }
-
-        public void validationNotConclusive() {
-            this.validation = Validation.NOT_CONCLUSIVE;
-        }
-        
     }
 
-    public Set<CoEvolution> getValidated() {
-        return null;
-    }
-
-    public Set<CoEvolution> getUnvalidated() {
-        return null;
-    }
+    public abstract Set<CoEvolution> getCoEvolutions();
 
     public JsonElement toJson() {
         return new JsonObject();
