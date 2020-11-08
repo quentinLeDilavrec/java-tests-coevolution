@@ -690,41 +690,40 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 for (EImpact ei : aaa.getValue()) {
                     for (Entry<Range, ImmutablePair<Range, String>> bbb : ei.tests.entrySet()) {
                         String resInitial = initialTestsStatus.get(bbb.getKey());
-                            ImmutablePair<Range, String> ccc = bbb.getValue();
-                            String resAfter = ccc.getValue();
-                            if (resInitial == null && resAfter == null) { // V V
-                                // probable resolution
-                                for (Evolution ddd : aaa.getKey()) {
-                                    probableResolutionsIndex.putIfAbsent(ddd, new HashMap<>());
-                                    probableResolutionsIndex.get(ddd).put(ccc.getKey(), ei);
-                                }
-                                probableCoEvoResolutions.add(ei);
-                            } else if (resInitial == null) { // V X
-                                // probable cause
-                                probableCoevoCauses.add(ei);
-                            } else if (resAfter == null) { // X V
-                                // at least the last part of a resolution, if considering multiple commits
-                                partialResolutions.add(ei);
-                                for (Evolution ddd : aaa.getKey()) {
-                                    // for now we wont call it a resolution
-                                    probablyNothing.putIfAbsent(ddd, new HashMap<>());
-                                    probablyNothing.get(ddd).put(ccc.getKey(), ei);
-                                    // probableResolutionsIndex.putIfAbsent(ddd, new HashMap<>());
-                                    // probableResolutionsIndex.get(ddd).put(ccc.getKey(), ei);
-                                }
-                            } else { // X X
-                                // here nothing, but could be part of a any, if considering multiple commits
-                                // TODO useless to put in the graph? would need to be assembled with evo from
-                                // prev commits until test pass
-                                for (Evolution ddd : aaa.getKey()) {
-                                    probablyNothing.putIfAbsent(ddd, new HashMap<>());
-                                    probablyNothing.get(ddd).put(ccc.getKey(), ei);
-                                }
+                        ImmutablePair<Range, String> ccc = bbb.getValue();
+                        String resAfter = ccc.getValue();
+                        if (resInitial == null && resAfter == null) { // V V
+                            // probable resolution
+                            for (Evolution ddd : aaa.getKey()) {
+                                probableResolutionsIndex.putIfAbsent(ddd, new HashMap<>());
+                                probableResolutionsIndex.get(ddd).put(ccc.getKey(), ei);
+                            }
+                            probableCoEvoResolutions.add(ei);
+                        } else if (resInitial == null) { // V X
+                            // probable cause
+                            probableCoevoCauses.add(ei);
+                        } else if (resAfter == null) { // X V
+                            // at least the last part of a resolution, if considering multiple commits
+                            partialResolutions.add(ei);
+                            for (Evolution ddd : aaa.getKey()) {
+                                // for now we wont call it a resolution
+                                probablyNothing.putIfAbsent(ddd, new HashMap<>());
+                                probablyNothing.get(ddd).put(ccc.getKey(), ei);
+                                // probableResolutionsIndex.putIfAbsent(ddd, new HashMap<>());
+                                // probableResolutionsIndex.get(ddd).put(ccc.getKey(), ei);
+                            }
+                        } else { // X X
+                            // here nothing, but could be part of a any, if considering multiple commits
+                            // TODO useless to put in the graph? would need to be assembled with evo from
+                            // prev commits until test pass
+                            for (Evolution ddd : aaa.getKey()) {
+                                probablyNothing.putIfAbsent(ddd, new HashMap<>());
+                                probablyNothing.get(ddd).put(ccc.getKey(), ei);
                             }
                         }
                     }
-
                 }
+
             }
             // compute inclusion of causes in reso then make the coevo
             for (EImpact eimpCauses : probableCoevoCauses) {
@@ -733,13 +732,13 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     Map<Range, EImpact> resos = probableResolutionsIndex.get(causeEvos.getKey());
                     if (possibleReso == null) {
                         possibleReso = new HashSet<>();
-                        for (Entry<Range, Map<Range, String>> testEntry : eimpCauses.tests.entrySet()) {
+                        for (Entry<Range, ImmutablePair<Range, String>> testEntry : eimpCauses.tests.entrySet()) {
                             possibleReso.add(new ImmutablePair<Range, EImpact>(testEntry.getKey(),
                                     resos.get(testEntry.getKey())));
                         }
                     } else {
                         Set<ImmutablePair<Range, EImpact>> tmp = new HashSet<>();
-                        for (Entry<Range, Map<Range, String>> testEntry : eimpCauses.tests.entrySet()) {
+                        for (Entry<Range, ImmutablePair<Range, String>> testEntry : eimpCauses.tests.entrySet()) {
                             tmp.add(new ImmutablePair<Range, EImpact>(testEntry.getKey(),
                                     resos.get(testEntry.getKey())));
                         }
@@ -759,9 +758,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     resolutions.removeAll(eimpCauses.evolutions.keySet());
                     CoEvolutionExtension res = new CoEvolutionExtension(new HashSet<>(eimpCauses.evolutions.keySet()),
                             resolutions, Collections.singleton(eimpResoEntry.getKey()),
-                            eimpResoEntry.getValue().tests.get(eimpResoEntry.getKey()).entrySet().stream()
-                                    .filter(x -> x.getValue() == null).map(x -> x.getKey())
-                                    .collect(Collectors.toSet()));
+                            Collections.singleton(eimpResoEntry.getValue().tests.get(eimpResoEntry.getKey()).getKey()));
                     coevolutions.add(res);
                 }
             }
