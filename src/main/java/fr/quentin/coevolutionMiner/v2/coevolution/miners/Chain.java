@@ -28,7 +28,7 @@ class Chain<T> implements Collection<T> {
 
     @Override
     public int size() {
-        return (prev != null) ? 1 + prev.size() : 0;
+        return (prev != null) ? 1 + prev.size() : 1;
     }
 
     @Override
