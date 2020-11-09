@@ -331,13 +331,13 @@ public class ApplierHelper implements AutoCloseable {
             try {
                 AAction action = getAction(change.content, change.way);
                 boolean inverted = action == null;
-                action = getAction(change.content, !change.way);
+                action = inverted? getAction(change.content, !change.way):action;
                 boolean b = auxApply(scanner, this.factory, action, inverted);
                 for (AbstractVersionedTree node : waitingToBeApplied.keySet()) {
                     try {
                         AAction action2 = getAction(node, waitingToBeApplied.get(node));
                         boolean inverted2 = action2 == null;
-                        action2 = getAction(node, !waitingToBeApplied.get(node));
+                        action2 = inverted2 ? getAction(node, !waitingToBeApplied.get(node)): action2;
                         auxApply(scanner, this.factory, action2, inverted2);
                         waitingToBeApplied.remove(node);
                     } catch (gumtree.spoon.apply.WrongAstContextException e) {
