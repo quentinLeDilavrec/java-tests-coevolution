@@ -734,6 +734,9 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 Set<ImmutablePair<Range, EImpact>> possibleReso = null;
                 for (Entry<Evolution, Fraction> causeEvos : eimpCauses.evolutions.entrySet()) {
                     Map<Range, EImpact> resos = probableResolutionsIndex.get(causeEvos.getKey());
+                    if (resos == null) {
+                        break;
+                    }
                     if (possibleReso == null) {
                         possibleReso = new HashSet<>();
                         for (Entry<Range, ImmutablePair<Range, String>> testEntry : eimpCauses.tests.entrySet()) {
@@ -749,7 +752,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         possibleReso.retainAll(tmp);
                     }
                     if (possibleReso == null || possibleReso.isEmpty()) {
-                        continue;
+                        break;
                     }
                 }
                 if (possibleReso == null || possibleReso.isEmpty()) {
