@@ -363,7 +363,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                                         .toString();
                             }
                             Range testAfter = k.getAfterProj().getRange(elePath, position.getSourceStart(),
-                                    position.getSourceEnd(), elementTestAfter);
+                                    position.getSourceEnd());
                             if (testAfter == null)
                                 throw new RuntimeException();
                             testToExec = testAfter;
@@ -436,7 +436,6 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             }
             currCoevolutions.setInitialResults(initialTestsStatus);
             currCoevolutions.addEImpacts(functionalImpacts);
-
         }
 
         // for (Entry<Range, Set<Object>> impactedTest :
