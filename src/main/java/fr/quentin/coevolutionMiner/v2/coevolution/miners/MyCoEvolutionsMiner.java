@@ -571,6 +571,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 }
             }
             notUsed.removeAll(acc);
+            acc.remove(evolution);
             result.put(evolution, acc);
         }
         // promote

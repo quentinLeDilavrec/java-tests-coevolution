@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -79,7 +80,7 @@ public class ApplierHelper implements AutoCloseable {
         private Map<Evolution, Integer> evoReqSize = new HashMap<>();
         // private Map<Evolution, Set<AAction>> evoToTree = new HashMap<>();
         private final Map<Evolution, Set<Evolution>> evoToEvo = ApplierHelper.this.evoToEvo;
-        private Map<Object, Set<Evolution>> presentMap = new HashMap<>();
+        private Map<AAction, Set<Evolution>> presentMap = new HashMap<>();
         // private Map<Object, Set<Evolution>> absentMap = new HashMap<>();
         private Map<AAction, Boolean> reqState = new HashMap<>(); // false by default
         private Set<Evolution> validable = new HashSet<>();
@@ -87,6 +88,11 @@ public class ApplierHelper implements AutoCloseable {
         EvoStateMaintainer(Collection<Evolution> evos) {
             for (Evolution e : evos) {
                 markRequirements(new Chain<>(this, e));
+            }
+            for (Set<Evolution> values : presentMap.values()) {
+                for (Evolution evolution : values) {
+                    evoReqSize.put(evolution, evoReqSize.getOrDefault(evolution, 0)+1);
+                }
             }
         }
 
