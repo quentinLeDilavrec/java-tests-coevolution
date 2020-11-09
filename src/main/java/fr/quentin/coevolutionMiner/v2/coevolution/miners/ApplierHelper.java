@@ -90,10 +90,11 @@ public class ApplierHelper implements AutoCloseable {
             }
         }
 
-        void set(AbstractVersionedTree a, boolean present, boolean silent) {
+        boolean set(AbstractVersionedTree a, boolean present, boolean silent) {
             Boolean prev = reqState.put(a, present);
             if (prev != null && prev == present) {
                 // nothing to do
+                return false;
             } else {
                 for (Evolution e : (present ? presentMap : absentMap).getOrDefault(a, Collections.emptySet())) {
                     Integer v = evoState.getOrDefault(e, 0);
@@ -107,6 +108,7 @@ public class ApplierHelper implements AutoCloseable {
                 if (!silent) {
                     triggerCallback();
                 }
+                return true;
             }
         }
 
@@ -332,7 +334,7 @@ public class ApplierHelper implements AutoCloseable {
         do {
             Combination.CHANGE<AbstractVersionedTree> change = combs.next();
             try {
-                auxApply(scanner, this.factory, getAction(change.content, change.way));
+                boolean b = auxApply(scanner, this.factory, getAction(change.content, change.way));
                 for (AbstractVersionedTree node : waitingToBeApplied.keySet()) {
                     try {
                         auxApply(scanner, this.factory, getAction(node, waitingToBeApplied.get(node)));
@@ -340,7 +342,8 @@ public class ApplierHelper implements AutoCloseable {
                     } catch (gumtree.spoon.apply.WrongAstContextException e) {
                     }
                 }
-                evoState.triggerCallback();
+                if(b)
+                    evoState.triggerCallback();
             } catch (gumtree.spoon.apply.WrongAstContextException e) {
                 waitingToBeApplied.put(change.content, change.way);
             }
@@ -348,7 +351,7 @@ public class ApplierHelper implements AutoCloseable {
         return launcher;
     }
 
-    public void auxApply(final SpoonGumTreeBuilder scanner, Factory facto, AAction action)
+    public boolean auxApply(final SpoonGumTreeBuilder scanner, Factory facto, AAction action)
             throws WrongAstContextException {
         if (action instanceof Insert) {
             ActionApplier.applyAInsert(facto, scanner.getTreeContext(), (Insert & AAction<Insert>) action);
@@ -362,14 +365,13 @@ public class ApplierHelper implements AutoCloseable {
                     watching.put(src, dst);
                 }
             }
-            evoState.set(dst, true, true);
+            return evoState.set(dst, true, true);
         } else if (action instanceof Delete) {
             ActionApplier.applyADelete(facto, scanner.getTreeContext(), (Delete & AAction<Delete>) action);
-            evoState.set(action.getTarget(), false, true);
+            return evoState.set(action.getTarget(), false, true);
         } else if (action instanceof Update) {
             ActionApplier.applyAUpdate(facto, scanner.getTreeContext(), (Update & AAction<Update>) action);
-            evoState.set((AbstractVersionedTree) action.getSource(), false, true);
-            evoState.set(action.getTarget(), true, true);
+            return evoState.set((AbstractVersionedTree) action.getSource(), false, true) & evoState.set(action.getTarget(), true, true);
             // } else if (action instanceof Move){
             // ActionApplier.applyAMove(facto, scanner.getTreeContext(), (Move &
             // AAction<Move>) action);
