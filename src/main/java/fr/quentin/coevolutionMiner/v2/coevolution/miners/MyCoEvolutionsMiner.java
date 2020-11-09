@@ -300,7 +300,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             }
         }
         // Validation phase, by compiling and running tests
-        Path path = Paths.get("/tmp/applyResults/src/");
+        Path path = Paths.get("/tmp/applyResults/");
         Path oriPath = ((SpoonAST) currEvoAtCommit.getRootModule().getBeforeProj().getAst()).rootDir;
         try {
             FileUtils.copyDirectory(oriPath.toFile(), path.toFile());
@@ -374,7 +374,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         // if (descRange.getTarget().equals(testBefore)) {
 
                         // }
-                        ah.serialize(path.toFile());
+                        ah.serialize(Paths.get(path.toString(), "src").toFile());
                         String res = executeTest(sourcesProvider, path, testClassQualName, testSimpName);
                         EImpact eimpact = new EImpact();
                         eimpact.tests.put(testBefore, new ImmutablePair<>(testToExec, res));
