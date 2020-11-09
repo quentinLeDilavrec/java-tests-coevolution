@@ -356,15 +356,14 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                             // can point to the original test ?
                             testToExec = testBefore;
                         } else {
-                            String string = k.getAfterProj().getAst().rootDir.relativize(position.getFile().toPath())
+                            String elePath = k.getAfterProj().getAst().rootDir.relativize(position.getFile().toPath())
                                     .toString();
-                            if (string.startsWith("..")) {
-                                k.getBeforeProj().getAst().rootDir.relativize(position.getFile().toPath())
-                                    .toString();
+                            if (elePath.startsWith("..")) {
+                                elePath = k.getBeforeProj().getAst().rootDir.relativize(position.getFile().toPath())
+                                        .toString();
                             }
-                            Range testAfter = k.getAfterProj().getRange(
-                                    string,
-                                    position.getSourceStart(), position.getSourceEnd(), elementTestAfter);
+                            Range testAfter = k.getAfterProj().getRange(elePath, position.getSourceStart(),
+                                    position.getSourceEnd(), elementTestAfter);
                             if (testAfter == null)
                                 throw new RuntimeException();
                             testToExec = testAfter;
