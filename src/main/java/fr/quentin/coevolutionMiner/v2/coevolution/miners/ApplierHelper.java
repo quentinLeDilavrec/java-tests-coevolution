@@ -355,11 +355,11 @@ public class ApplierHelper implements AutoCloseable {
     public boolean auxApply(final SpoonGumTreeBuilder scanner, Factory facto, AAction action, boolean inverted)
             throws WrongAstContextException {
         AAction invertableAction = invertAction(action);
-        if (action instanceof Insert) {
-            ActionApplier.applyAInsert(facto, scanner.getTreeContext(), (Insert & AAction<Insert>) action);
+        if (invertableAction instanceof Insert) {
+            ActionApplier.applyAInsert(facto, scanner.getTreeContext(), (Insert & AAction<Insert>) invertableAction);
             // Object dst =
-            // action.getTarget().getMetadata(MyScriptGenerator.MOVE_DST_ACTION);
-            AbstractVersionedTree dst = action.getTarget();
+            // invertableAction.getTarget().getMetadata(MyScriptGenerator.MOVE_DST_ACTION);
+            AbstractVersionedTree dst = invertableAction.getTarget();
             AAction<Move> mact = (AAction<Move>) dst.getMetadata(MyScriptGenerator.MOVE_SRC_ACTION);
             if (mact != null) {
                 ITree src = mact.getSource();
@@ -368,18 +368,18 @@ public class ApplierHelper implements AutoCloseable {
                 }
             }
             // return evoState.set(dst, true, true);
-        } else if (action instanceof Delete) {
-            ActionApplier.applyADelete(facto, scanner.getTreeContext(), (Delete & AAction<Delete>) action);
-            // return evoState.set(action.getTarget(), false, true);
-        } else if (action instanceof Update) {
-            ActionApplier.applyAUpdate(facto, scanner.getTreeContext(), (Update & AAction<Update>) action);
-            // return evoState.set((AbstractVersionedTree) action.getSource(), false, true)
-                    // & evoState.set(action.getTarget(), true, true);
-            // } else if (action instanceof Move){
+        } else if (invertableAction instanceof Delete) {
+            ActionApplier.applyADelete(facto, scanner.getTreeContext(), (Delete & AAction<Delete>) invertableAction);
+            // return evoState.set(invertableAction.getTarget(), false, true);
+        } else if (invertableAction instanceof Update) {
+            ActionApplier.applyAUpdate(facto, scanner.getTreeContext(), (Update & AAction<Update>) invertableAction);
+            // return evoState.set((AbstractVersionedTree) invertableAction.getSource(), false, true)
+                    // & evoState.set(invertableAction.getTarget(), true, true);
+            // } else if (invertableAction instanceof Move){
             // ActionApplier.applyAMove(facto, scanner.getTreeContext(), (Move &
-            // AAction<Move>) action);
-            // evoState.set((AbstractVersionedTree)action.getSource(), false);
-            // evoState.set(action.getTarget(), true);
+            // AAction<Move>) invertableAction);
+            // evoState.set((AbstractVersionedTree)invertableAction.getSource(), false);
+            // evoState.set(invertableAction.getTarget(), true);
         } else {
             throw new RuntimeException(action.getClass().getCanonicalName());
         }
