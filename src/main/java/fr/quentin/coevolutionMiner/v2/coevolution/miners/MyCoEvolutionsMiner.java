@@ -740,8 +740,12 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     if (possibleReso == null) {
                         possibleReso = new HashSet<>();
                         for (Entry<Range, ImmutablePair<Range, String>> testEntry : eimpCauses.tests.entrySet()) {
+                            EImpact aaa = resos.get(testEntry.getKey());
+                            if (aaa==null) {
+                                continue;
+                            }
                             possibleReso.add(new ImmutablePair<Range, EImpact>(testEntry.getKey(),
-                                    resos.get(testEntry.getKey())));
+                                    aaa));
                         }
                     } else {
                         Set<ImmutablePair<Range, EImpact>> tmp = new HashSet<>();
