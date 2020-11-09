@@ -81,7 +81,7 @@ public class ApplierHelper implements AutoCloseable {
         private final Map<Evolution, Set<Evolution>> evoToEvo = ApplierHelper.this.evoToEvo;
         private Map<Object, Set<Evolution>> presentMap = new HashMap<>();
         // private Map<Object, Set<Evolution>> absentMap = new HashMap<>();
-        private Map<AbstractVersionedTree, Boolean> reqState = new HashMap<>();
+        private Map<AAction, Boolean> reqState = new HashMap<>(); // false by default
         private Set<Evolution> validable = new HashSet<>();
 
         EvoStateMaintainer(Collection<Evolution> evos) {
@@ -90,15 +90,15 @@ public class ApplierHelper implements AutoCloseable {
             }
         }
 
-        boolean set(AbstractVersionedTree a, boolean present, boolean silent) {
-            Boolean prev = reqState.put(a, present);
-            if (prev != null && prev == present) {
+        boolean set(AAction a, boolean inverted, boolean silent) {
+            Boolean prev = reqState.put(a, inverted);
+            if (prev != null && prev == inverted) {
                 // nothing to do
                 return false;
             } else {
                 for (Evolution e : presentMap.getOrDefault(a, Collections.emptySet())) {
                     Integer v = evoState.getOrDefault(e, 0);
-                    evoState.put(e, present ? v + 1 : v - 1);
+                    evoState.put(e, inverted ? v + 1 : v - 1);
                     if (isLaunchable(e)) {
                         validable.add(e);
                     } else {
@@ -152,13 +152,14 @@ public class ApplierHelper implements AutoCloseable {
         }
 
         public boolean isCurrentlyApplied(AAction a) {
-            if (a instanceof Move) {
-                Boolean s = reqState.get(a.getSource());
-                Boolean t = reqState.get(a.getTarget());
-                return s && t;
-            } else {
-                return reqState.get(a.getTarget());
-            }
+            // if (a instanceof Move) {
+            //     Boolean s = reqState.get(a.getSource());
+            //     Boolean t = reqState.get(a.getTarget());
+            //     return s && t;
+            // } else {
+            //     return reqState.get(a.getTarget());
+            // }
+            return reqState.get(a);
         }
 
         public Set<Evolution> getComponents(Evolution e) {
@@ -183,28 +184,30 @@ public class ApplierHelper implements AutoCloseable {
         }
 
         private void markRequirements(AAction a, Collection<Evolution> e) {
-            if (a instanceof Delete) {
-                // markDeleteRequirements(a, e);
-                // } else if (a instanceof Move) {
-                // markSourceRequirements(a, e);
-                // markInsertRequirements(a, e);
-            } else {
-                markInsertRequirements(a, e);
-                // markContextRequirements(a, e);
-            }
+            presentMap.putIfAbsent(a, new HashSet<>());
+            presentMap.get(a).addAll(e);
+            // if (a instanceof Delete) {
+            //     // markDeleteRequirements(a, e);
+            //     // } else if (a instanceof Move) {
+            //     // markSourceRequirements(a, e);
+            //     // markInsertRequirements(a, e);
+            // } else {
+            //     markInsertRequirements(a, e);
+            //     // markContextRequirements(a, e);
+            // }
         }
 
         private void markInsertRequirements(AAction a, Collection<Evolution> e) {
-            AbstractVersionedTree t = a.getTarget();
-            assert (t != null);
-            // AbstractVersionedTree p = t.getParent();
-            presentMap.putIfAbsent(t, new HashSet<>());
-            presentMap.get(t).addAll(e);
+            // AbstractVersionedTree t = a.getTarget();
+            // assert (t != null);
+            // // AbstractVersionedTree p = t.getParent();
+            // presentMap.putIfAbsent(t, new HashSet<>());
+            // presentMap.get(t).addAll(e);
         }
 
         private void markDeleteRequirements(AAction<Delete> a, Collection<Evolution> e) {
-            AbstractVersionedTree t = a.getTarget();
-            assert (t != null);
+            // AbstractVersionedTree t = a.getTarget();
+            // assert (t != null);
             // absentMap.putIfAbsent(t, new HashSet<>());
             // absentMap.get(t).addAll(e);
             // for (AbstractVersionedTree c : t.getAllChildren()) {
@@ -281,14 +284,14 @@ public class ApplierHelper implements AutoCloseable {
         List<AAction> retryList = new ArrayList<>();
         for (AAction action : wantedActions) {
             try {
-                auxApply(scanner, this.factory, action);
+                auxApply(scanner, this.factory, action, false);
             } catch (gumtree.spoon.apply.WrongAstContextException e) {
                 retryList.add(action);
             }
         }
         for (AAction action : retryList) {
             try {
-                auxApply(scanner, this.factory, action);
+                auxApply(scanner, this.factory, action, false);
             } catch (gumtree.spoon.apply.WrongAstContextException e) {
                 throw new RuntimeException(e);
             }
@@ -300,16 +303,8 @@ public class ApplierHelper implements AutoCloseable {
         AAction action;
         if (way) {
             action = (AAction) tree.getMetadata(MyScriptGenerator.INSERT_ACTION);
-            if (action == null) {
-                action = (AAction) tree.getMetadata(MyScriptGenerator.DELETE_ACTION);
-                action = invertAction(action);
-            }
         } else {
             action = (AAction) tree.getMetadata(MyScriptGenerator.DELETE_ACTION);
-            if (action == null) {
-                action = (AAction) tree.getMetadata(MyScriptGenerator.INSERT_ACTION);
-                action = invertAction(action);
-            }
         }
         return action;
     }
@@ -334,10 +329,16 @@ public class ApplierHelper implements AutoCloseable {
         do {
             Combination.CHANGE<AbstractVersionedTree> change = combs.next();
             try {
-                boolean b = auxApply(scanner, this.factory, getAction(change.content, change.way));
+                AAction action = getAction(change.content, change.way);
+                boolean inverted = action == null;
+                action = getAction(change.content, !change.way);
+                boolean b = auxApply(scanner, this.factory, action, inverted);
                 for (AbstractVersionedTree node : waitingToBeApplied.keySet()) {
                     try {
-                        auxApply(scanner, this.factory, getAction(node, waitingToBeApplied.get(node)));
+                        AAction action2 = getAction(node, waitingToBeApplied.get(node));
+                        boolean inverted2 = action2 == null;
+                        action2 = getAction(node, !waitingToBeApplied.get(node));
+                        auxApply(scanner, this.factory, action2, inverted2);
                         waitingToBeApplied.remove(node);
                     } catch (gumtree.spoon.apply.WrongAstContextException e) {
                     }
@@ -351,8 +352,9 @@ public class ApplierHelper implements AutoCloseable {
         return launcher;
     }
 
-    public boolean auxApply(final SpoonGumTreeBuilder scanner, Factory facto, AAction action)
+    public boolean auxApply(final SpoonGumTreeBuilder scanner, Factory facto, AAction action, boolean inverted)
             throws WrongAstContextException {
+        AAction invertableAction = invertAction(action);
         if (action instanceof Insert) {
             ActionApplier.applyAInsert(facto, scanner.getTreeContext(), (Insert & AAction<Insert>) action);
             // Object dst =
@@ -365,14 +367,14 @@ public class ApplierHelper implements AutoCloseable {
                     watching.put(src, dst);
                 }
             }
-            return evoState.set(dst, true, true);
+            // return evoState.set(dst, true, true);
         } else if (action instanceof Delete) {
             ActionApplier.applyADelete(facto, scanner.getTreeContext(), (Delete & AAction<Delete>) action);
-            return evoState.set(action.getTarget(), false, true);
+            // return evoState.set(action.getTarget(), false, true);
         } else if (action instanceof Update) {
             ActionApplier.applyAUpdate(facto, scanner.getTreeContext(), (Update & AAction<Update>) action);
-            return evoState.set((AbstractVersionedTree) action.getSource(), false, true)
-                    & evoState.set(action.getTarget(), true, true);
+            // return evoState.set((AbstractVersionedTree) action.getSource(), false, true)
+                    // & evoState.set(action.getTarget(), true, true);
             // } else if (action instanceof Move){
             // ActionApplier.applyAMove(facto, scanner.getTreeContext(), (Move &
             // AAction<Move>) action);
@@ -381,6 +383,7 @@ public class ApplierHelper implements AutoCloseable {
         } else {
             throw new RuntimeException(action.getClass().getCanonicalName());
         }
+        return evoState.set(action, inverted, true);
     }
 
     public void auxUnApply(final SpoonGumTreeBuilder scanner, Factory facto, AAction action)
@@ -398,17 +401,17 @@ public class ApplierHelper implements AutoCloseable {
                     watching.put(src, dst);
                 }
             }
-            evoState.set(dst, false, true);
+            // evoState.set(dst, false, true);
         } else if (action instanceof Delete) {
             ActionApplier.applyAInsert(facto, scanner.getTreeContext(),
-                    AAction.build(Insert.class, action.getTarget(), action.getTarget())); // hope it gest the original
+                    AAction.build(Insert.class, action.getTarget(), action.getTarget())); // hope it gets the original
                                                                                           // CtElement
-            evoState.set(action.getTarget(), true, true);
+            // evoState.set(action.getTarget(), true, true);
         } else if (action instanceof Update) {
             ActionApplier.applyAUpdate(facto, scanner.getTreeContext(),
                     AAction.build(Update.class, action.getTarget(), (AbstractVersionedTree) action.getSource()));
-            evoState.set((AbstractVersionedTree) action.getTarget(), false, true);
-            evoState.set((AbstractVersionedTree) action.getSource(), true, true);
+            // evoState.set((AbstractVersionedTree) action.getTarget(), false, true);
+            // evoState.set((AbstractVersionedTree) action.getSource(), true, true);
             // } else if (action instanceof Move){
             // ActionApplier.applyAMove(facto, scanner.getTreeContext(), (Move &
             // AAction<Move>) action);
@@ -417,6 +420,7 @@ public class ApplierHelper implements AutoCloseable {
         } else {
             throw new RuntimeException(action.getClass().getCanonicalName());
         }
+        evoState.set(action, true, true);
     }
 
     @Override
