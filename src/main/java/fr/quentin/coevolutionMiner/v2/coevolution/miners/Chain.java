@@ -55,7 +55,7 @@ class Chain<T> implements Collection<T> {
 
             @Override
             public boolean hasNext() {
-                return it == null;
+                return it != null;
             }
 
             @Override
