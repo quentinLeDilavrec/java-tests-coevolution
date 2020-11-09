@@ -300,7 +300,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             }
         }
         // Validation phase, by compiling and running tests
-        Path path = Paths.get("/tmp/applyResults/");
+        Path path = Paths.get("/tmp/applyResults/src/");
         Path oriPath = ((SpoonAST) currEvoAtCommit.getRootModule().getBeforeProj().getAst()).rootDir;
         try {
             FileUtils.copyDirectory(oriPath.toFile(), path.toFile());
