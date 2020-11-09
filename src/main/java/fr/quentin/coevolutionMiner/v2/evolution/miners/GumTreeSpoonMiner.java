@@ -60,6 +60,7 @@ import spoon.reflect.cu.position.DeclarationSourcePosition;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtPackage;
+import spoon.reflect.reference.CtReference;
 
 public class GumTreeSpoonMiner implements EvolutionsMiner {
     Logger LOGGER = Logger.getLogger("ImpactGT commitHandler");
@@ -371,6 +372,9 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             private void augment(DescRange dr) {
                 CtElement ori = (CtElement) dr.getTarget().getOriginal();
                 assert ori != null;
+                if (ori instanceof CtReference) {
+                    ori = ori.getParent();
+                }
                 HashSet<DescRange> md = (HashSet<DescRange>) ori.getMetadata(METADATA_KEY_EVO);
                 if (md == null) {
                     md = new HashSet<>();
