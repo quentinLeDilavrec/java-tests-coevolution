@@ -98,7 +98,7 @@ public class ApplierHelper implements AutoCloseable {
             } else {
                 for (Evolution e : presentMap.getOrDefault(a, Collections.emptySet())) {
                     Integer v = evoState.getOrDefault(e, 0);
-                    evoState.put(e, inverted ? v + 1 : v - 1);
+                    evoState.put(e, inverted ? v - 1 : v + 1);
                     if (isLaunchable(e)) {
                         validable.add(e);
                     } else {
