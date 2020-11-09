@@ -80,7 +80,7 @@ public class ApplierHelper implements AutoCloseable {
         // private Map<Evolution, Set<AAction>> evoToTree = new HashMap<>();
         private final Map<Evolution, Set<Evolution>> evoToEvo = ApplierHelper.this.evoToEvo;
         private Map<Object, Set<Evolution>> presentMap = new HashMap<>();
-        private Map<Object, Set<Evolution>> absentMap = new HashMap<>();
+        // private Map<Object, Set<Evolution>> absentMap = new HashMap<>();
         private Map<AbstractVersionedTree, Boolean> reqState = new HashMap<>();
         private Set<Evolution> validable = new HashSet<>();
 
@@ -96,9 +96,9 @@ public class ApplierHelper implements AutoCloseable {
                 // nothing to do
                 return false;
             } else {
-                for (Evolution e : (present ? presentMap : absentMap).getOrDefault(a, Collections.emptySet())) {
+                for (Evolution e : presentMap.getOrDefault(a, Collections.emptySet())) {
                     Integer v = evoState.getOrDefault(e, 0);
-                    evoState.put(e, ++v);
+                    evoState.put(e, present ? v + 1 : v - 1);
                     if (isLaunchable(e)) {
                         validable.add(e);
                     } else {
@@ -184,7 +184,7 @@ public class ApplierHelper implements AutoCloseable {
 
         private void markRequirements(AAction a, Collection<Evolution> e) {
             if (a instanceof Delete) {
-                markDeleteRequirements(a, e);
+                // markDeleteRequirements(a, e);
                 // } else if (a instanceof Move) {
                 // markSourceRequirements(a, e);
                 // markInsertRequirements(a, e);
@@ -205,8 +205,8 @@ public class ApplierHelper implements AutoCloseable {
         private void markDeleteRequirements(AAction<Delete> a, Collection<Evolution> e) {
             AbstractVersionedTree t = a.getTarget();
             assert (t != null);
-            absentMap.putIfAbsent(t, new HashSet<>());
-            absentMap.get(t).addAll(e);
+            // absentMap.putIfAbsent(t, new HashSet<>());
+            // absentMap.get(t).addAll(e);
             // for (AbstractVersionedTree c : t.getAllChildren()) {
             // absentMap.putIfAbsent(c, new HashSet<>());
             // absentMap.get(c).addAll(e);
@@ -342,7 +342,7 @@ public class ApplierHelper implements AutoCloseable {
                     } catch (gumtree.spoon.apply.WrongAstContextException e) {
                     }
                 }
-                if(b)
+                if (b)
                     evoState.triggerCallback();
             } catch (gumtree.spoon.apply.WrongAstContextException e) {
                 waitingToBeApplied.put(change.content, change.way);
@@ -371,7 +371,8 @@ public class ApplierHelper implements AutoCloseable {
             return evoState.set(action.getTarget(), false, true);
         } else if (action instanceof Update) {
             ActionApplier.applyAUpdate(facto, scanner.getTreeContext(), (Update & AAction<Update>) action);
-            return evoState.set((AbstractVersionedTree) action.getSource(), false, true) & evoState.set(action.getTarget(), true, true);
+            return evoState.set((AbstractVersionedTree) action.getSource(), false, true)
+                    & evoState.set(action.getTarget(), true, true);
             // } else if (action instanceof Move){
             // ActionApplier.applyAMove(facto, scanner.getTreeContext(), (Move &
             // AAction<Move>) action);
@@ -502,10 +503,10 @@ public class ApplierHelper implements AutoCloseable {
             ITree xx = treeTest[i];
             ITree x = watching.getOrDefault(xx, xx);
             // Map<VersionCommit, CtElement> map = (Map<VersionCommit, CtElement>) x
-            //         .getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION);
+            // .getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION);
             CtElement ele = null;
             // if (map != null) {
-            //     ele = map.get(afterVersion);
+            // ele = map.get(afterVersion);
             // }
             if (ele == null) {
                 ele = (CtElement) x.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
