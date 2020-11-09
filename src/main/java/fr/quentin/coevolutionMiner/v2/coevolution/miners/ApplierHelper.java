@@ -362,14 +362,14 @@ public class ApplierHelper implements AutoCloseable {
                     watching.put(src, dst);
                 }
             }
-            evoState.set(dst, true, false);
+            evoState.set(dst, true, true);
         } else if (action instanceof Delete) {
             ActionApplier.applyADelete(facto, scanner.getTreeContext(), (Delete & AAction<Delete>) action);
-            evoState.set(action.getTarget(), false, false);
+            evoState.set(action.getTarget(), false, true);
         } else if (action instanceof Update) {
             ActionApplier.applyAUpdate(facto, scanner.getTreeContext(), (Update & AAction<Update>) action);
             evoState.set((AbstractVersionedTree) action.getSource(), false, true);
-            evoState.set(action.getTarget(), true, false);
+            evoState.set(action.getTarget(), true, true);
             // } else if (action instanceof Move){
             // ActionApplier.applyAMove(facto, scanner.getTreeContext(), (Move &
             // AAction<Move>) action);

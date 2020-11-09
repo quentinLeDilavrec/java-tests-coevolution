@@ -382,8 +382,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         } else {
                             // test compilation and execution failed
                         }
-                        // functionalImpacts
-
+                        functionalImpacts.putIfAbsent(t, new HashSet<>());
+                        functionalImpacts.get(t).add(eimpact);
                     }
 
                 };
