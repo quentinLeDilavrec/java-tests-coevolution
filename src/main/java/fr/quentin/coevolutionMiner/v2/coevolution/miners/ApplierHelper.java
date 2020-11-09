@@ -354,7 +354,7 @@ public class ApplierHelper implements AutoCloseable {
 
     public boolean auxApply(final SpoonGumTreeBuilder scanner, Factory facto, AAction action, boolean inverted)
             throws WrongAstContextException {
-        AAction invertableAction = invertAction(action);
+        AAction invertableAction = inverted ? invertAction(action) : action;
         if (invertableAction instanceof Insert) {
             ActionApplier.applyAInsert(facto, scanner.getTreeContext(), (Insert & AAction<Insert>) invertableAction);
             // Object dst =
