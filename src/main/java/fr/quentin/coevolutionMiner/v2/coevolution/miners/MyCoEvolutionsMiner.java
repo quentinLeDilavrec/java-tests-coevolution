@@ -424,17 +424,36 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                             }
                         }
 
-                        String res = executeTest(sourcesProvider, path, testClassQualName, testSimpName);
                         EImpact eimpact = new EImpact();
-                        eimpact.tests.put(testBefore, new ImmutablePair<>(testToExec, res));
                         for (Evolution e : t) {
                             eimpact.evolutions.put(e, ah.evoState.ratio(e));
                         }
-                        if (res == null) {
-                            // test passed
-                        } else {
-                            // test compilation and execution failed
+                        String res = null;
+                        String failAtStep = null;
+                        EImpact.FailureReport report = null;
+                        if(res==null){
+                            res = compileApp(sourcesProvider, path);
                         }
+                        if(res==null){
+                            res = compileAllTests(sourcesProvider, path);
+                        } else {
+                            report = new EImpact.FailureReport();
+                            report.when = "App compiling";
+                            report.what = res;
+                        }
+                        if(res==null){
+                            res = executeTest(sourcesProvider, path, testClassQualName, testSimpName);
+                        } else {
+                            report = new EImpact.FailureReport();
+                            report.when = "Tests compiling";
+                            report.what = res;
+                        }
+                        if(res!=null){
+                            report = new EImpact.FailureReport();
+                            report.when = "Tests execution";
+                            report.what = res;
+                        }
+                        eimpact.tests.put(testBefore, new ImmutablePair<>(testToExec, report));
                         functionalImpacts.putIfAbsent(t, new HashSet<>());
                         functionalImpacts.get(t).add(eimpact);
                     }
@@ -740,10 +759,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         public void addEImpacts(Map<Set<Evolution>, Set<EImpact>> eImpacts) {
             for (Entry<Set<Evolution>, Set<EImpact>> aaa : eImpacts.entrySet()) {
                 for (EImpact ei : aaa.getValue()) {
-                    for (Entry<Range, ImmutablePair<Range, String>> bbb : ei.tests.entrySet()) {
+                    for (Entry<Range, ImmutablePair<Range, EImpact.FailureReport>> bbb : ei.tests.entrySet()) {
                         String resInitial = initialTestsStatus.get(bbb.getKey());
-                        ImmutablePair<Range, String> ccc = bbb.getValue();
-                        String resAfter = ccc.getValue();
+                        ImmutablePair<Range, EImpact.FailureReport> ccc = bbb.getValue();
+                        EImpact.FailureReport resAfter = ccc.getValue();
                         if (resInitial == null && resAfter == null) { // V V
                             // probable resolution
                             for (Evolution ddd : aaa.getKey()) {
@@ -787,7 +806,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     }
                     if (possibleReso == null) {
                         possibleReso = new HashSet<>();
-                        for (Entry<Range, ImmutablePair<Range, String>> testEntry : eimpCauses.tests.entrySet()) {
+                        for (Entry<Range, ImmutablePair<Range, EImpact.FailureReport>> testEntry : eimpCauses.tests.entrySet()) {
                             EImpact aaa = resos.get(testEntry.getKey());
                             if (aaa == null) {
                                 continue;
@@ -796,7 +815,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         }
                     } else {
                         Set<ImmutablePair<Range, EImpact>> tmp = new HashSet<>();
-                        for (Entry<Range, ImmutablePair<Range, String>> testEntry : eimpCauses.tests.entrySet()) {
+                        for (Entry<Range, ImmutablePair<Range, EImpact.FailureReport>> testEntry : eimpCauses.tests.entrySet()) {
                             tmp.add(new ImmutablePair<Range, EImpact>(testEntry.getKey(),
                                     resos.get(testEntry.getKey())));
                         }
@@ -891,22 +910,6 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
     }
 
-    // private final class FilterMethod implements Filter<CtMethod<?>> {
-    // private final AST.FileSnapshot.Range range;
-
-    // private FilterMethod(AST.FileSnapshot.Range range) {
-    // this.range = range;
-    // }
-
-    // @Override
-    // public boolean matches(CtMethod<?> element) {
-    // return
-    // range.getFile().getPath().equals(element.getPosition().getFile().toPath().toString())
-    // && range.getStart() == element.getPosition().getSourceStart()
-    // && range.getEnd() == element.getPosition().getSourceEnd();
-    // }
-    // }
-
     private String executeTest(Sources sourcesProvider, Path path, String declaringClass, String name) {
         try {
             StringBuilder r = new StringBuilder();
@@ -932,8 +935,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     private String compileAllTests(Sources sourcesProvider, Path path) {
         try {
             StringBuilder r = new StringBuilder();
+            System.out.println("Compiling all tests ");
             InvocationResult res = SourcesHelper.compileAllTests(path, x -> {
-                r.append(x);
+                System.out.println(x);
+                r.append(x + "\n");
             });
             CommandLineException executionException = res.getExecutionException();
             if (executionException != null) {
@@ -949,149 +954,26 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
     }
 
-    private void depr(Set<Evolution> global_evolutions_set) {
-        for (Evolution evolution : global_evolutions_set) {
-            // Path rootBefore = astBefore.rootDir;
-            // ImpactAnalysis impactAnaBefore = new ImpactAnalysis(astBefore.launcher);//
-            // TODO clone model and/or launcher
-            // List<ImpactChain> impactedTests;
-            // try {
-            // impactedTests = impactAnaBefore.getImpactedTests(evolutions);
-            // } catch (IOException e) {
-            // throw new RuntimeException(e);
-            // }
-            // fr.quentin.Impacts impacts = new fr.quentin.Impacts(impactedTests);
-
-            // // TODO more than ana the commit just after the evolution
-            // AST astAfter = astHandler.handle(astHandler.buildSpec(spec.evoSpec.sources,
-            // commitIdAfter), "Spoon");
-            // Path rootAfter = astAfter.rootDir;
-            // ImpactAnalysis impactAnaAfter = new ImpactAnalysis(astAfter.launcher);// TODO
-            // clone model and/or launcher
-            // List<ImpactChain> modifiedTests;
-            // try {
-            // modifiedTests = impactAnaAfter.getImpactedTestsPostEvolution(evolutions);
-            // } catch (IOException e) {
-            // throw new RuntimeException(e);
-            // }
-            // List<ImpactChain> involedEvolutions;
-            // // try {
-            // // // involedEvolutions =
-            // impactAnaAfter.getInvolvedEvolutions(impacts,evolutions); // TODO interpolate
-            // results (do it with neo4j?)
-            // // } catch (IOException e) {
-            // // throw new RuntimeException(e);
-            // // }
-            // fr.quentin.Impacts impactsAfter = new fr.quentin.Impacts(impactedTests);
-
-            // res.add();
+    private String compileApp(Sources sourcesProvider, Path path) {
+        try {
+            StringBuilder r = new StringBuilder();
+            System.out.println("Compiling all tests ");
+            InvocationResult res = SourcesHelper.compileApp(path, x -> {
+                System.out.println(x);
+                r.append(x + "\n");
+            });
+            CommandLineException executionException = res.getExecutionException();
+            if (executionException != null) {
+                throw executionException;
+            }
+            if (res.getExitCode() == 0) {
+                return null;
+            } else {
+                return r.toString();
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
-    }
-
-    void oldEnd() {
-
-        // // TODO review + remove rest
-
-        // // Compile needed code and tests for each test potentially containing coevos
-        // Exception beforeTestsCompileException = compileAllTests(sourcesProvider,
-        // before_proj.getAst().rootDir);
-        // if (beforeTestsCompileException != null) {
-        // throw new SmallMiningException("Before Tests Don't Build",
-        // beforeTestsCompileException);
-        // }
-
-        // Impacts afterImpacts =
-        // impactHandler.handle(impactHandler.buildSpec(after_ast_id, currEvoSpecRM));
-        // CoEvolutions.Specifier coevoSpec =
-        // CoEvolutionHandler.buildSpec(sourcesProvider.spec, currEvoSpecRM);
-        // CoEvolutionsExtension currCoevolutions1 = new
-        // CoEvolutionsExtension(coevoSpec, currentEvolutions, before_proj,
-        // after_proj);
-        // MyCoEvolutionsMiner.CoEvolutionsExtension.Builder coevoBuilder =
-        // currCoevolutions1.createBuilder();
-        // coevoBuilder.setImpactsAfter(afterImpacts);
-        // // store.construct(coevoBuilder, currentImpacts.getImpactedTests());
-        // Set<CoEvolution> toValidate = new HashSet<>();
-        // for (CoEvolution entry : currCoevolutions1.getUnvalidated()) {
-        // // TODO loop on tests before to make checks with multiple set of properties
-        // Project.AST.FileSnapshot.Range posBefore = null;
-        // for (Project.AST.FileSnapshot.Range aefgzf : entry.getTestsBefore()) {
-        // posBefore = aefgzf;
-        // break;
-        // }
-
-        // CtMethod<?> testsBefore = (CtMethod<?>)
-        // before_proj.getAst().getOriginal(posBefore);
-        // Exception resultTestBefore = executeTest(sourcesProvider,
-        // before_proj.getAst().rootDir,
-        // testsBefore.getDeclaringType().getQualifiedName(),
-        // testsBefore.getSimpleName());
-
-        // // TODO idem
-        // Project.AST.FileSnapshot.Range posAfter = null;
-        // for (Project.AST.FileSnapshot.Range aefgzf : entry.getTestsAfter()) {
-        // posAfter = aefgzf;
-        // break;
-        // }
-        // if (posAfter == null) {
-        // if (resultTestBefore != null) {
-        // logger.info("Test before evo failed");
-        // } else {
-        // logger.info("Test before evo success but was not able to get test in after
-        // version");
-        // }
-        // continue;
-        // }
-        // CtMethod<?> testsAfter = (CtMethod<?>)
-        // after_proj.getAst().getOriginal(posAfter);
-        // if (resultTestBefore != null) {
-        // // TODO "mvn test "+ test.get(0).getDeclaringType() + "$" +
-        // // test.get(0).getSimpleName();
-        // Exception resultTestAfter = executeTest(sourcesProvider,
-        // after_proj.getAst().rootDir,
-        // testsAfter.getDeclaringType().getQualifiedName(),
-        // testsAfter.getSimpleName());
-        // if (resultTestAfter != null) {
-        // logger.info("TestStayedFailed");
-        // } else {
-        // logger.info("TestNowSuccessful");
-        // toValidate.add(entry);
-        // }
-        // } else {
-        // // TODO execute a test without its co-evolution by modifying code
-        // // Exception resultTestAfterWithoutResolutions =
-        // //
-        // executeTestWithoutCoevo(sourcesProvider,nextCommit.id,entry.getValue(),resolutions);
-        // if (testsAfter != null) {
-        // Exception resultTestAfter = executeTest(sourcesProvider,
-        // after_proj.getAst().rootDir,
-        // testsAfter.getDeclaringType().getQualifiedName(),
-        // testsAfter.getSimpleName());
-        // if (resultTestAfter != null) {
-        // logger.info("TestNowFail");
-        // } else {
-        // logger.info("TestStayedSuccessful");
-        // toValidate.add(entry); // TODO implement the deactivation of evolutions
-        // // for now here it does not garantie that this coevolution solves anythis (at
-        // // least it does not make it invalid)
-        // }
-        // } else {
-        // logger.info("Test after not found");
-        // System.out.println(testsAfter);
-        // System.out.println(posAfter);
-        // }
-        // //
-        // logger.info(resultTestAfterWithoutResolutions!=null?resultTestAfter!=null?"TestNotResolved":"TestNowSuccessful":resultTestAfter!=null?"ResolutionMakeTestFail":"GoodResolution");
-        // }
-        // }
-        // for (CoEvolution entry : toValidate) {
-        // currCoevolutions1.validate(entry);
-        // }
-        // System.out.println("unvalidated found");
-        // System.out.println(currCoevolutions1.getUnvalidated().size());
-
-        // CoEvolutionsExtension currCoevolutions = currCoevolutions1;
-        // return currCoevolutions;
     }
 
     public class SmallMiningException extends Exception {
@@ -1115,44 +997,6 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
 
         private static final long serialVersionUID = 6192596956456010689L;
-
-    }
-
-    static class EImpact {
-
-        public final Map<Range, ImmutablePair<Range, String>> tests = new HashMap<>();
-        public final Map<Evolution, Fraction> evolutions = new HashMap<>();
-
-        @Override
-        public int hashCode() {
-            final int prime = 31;
-            int result = 1;
-            result = prime * result + ((evolutions == null) ? 0 : evolutions.hashCode());
-            result = prime * result + ((tests == null) ? 0 : tests.hashCode());
-            return result;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj)
-                return true;
-            if (obj == null)
-                return false;
-            if (getClass() != obj.getClass())
-                return false;
-            EImpact other = (EImpact) obj;
-            if (evolutions == null) {
-                if (other.evolutions != null)
-                    return false;
-            } else if (!evolutions.equals(other.evolutions))
-                return false;
-            if (tests == null) {
-                if (other.tests != null)
-                    return false;
-            } else if (!tests.equals(other.tests))
-                return false;
-            return true;
-        }
 
     }
 }
