@@ -523,7 +523,8 @@ public class ApplierHelper implements AutoCloseable {
             // ele = map.get(afterVersion);
             // }
             if (ele == null) {
-                ele = (CtElement) ((AbstractVersionedTree)x).getChildren(afterVersion).get(0).getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);//SpoonGumTreeBuilder.SPOON_OBJECT);
+                ele = (CtElement) ((AbstractVersionedTree)x).getChildren(afterVersion).get(0).getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+                ele.getParent();
             }
             r[i] = ele;
         }
