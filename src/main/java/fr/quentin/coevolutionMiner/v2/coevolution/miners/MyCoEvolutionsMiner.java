@@ -376,6 +376,9 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 FunctionalImpactHelper consumer = new FunctionalImpactHelper() {
                     @Override
                     public void accept(Set<Evolution> t) {
+                        for (Evolution ddd : t) {
+                            System.err.println(ddd.getOriginal());
+                        }
                         ITree treeTestBefore = (ITree) ((CtElement) this.testBefore.getOriginal())
                                 .getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
                         CtMethod elementTestAfter = (CtMethod) ah.getUpdatedElement(currEvoAtCommit.afterVersion,
