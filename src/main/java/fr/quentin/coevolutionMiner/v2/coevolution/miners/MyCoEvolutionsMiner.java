@@ -431,27 +431,29 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         String res = null;
                         String failAtStep = null;
                         EImpact.FailureReport report = null;
-                        if(res==null){
+                        if(report==null){
                             res = compileApp(sourcesProvider, path);
+                            if (res!=null) {
+                                report = new EImpact.FailureReport();
+                                report.when = "App compiling";
+                                report.what = res;
+                            }
                         }
-                        if(res==null){
+                        if(report==null){
                             res = compileAllTests(sourcesProvider, path);
-                        } else {
-                            report = new EImpact.FailureReport();
-                            report.when = "App compiling";
-                            report.what = res;
+                            if (res!=null) {
+                                report = new EImpact.FailureReport();
+                                report.when = "Tests compiling";
+                                report.what = res;
+                            }
                         }
-                        if(res==null){
+                        if(report==null){
                             res = executeTest(sourcesProvider, path, testClassQualName, testSimpName);
-                        } else {
-                            report = new EImpact.FailureReport();
-                            report.when = "Tests compiling";
-                            report.what = res;
-                        }
-                        if(res!=null && report==null){
-                            report = new EImpact.FailureReport();
-                            report.when = "Tests execution";
-                            report.what = res;
+                            if (res!=null) {
+                                report = new EImpact.FailureReport();
+                                report.when = "Tests execution";
+                                report.what = res;
+                            }
                         }
                         eimpact.tests.put(testBefore, new ImmutablePair<>(testToExec, report));
                         functionalImpacts.putIfAbsent(t, new HashSet<>());
