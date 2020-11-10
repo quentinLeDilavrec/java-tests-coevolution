@@ -524,7 +524,7 @@ public class ApplierHelper implements AutoCloseable {
             // }
             if (ele == null) {
                 ele = (CtElement) ((AbstractVersionedTree)x).getChildren(afterVersion).get(0).getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
-                ele.getParent();
+                ele = ele.getParent();
             }
             r[i] = ele;
         }
