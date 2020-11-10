@@ -448,7 +448,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                             report.when = "Tests compiling";
                             report.what = res;
                         }
-                        if(res!=null){
+                        if(res!=null && report==null){
                             report = new EImpact.FailureReport();
                             report.when = "Tests execution";
                             report.what = res;
