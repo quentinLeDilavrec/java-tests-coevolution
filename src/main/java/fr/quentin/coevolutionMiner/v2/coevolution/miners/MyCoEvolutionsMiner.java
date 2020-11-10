@@ -1,7 +1,9 @@
 package fr.quentin.coevolutionMiner.v2.coevolution.miners;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -49,14 +51,20 @@ import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsMiner;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsStorage;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.CoEvolution;
 import spoon.Launcher;
+import spoon.compiler.Environment;
 import spoon.compiler.Environment.PRETTY_PRINTING_MODE;
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
+import spoon.reflect.declaration.CtModule;
+import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;
+import spoon.reflect.factory.Factory;
 import spoon.reflect.path.CtPath;
 import spoon.reflect.visitor.Filter;
+import spoon.support.DefaultOutputDestinationHandler;
 import spoon.support.JavaOutputProcessor;
+import spoon.support.OutputDestinationHandler;
 import fr.quentin.impactMiner.Position;
 import gumtree.spoon.diff.Diff;
 import gumtree.spoon.diff.DiffImpl;
@@ -313,8 +321,40 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         Map<Set<Evolution>, Set<EImpact>> functionalImpacts = new HashMap<>();
         Map<Range, String> initialTestsStatus = new HashMap<>();
+        JavaOutputProcessor outputProcessor = new JavaOutputProcessor();
+        List<Path> rootDirs = Arrays.asList(ast_before.rootDir, ast_after.rootDir);
+
+        OutputDestinationHandler outDestHandler = new OutputDestinationHandler() {
+            @Override
+            public Path getOutputPath(CtModule module, CtPackage pack, CtType type) {
+                Path path = type.getPosition().getFile().toPath();
+                for (Path root : rootDirs) {
+                    if (path.startsWith(root)) {
+                        return getDefaultOutputDirectory().toPath().resolve(root.relativize(path));
+                        // break;
+                    }
+                }
+                throw new RuntimeException();
+            }
+
+            @Override
+            public File getDefaultOutputDirectory() {
+                return path.toFile();
+            }
+        };
         for (EvolutionsAtProj k : interestingCases.keySet()) {
+
             try (ApplierHelper ah = new ApplierHelper(k, evoPerProj.get(k), atomizedRefactorings);) {
+                // ah.setTestDirectories(
+                // ((SpoonAST)
+                // k.getBeforeProj().getAst()).launcher.getPomFile().getSourceDirectories().stream()
+                // .map(x -> k.getBeforeProj().getAst().rootDir.relativize(x.toPath()))
+                // .collect(Collectors.toList()));
+                // ah.setSourceDirectories(
+                // ((SpoonAST)
+                // k.getBeforeProj().getAst()).launcher.getPomFile().getTestDirectories().stream()
+                // .map(x -> k.getBeforeProj().getAst().rootDir.relativize(x.toPath()))
+                // .collect(Collectors.toList()));
                 for (Range initialTest : impactedTestsPerProj.get(k)) {
                     String resInitial = executeTest(sourcesProvider, path,
                             ((CtMethod) initialTest.getOriginal()).getDeclaringType().getQualifiedName(),
@@ -329,6 +369,11 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     public String sigTestBefore;
 
                 }
+
+                Factory mFacto = (Factory) k.getMdiff().getMiddle().getMetadata("Factory");
+                mFacto.getEnvironment().setOutputDestinationHandler(outDestHandler);
+                outputProcessor.setFactory(mFacto);
+
                 FunctionalImpactHelper consumer = new FunctionalImpactHelper() {
                     @Override
                     public void accept(Set<Evolution> t) {
@@ -372,9 +417,14 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         // DescRange descRange = (Evolution.DescRange) elementTestAfter
                         // .getMetadata(EvolutionsMiner.METADATA_KEY_EVO);
                         // if (descRange.getTarget().equals(testBefore)) {
-
                         // }
-                        ah.serialize(Paths.get(path.toString(), "src").toFile());
+
+                        for (CtType p : mFacto.getModel().getAllTypes()) {
+                            if (!p.isShadow()) {
+                                outputProcessor.createJavaFile(p);
+                            }
+                        }
+
                         String res = executeTest(sourcesProvider, path, testClassQualName, testSimpName);
                         EImpact eimpact = new EImpact();
                         eimpact.tests.put(testBefore, new ImmutablePair<>(testToExec, res));
@@ -389,7 +439,6 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         functionalImpacts.putIfAbsent(t, new HashSet<>());
                         functionalImpacts.get(t).add(eimpact);
                     }
-
                 };
                 ah.setValidityLauncher(consumer);
                 for (InterestingCase c : interestingCases.get(k)) {
@@ -741,11 +790,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         possibleReso = new HashSet<>();
                         for (Entry<Range, ImmutablePair<Range, String>> testEntry : eimpCauses.tests.entrySet()) {
                             EImpact aaa = resos.get(testEntry.getKey());
-                            if (aaa==null) {
+                            if (aaa == null) {
                                 continue;
                             }
-                            possibleReso.add(new ImmutablePair<Range, EImpact>(testEntry.getKey(),
-                                    aaa));
+                            possibleReso.add(new ImmutablePair<Range, EImpact>(testEntry.getKey(), aaa));
                         }
                     } else {
                         Set<ImmutablePair<Range, EImpact>> tmp = new HashSet<>();

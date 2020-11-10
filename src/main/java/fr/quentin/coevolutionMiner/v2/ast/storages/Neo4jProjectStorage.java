@@ -105,6 +105,8 @@ public class Neo4jProjectStorage implements ProjectStorage {
                 .map(x -> rootDir.relativize(x.toPath()).toString()).collect(Collectors.toList());
         srcs.add(Paths.get(project.spec.relPath.toString(), "src/main/java").toString());
         content.put("srcs", srcs);
+        content.put("tests", ast.launcher.getPomFile().getTestDirectories().stream()
+        .map(x -> rootDir.relativize(x.toPath()).toString()).collect(Collectors.toList()));
         Model pom = ast.launcher.getPomFile().getModel();
         content.put("groupId", pom.getGroupId());
         content.put("artifactId", pom.getArtifactId());

@@ -1,6 +1,7 @@
 package fr.quentin.coevolutionMiner.v2.coevolution.miners;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -49,10 +50,13 @@ import spoon.Launcher;
 import spoon.MavenLauncher;
 import spoon.compiler.Environment;
 import spoon.reflect.declaration.CtElement;
+import spoon.reflect.declaration.CtModule;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.factory.Factory;
+import spoon.support.DefaultOutputDestinationHandler;
 import spoon.support.JavaOutputProcessor;
+import spoon.support.OutputDestinationHandler;
 import spoon.support.StandardEnvironment;
 
 public class ApplierHelper implements AutoCloseable {
@@ -255,7 +259,7 @@ public class ApplierHelper implements AutoCloseable {
         this.evoToEvo = atomizedRefactorings;
         this.evoState = new EvoStateMaintainer(allPossiblyConsideredEvos);
     }
-
+    
     public ApplierHelper(EvolutionsAtProj eap, Collection<Evolution> allPossiblyConsideredEvos,
             Map<Evolution, Set<Evolution>> atomizedRefactorings) {
         this(eap.getScanner(), eap.getMdiff().getMiddle(), eap.getDiff(), allPossiblyConsideredEvos,
@@ -435,61 +439,61 @@ public class ApplierHelper implements AutoCloseable {
         // TODO undo all changes on middle repr as spoon ast
     }
 
-    static void applyEvolutions(EvolutionsAtProj eap, Set<Evolution> wantedEvos,
-            Map<Evolution, Set<Evolution>> atomizedRefactorings) {
-        // bug spoon while parsing comments
-        // make system tests that analyze spoon itself
-        // maven modules can be handled by the used, just need to open some api calls
-        // (access to SpoonPom childrens, MavenLauncher that takes an SpoonPom Instance)
-        // make spoon being able to be more in incremental, in the future use an
-        // incremental parser, would allow to scale to mining of whole git repo ?!?!
-        // interested?
-        // that is something like versioned visitors and accessors OR keep them as is
-        // but make a processor that can change the version of the ast
-        // make things more immutable in the future? solve part of the complexity of
-        // ChangeListener
-        // reversible / bijective
-        // avoid cloning whole ast
-        // keep original asts and found operations valid
-        // able to apply each atomic op
-        // what about move class / move package ?
-        // transformation into coming patch ?
-        // maintain an intermediary ast ? where we apply ops
-        // would it be easier to create an Itree instead of a spoon ast ?
-        // ability to apply and unapply op in any order
-        // able to serialize/prettyprint intermediary ast
-        // in general being able to manipulate the intermediary ast like a standard
-        // spoon ast
-        // avoid cloning the whole ast to create the intermediary tree
-        // is it possible to avoid using CtPath to go between left or right and
-        // intermediary
-        // ChangeListener can be used realistically? extends it to revert operations?
-        // as martin pointed out, it can be looked at like a merge for the creating of
-        // the intermediary,
-        // considering a left, middle and right ast, here left = middle, but we need to
-        // filter some evolutions coming from right.
-        try (ApplierHelper ah = new ApplierHelper(eap, wantedEvos, atomizedRefactorings);) {
-            Launcher launcher = ah.applyEvolutions(wantedEvos);
-            serialize(launcher, Paths.get("/tmp/applyResults/").toFile());
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+    // static void applyEvolutions(EvolutionsAtProj eap, Set<Evolution> wantedEvos,
+    //         Map<Evolution, Set<Evolution>> atomizedRefactorings) {
+    //     // bug spoon while parsing comments
+    //     // make system tests that analyze spoon itself
+    //     // maven modules can be handled by the used, just need to open some api calls
+    //     // (access to SpoonPom childrens, MavenLauncher that takes an SpoonPom Instance)
+    //     // make spoon being able to be more in incremental, in the future use an
+    //     // incremental parser, would allow to scale to mining of whole git repo ?!?!
+    //     // interested?
+    //     // that is something like versioned visitors and accessors OR keep them as is
+    //     // but make a processor that can change the version of the ast
+    //     // make things more immutable in the future? solve part of the complexity of
+    //     // ChangeListener
+    //     // reversible / bijective
+    //     // avoid cloning whole ast
+    //     // keep original asts and found operations valid
+    //     // able to apply each atomic op
+    //     // what about move class / move package ?
+    //     // transformation into coming patch ?
+    //     // maintain an intermediary ast ? where we apply ops
+    //     // would it be easier to create an Itree instead of a spoon ast ?
+    //     // ability to apply and unapply op in any order
+    //     // able to serialize/prettyprint intermediary ast
+    //     // in general being able to manipulate the intermediary ast like a standard
+    //     // spoon ast
+    //     // avoid cloning the whole ast to create the intermediary tree
+    //     // is it possible to avoid using CtPath to go between left or right and
+    //     // intermediary
+    //     // ChangeListener can be used realistically? extends it to revert operations?
+    //     // as martin pointed out, it can be looked at like a merge for the creating of
+    //     // the intermediary,
+    //     // considering a left, middle and right ast, here left = middle, but we need to
+    //     // filter some evolutions coming from right.
+    //     try (ApplierHelper ah = new ApplierHelper(eap, wantedEvos, atomizedRefactorings);) {
+    //         Launcher launcher = ah.applyEvolutions(wantedEvos);
+    //         serialize(launcher, Paths.get("/tmp/applyResults/").toFile());
+    //     } catch (Exception e) {
+    //         throw new RuntimeException(e);
+    //     }
 
-    }
+    // }
 
-    void serialize(File out) {
-        serialize(this.launcher, out);
-    }
+    // void serialize(File out) {
+    //     JavaOutputProcessor outWriter = launcher.createOutputWriter();
+	// 	outWriter.getEnvironment().setOutputDestinationHandler(new MyDefaultOutputDestinationHandler(out,outWriter.getEnvironment()));
+    //     // outWriter.getEnvironment().setSourceOutputDirectory(out);
+    //     for (CtType p : launcher.getModel().getAllTypes()) {
+    //         if (!p.isShadow()) {
+    //             outWriter.createJavaFile(p);
+    //         }
+    //     }
+    // }
 
-    public static void serialize(Launcher launcher, File out) {
-        JavaOutputProcessor outWriter = launcher.createOutputWriter();
-        outWriter.getEnvironment().setSourceOutputDirectory(out); // TODO go further!!!!
-        for (CtType p : launcher.getModel().getAllTypes()) {
-            if (!p.isShadow()) {
-                outWriter.createJavaFile(p);
-            }
-        }
-    }
+    // public static void serialize(Launcher launcher, File out) {
+    // }
 
     private Map<ITree, ITree> watching = new HashMap<>();
 
