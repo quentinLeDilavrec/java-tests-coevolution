@@ -253,6 +253,26 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                         }
                     }
                     CtPackage right = ((ProjectSpoon.SpoonAST) afterProj.getAst()).launcher.getModel().getRootPackage();
+                    for (CompilationUnit cu : right.getFactory().CompilationUnit().getMap().values()) {
+                        for (File root : ((ProjectSpoon.SpoonAST) afterProj.getAst()).launcher.getPomFile()
+                                .getSourceDirectories()) {
+                            if (cu.getFile().toPath().startsWith(root.toPath())) {
+                                cu.putMetadata("SourceTypeNRootDirectory", new ImmutableTriple<>(
+                                        ((ProjectSpoon.SpoonAST) afterProj.getAst()).rootDir,
+                                        ((ProjectSpoon.SpoonAST) afterProj.getAst()).rootDir.relativize(root.toPath()),
+                                        MavenLauncher.SOURCE_TYPE.APP_SOURCE));
+                            }
+                        }
+                        for (File root : ((ProjectSpoon.SpoonAST) afterProj.getAst()).launcher.getPomFile()
+                                .getTestDirectories()) {
+                            if (cu.getFile().toPath().startsWith(root.toPath())) {
+                                cu.putMetadata("SourceTypeNRootDirectory", new ImmutableTriple<>(
+                                        ((ProjectSpoon.SpoonAST) afterProj.getAst()).rootDir,
+                                        ((ProjectSpoon.SpoonAST) afterProj.getAst()).rootDir.relativize(root.toPath()),
+                                        MavenLauncher.SOURCE_TYPE.TEST_SOURCE));
+                            }
+                        }
+                    }
                     this.scanner = new SpoonGumTreeBuilder();
                     ITree srcTree;
                     srcTree = scanner.getTree(left);
