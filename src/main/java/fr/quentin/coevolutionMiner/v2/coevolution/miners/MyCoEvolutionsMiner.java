@@ -332,8 +332,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 Path path = position.getFile().toPath();
                 ImmutableTriple<Path, Path, MavenLauncher.SOURCE_TYPE> srcTriple = (ImmutableTriple<Path, Path, MavenLauncher.SOURCE_TYPE>) position
                         .getCompilationUnit().getMetadata("SourceTypeNRootDirectory");
-                return getDefaultOutputDirectory().toPath()
-                        .resolve(srcTriple.left.relativize(path));
+                return getDefaultOutputDirectory().toPath().resolve(srcTriple.left.relativize(path));
             }
 
             @Override
@@ -434,25 +433,25 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         String res = null;
                         String failAtStep = null;
                         EImpact.FailureReport report = null;
-                        if(report==null){
+                        if (report == null) {
                             res = compileApp(sourcesProvider, path);
-                            if (res!=null) {
+                            if (res != null) {
                                 report = new EImpact.FailureReport();
                                 report.when = "App compiling";
                                 report.what = res;
                             }
                         }
-                        if(report==null){
+                        if (report == null) {
                             res = compileAllTests(sourcesProvider, path);
-                            if (res!=null) {
+                            if (res != null) {
                                 report = new EImpact.FailureReport();
                                 report.when = "Tests compiling";
                                 report.what = res;
                             }
                         }
-                        if(report==null){
+                        if (report == null) {
                             res = executeTest(sourcesProvider, path, testClassQualName, testSimpName);
-                            if (res!=null) {
+                            if (res != null) {
                                 report = new EImpact.FailureReport();
                                 report.when = "Tests execution";
                                 report.what = res;
@@ -811,7 +810,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     }
                     if (possibleReso == null) {
                         possibleReso = new HashSet<>();
-                        for (Entry<Range, ImmutablePair<Range, EImpact.FailureReport>> testEntry : eimpCauses.tests.entrySet()) {
+                        for (Entry<Range, ImmutablePair<Range, EImpact.FailureReport>> testEntry : eimpCauses.tests
+                                .entrySet()) {
                             EImpact aaa = resos.get(testEntry.getKey());
                             if (aaa == null) {
                                 continue;
@@ -820,7 +820,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         }
                     } else {
                         Set<ImmutablePair<Range, EImpact>> tmp = new HashSet<>();
-                        for (Entry<Range, ImmutablePair<Range, EImpact.FailureReport>> testEntry : eimpCauses.tests.entrySet()) {
+                        for (Entry<Range, ImmutablePair<Range, EImpact.FailureReport>> testEntry : eimpCauses.tests
+                                .entrySet()) {
                             tmp.add(new ImmutablePair<Range, EImpact>(testEntry.getKey(),
                                     resos.get(testEntry.getKey())));
                         }
@@ -838,6 +839,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     EImpact eimpReso = eimpResoEntry.getValue();
                     Set<Evolution> resolutions = new HashSet<>(eimpReso.evolutions.keySet());
                     resolutions.removeAll(eimpCauses.evolutions.keySet());
+                    if (resolutions.size() == 0)
+                        continue;
                     CoEvolutionExtension res = new CoEvolutionExtension(new HashSet<>(eimpCauses.evolutions.keySet()),
                             resolutions, Collections.singleton(eimpResoEntry.getKey()),
                             Collections.singleton(eimpResoEntry.getValue().tests.get(eimpResoEntry.getKey()).getKey()));
