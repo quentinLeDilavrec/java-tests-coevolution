@@ -333,7 +333,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 ImmutableTriple<Path, Path, MavenLauncher.SOURCE_TYPE> srcTriple = (ImmutableTriple<Path, Path, MavenLauncher.SOURCE_TYPE>) position
                         .getCompilationUnit().getMetadata("SourceTypeNRootDirectory");
                 return getDefaultOutputDirectory().toPath()
-                        .resolve(srcTriple.left.resolve(srcTriple.middle).relativize(path));
+                        .resolve(srcTriple.left.relativize(path));
             }
 
             @Override
