@@ -72,8 +72,8 @@ public class ApplierHelper implements AutoCloseable {
         this.validityLauncher = validityLauncher;
     }
 
-    private float meanSimConst = .7f;
-    private float minReqConst = .1f;
+    private float meanSimConst = .99f;
+    private float minReqConst = .9f;
     public final Map<Evolution, Set<Evolution>> evoToEvo;
     private Factory factory;
     private Launcher launcher;
