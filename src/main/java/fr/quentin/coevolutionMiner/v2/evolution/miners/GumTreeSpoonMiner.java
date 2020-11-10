@@ -236,7 +236,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                         for (File root : ((ProjectSpoon.SpoonAST) beforeProj.getAst()).launcher.getPomFile()
                                 .getSourceDirectories()) {
                             if (cu.getFile().toPath().startsWith(root.toPath())) {
-                                cu.putMetadata("SourceTypeNRoutDirectory", new ImmutableTriple<>(
+                                cu.putMetadata("SourceTypeNRootDirectory", new ImmutableTriple<>(
                                         ((ProjectSpoon.SpoonAST) beforeProj.getAst()).rootDir,
                                         ((ProjectSpoon.SpoonAST) beforeProj.getAst()).rootDir.relativize(root.toPath()),
                                         MavenLauncher.SOURCE_TYPE.APP_SOURCE));
