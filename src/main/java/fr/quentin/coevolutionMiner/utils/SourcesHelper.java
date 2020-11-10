@@ -499,6 +499,21 @@ public class SourcesHelper implements AutoCloseable {
 		InvocationRequest request = new DefaultInvocationRequest();
 		request.setBaseDirectory(path.toFile());
 		request.setGoals(Arrays.asList("test-compile"));
+		request.setOutputHandler(outputHandler);
+		Invoker invoker = new DefaultInvoker();
+		invoker.setMavenHome(Paths.get(MVN_HOME).toFile());
+		try {
+			return invoker.execute(request);
+		} catch (MavenInvocationException e) {
+			throw new Exception("Error while running tests with maven", e);
+		}
+	}
+
+	public static InvocationResult compileApp(Path path, InvocationOutputHandler outputHandler) throws Exception {
+		InvocationRequest request = new DefaultInvocationRequest();
+		request.setBaseDirectory(path.toFile());
+		request.setGoals(Arrays.asList("compile"));
+		request.setOutputHandler(outputHandler);
 		Invoker invoker = new DefaultInvoker();
 		invoker.setMavenHome(Paths.get(MVN_HOME).toFile());
 		try {
