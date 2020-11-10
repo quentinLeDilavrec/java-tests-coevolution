@@ -1,5 +1,6 @@
 package fr.quentin.coevolutionMiner.v2.evolution.miners;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -54,7 +55,9 @@ import gumtree.spoon.diff.DiffImpl;
 import gumtree.spoon.diff.MultiDiffImpl;
 import gumtree.spoon.diff.operations.Operation;
 import gumtree.spoon.diff.support.SpoonSupport;
+import spoon.MavenLauncher;
 import spoon.reflect.code.CtAbstractInvocation;
+import spoon.reflect.cu.CompilationUnit;
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.cu.position.DeclarationSourcePosition;
 import spoon.reflect.declaration.CtElement;
@@ -227,6 +230,28 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
 
                 if (beforeProj.getAst().isUsable() && afterProj.getAst().isUsable()) {
                     CtPackage left = ((ProjectSpoon.SpoonAST) beforeProj.getAst()).launcher.getModel().getRootPackage();
+                    // TODO make a checkable API, to access use :
+                    // (ImmutableTriple<Path,Path,MavenLauncher.SOURCE_TYPE>())cu.getMetadata("SourceTypeNRootDirectory");
+                    for (CompilationUnit cu : left.getFactory().CompilationUnit().getMap().values()) {
+                        for (File root : ((ProjectSpoon.SpoonAST) beforeProj.getAst()).launcher.getPomFile()
+                                .getSourceDirectories()) {
+                            if (cu.getFile().toPath().startsWith(root.toPath())) {
+                                cu.putMetadata("SourceTypeNRoutDirectory", new ImmutableTriple<>(
+                                        ((ProjectSpoon.SpoonAST) beforeProj.getAst()).rootDir,
+                                        ((ProjectSpoon.SpoonAST) beforeProj.getAst()).rootDir.relativize(root.toPath()),
+                                        MavenLauncher.SOURCE_TYPE.APP_SOURCE));
+                            }
+                        }
+                        for (File root : ((ProjectSpoon.SpoonAST) beforeProj.getAst()).launcher.getPomFile()
+                                .getTestDirectories()) {
+                            if (cu.getFile().toPath().startsWith(root.toPath())) {
+                                cu.putMetadata("SourceTypeNRootDirectory", new ImmutableTriple<>(
+                                        ((ProjectSpoon.SpoonAST) beforeProj.getAst()).rootDir,
+                                        ((ProjectSpoon.SpoonAST) beforeProj.getAst()).rootDir.relativize(root.toPath()),
+                                        MavenLauncher.SOURCE_TYPE.TEST_SOURCE));
+                            }
+                        }
+                    }
                     CtPackage right = ((ProjectSpoon.SpoonAST) afterProj.getAst()).launcher.getModel().getRootPackage();
                     this.scanner = new SpoonGumTreeBuilder();
                     ITree srcTree;
@@ -303,17 +328,19 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 Path path;
                 if (ele == null) {
                     return null;
-                    // ele = (CtElement) tree.getParent().getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+                    // ele = (CtElement)
+                    // tree.getParent().getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
                     // if (tree.getMetadata("type").equals("LABEL")) {
-                    //     if (ele instanceof CtAbstractInvocation) {
-                            
-                    //     }
-                    //     DeclarationSourcePosition position = (DeclarationSourcePosition) ele.getPosition();
-                    //     path = position.getFile().toPath();
-                    //     start = position.getNameStart();
-                    //     end = position.getNameEnd();
+                    // if (ele instanceof CtAbstractInvocation) {
+
+                    // }
+                    // DeclarationSourcePosition position = (DeclarationSourcePosition)
+                    // ele.getPosition();
+                    // path = position.getFile().toPath();
+                    // start = position.getNameStart();
+                    // end = position.getNameEnd();
                     // } else {
-                    //     throw null;
+                    // throw null;
                     // }
                     // ele = new CtWrapper<>(tree.getLabel(), ele);
                 } else {

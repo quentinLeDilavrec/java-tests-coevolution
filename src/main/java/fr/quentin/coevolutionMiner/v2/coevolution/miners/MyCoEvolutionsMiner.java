@@ -24,6 +24,7 @@ import com.google.gson.JsonObject;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.math.Fraction;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.maven.shared.invoker.InvocationResult;
 import org.apache.maven.shared.utils.cli.CommandLineException;
 import org.eclipse.jetty.util.MultiMap;
@@ -51,6 +52,7 @@ import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsMiner;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsStorage;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.CoEvolution;
 import spoon.Launcher;
+import spoon.MavenLauncher;
 import spoon.compiler.Environment;
 import spoon.compiler.Environment.PRETTY_PRINTING_MODE;
 import spoon.reflect.cu.SourcePosition;
@@ -322,19 +324,16 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         Map<Set<Evolution>, Set<EImpact>> functionalImpacts = new HashMap<>();
         Map<Range, String> initialTestsStatus = new HashMap<>();
         JavaOutputProcessor outputProcessor = new JavaOutputProcessor();
-        List<Path> rootDirs = Arrays.asList(ast_before.rootDir, ast_after.rootDir);
 
         OutputDestinationHandler outDestHandler = new OutputDestinationHandler() {
             @Override
             public Path getOutputPath(CtModule module, CtPackage pack, CtType type) {
-                Path path = type.getPosition().getFile().toPath();
-                for (Path root : rootDirs) {
-                    if (path.startsWith(root)) {
-                        return getDefaultOutputDirectory().toPath().resolve(root.relativize(path));
-                        // break;
-                    }
-                }
-                throw new RuntimeException();
+                SourcePosition position = type.getPosition();
+                Path path = position.getFile().toPath();
+                ImmutableTriple<Path, Path, MavenLauncher.SOURCE_TYPE> srcTriple = (ImmutableTriple<Path, Path, MavenLauncher.SOURCE_TYPE>) position
+                        .getCompilationUnit().getMetadata("SourceTypeNRootDirectory");
+                return getDefaultOutputDirectory().toPath()
+                        .resolve(srcTriple.left.resolve(srcTriple.middle).relativize(path));
             }
 
             @Override
@@ -911,6 +910,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     private String executeTest(Sources sourcesProvider, Path path, String declaringClass, String name) {
         try {
             StringBuilder r = new StringBuilder();
+            System.out.println("Launching test: " + declaringClass + "#" + name);
             InvocationResult res = SourcesHelper.executeTests(path, declaringClass + "#" + name, x -> {
                 System.out.println(x);
                 r.append(x + "\n");
