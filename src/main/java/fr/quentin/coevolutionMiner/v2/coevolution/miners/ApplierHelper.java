@@ -124,7 +124,7 @@ public class ApplierHelper implements AutoCloseable {
         }
 
         void triggerCallback() {
-            validityLauncher.accept(validable);
+            validityLauncher.accept(Collections.unmodifiableSet(new HashSet<>(validable)));
         }
 
         private boolean isLaunchable(Evolution e) {
