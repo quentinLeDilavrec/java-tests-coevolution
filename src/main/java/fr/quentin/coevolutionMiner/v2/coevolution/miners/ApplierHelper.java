@@ -50,6 +50,7 @@ import spoon.Launcher;
 import spoon.MavenLauncher;
 import spoon.compiler.Environment;
 import spoon.reflect.declaration.CtElement;
+import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtModule;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;
@@ -95,7 +96,7 @@ public class ApplierHelper implements AutoCloseable {
             }
             for (Set<Evolution> values : presentMap.values()) {
                 for (Evolution evolution : values) {
-                    evoReqSize.put(evolution, evoReqSize.getOrDefault(evolution, 0)+1);
+                    evoReqSize.put(evolution, evoReqSize.getOrDefault(evolution, 0) + 1);
                 }
             }
         }
@@ -163,11 +164,11 @@ public class ApplierHelper implements AutoCloseable {
 
         public boolean isCurrentlyApplied(AAction a) {
             // if (a instanceof Move) {
-            //     Boolean s = reqState.get(a.getSource());
-            //     Boolean t = reqState.get(a.getTarget());
-            //     return s && t;
+            // Boolean s = reqState.get(a.getSource());
+            // Boolean t = reqState.get(a.getTarget());
+            // return s && t;
             // } else {
-            //     return reqState.get(a.getTarget());
+            // return reqState.get(a.getTarget());
             // }
             return reqState.get(a);
         }
@@ -197,13 +198,13 @@ public class ApplierHelper implements AutoCloseable {
             presentMap.putIfAbsent(a, new HashSet<>());
             presentMap.get(a).addAll(e);
             // if (a instanceof Delete) {
-            //     // markDeleteRequirements(a, e);
-            //     // } else if (a instanceof Move) {
-            //     // markSourceRequirements(a, e);
-            //     // markInsertRequirements(a, e);
+            // // markDeleteRequirements(a, e);
+            // // } else if (a instanceof Move) {
+            // // markSourceRequirements(a, e);
+            // // markInsertRequirements(a, e);
             // } else {
-            //     markInsertRequirements(a, e);
-            //     // markContextRequirements(a, e);
+            // markInsertRequirements(a, e);
+            // // markContextRequirements(a, e);
             // }
         }
 
@@ -259,7 +260,7 @@ public class ApplierHelper implements AutoCloseable {
         this.evoToEvo = atomizedRefactorings;
         this.evoState = new EvoStateMaintainer(allPossiblyConsideredEvos);
     }
-    
+
     public ApplierHelper(EvolutionsAtProj eap, Collection<Evolution> allPossiblyConsideredEvos,
             Map<Evolution, Set<Evolution>> atomizedRefactorings) {
         this(eap.getScanner(), eap.getMdiff().getMiddle(), eap.getDiff(), allPossiblyConsideredEvos,
@@ -341,13 +342,13 @@ public class ApplierHelper implements AutoCloseable {
             try {
                 AAction action = getAction(change.content, change.way);
                 boolean inverted = action == null;
-                action = inverted? getAction(change.content, !change.way):action;
+                action = inverted ? getAction(change.content, !change.way) : action;
                 boolean b = auxApply(scanner, this.factory, action, inverted);
                 for (AbstractVersionedTree node : waitingToBeApplied.keySet()) {
                     try {
                         AAction action2 = getAction(node, waitingToBeApplied.get(node));
                         boolean inverted2 = action2 == null;
-                        action2 = inverted2 ? getAction(node, !waitingToBeApplied.get(node)): action2;
+                        action2 = inverted2 ? getAction(node, !waitingToBeApplied.get(node)) : action2;
                         auxApply(scanner, this.factory, action2, inverted2);
                         waitingToBeApplied.remove(node);
                     } catch (gumtree.spoon.apply.WrongAstContextException e) {
@@ -383,8 +384,9 @@ public class ApplierHelper implements AutoCloseable {
             // return evoState.set(invertableAction.getTarget(), false, true);
         } else if (invertableAction instanceof Update) {
             ActionApplier.applyAUpdate(facto, scanner.getTreeContext(), (Update & AAction<Update>) invertableAction);
-            // return evoState.set((AbstractVersionedTree) invertableAction.getSource(), false, true)
-                    // & evoState.set(invertableAction.getTarget(), true, true);
+            // return evoState.set((AbstractVersionedTree) invertableAction.getSource(),
+            // false, true)
+            // & evoState.set(invertableAction.getTarget(), true, true);
             // } else if (invertableAction instanceof Move){
             // ActionApplier.applyAMove(facto, scanner.getTreeContext(), (Move &
             // AAction<Move>) invertableAction);
@@ -440,56 +442,61 @@ public class ApplierHelper implements AutoCloseable {
     }
 
     // static void applyEvolutions(EvolutionsAtProj eap, Set<Evolution> wantedEvos,
-    //         Map<Evolution, Set<Evolution>> atomizedRefactorings) {
-    //     // bug spoon while parsing comments
-    //     // make system tests that analyze spoon itself
-    //     // maven modules can be handled by the used, just need to open some api calls
-    //     // (access to SpoonPom childrens, MavenLauncher that takes an SpoonPom Instance)
-    //     // make spoon being able to be more in incremental, in the future use an
-    //     // incremental parser, would allow to scale to mining of whole git repo ?!?!
-    //     // interested?
-    //     // that is something like versioned visitors and accessors OR keep them as is
-    //     // but make a processor that can change the version of the ast
-    //     // make things more immutable in the future? solve part of the complexity of
-    //     // ChangeListener
-    //     // reversible / bijective
-    //     // avoid cloning whole ast
-    //     // keep original asts and found operations valid
-    //     // able to apply each atomic op
-    //     // what about move class / move package ?
-    //     // transformation into coming patch ?
-    //     // maintain an intermediary ast ? where we apply ops
-    //     // would it be easier to create an Itree instead of a spoon ast ?
-    //     // ability to apply and unapply op in any order
-    //     // able to serialize/prettyprint intermediary ast
-    //     // in general being able to manipulate the intermediary ast like a standard
-    //     // spoon ast
-    //     // avoid cloning the whole ast to create the intermediary tree
-    //     // is it possible to avoid using CtPath to go between left or right and
-    //     // intermediary
-    //     // ChangeListener can be used realistically? extends it to revert operations?
-    //     // as martin pointed out, it can be looked at like a merge for the creating of
-    //     // the intermediary,
-    //     // considering a left, middle and right ast, here left = middle, but we need to
-    //     // filter some evolutions coming from right.
-    //     try (ApplierHelper ah = new ApplierHelper(eap, wantedEvos, atomizedRefactorings);) {
-    //         Launcher launcher = ah.applyEvolutions(wantedEvos);
-    //         serialize(launcher, Paths.get("/tmp/applyResults/").toFile());
-    //     } catch (Exception e) {
-    //         throw new RuntimeException(e);
-    //     }
+    // Map<Evolution, Set<Evolution>> atomizedRefactorings) {
+    // // bug spoon while parsing comments
+    // // make system tests that analyze spoon itself
+    // // maven modules can be handled by the used, just need to open some api calls
+    // // (access to SpoonPom childrens, MavenLauncher that takes an SpoonPom
+    // Instance)
+    // // make spoon being able to be more in incremental, in the future use an
+    // // incremental parser, would allow to scale to mining of whole git repo ?!?!
+    // // interested?
+    // // that is something like versioned visitors and accessors OR keep them as is
+    // // but make a processor that can change the version of the ast
+    // // make things more immutable in the future? solve part of the complexity of
+    // // ChangeListener
+    // // reversible / bijective
+    // // avoid cloning whole ast
+    // // keep original asts and found operations valid
+    // // able to apply each atomic op
+    // // what about move class / move package ?
+    // // transformation into coming patch ?
+    // // maintain an intermediary ast ? where we apply ops
+    // // would it be easier to create an Itree instead of a spoon ast ?
+    // // ability to apply and unapply op in any order
+    // // able to serialize/prettyprint intermediary ast
+    // // in general being able to manipulate the intermediary ast like a standard
+    // // spoon ast
+    // // avoid cloning the whole ast to create the intermediary tree
+    // // is it possible to avoid using CtPath to go between left or right and
+    // // intermediary
+    // // ChangeListener can be used realistically? extends it to revert operations?
+    // // as martin pointed out, it can be looked at like a merge for the creating
+    // of
+    // // the intermediary,
+    // // considering a left, middle and right ast, here left = middle, but we need
+    // to
+    // // filter some evolutions coming from right.
+    // try (ApplierHelper ah = new ApplierHelper(eap, wantedEvos,
+    // atomizedRefactorings);) {
+    // Launcher launcher = ah.applyEvolutions(wantedEvos);
+    // serialize(launcher, Paths.get("/tmp/applyResults/").toFile());
+    // } catch (Exception e) {
+    // throw new RuntimeException(e);
+    // }
 
     // }
 
     // void serialize(File out) {
-    //     JavaOutputProcessor outWriter = launcher.createOutputWriter();
-	// 	outWriter.getEnvironment().setOutputDestinationHandler(new MyDefaultOutputDestinationHandler(out,outWriter.getEnvironment()));
-    //     // outWriter.getEnvironment().setSourceOutputDirectory(out);
-    //     for (CtType p : launcher.getModel().getAllTypes()) {
-    //         if (!p.isShadow()) {
-    //             outWriter.createJavaFile(p);
-    //         }
-    //     }
+    // JavaOutputProcessor outWriter = launcher.createOutputWriter();
+    // outWriter.getEnvironment().setOutputDestinationHandler(new
+    // MyDefaultOutputDestinationHandler(out,outWriter.getEnvironment()));
+    // // outWriter.getEnvironment().setSourceOutputDirectory(out);
+    // for (CtType p : launcher.getModel().getAllTypes()) {
+    // if (!p.isShadow()) {
+    // outWriter.createJavaFile(p);
+    // }
+    // }
     // }
 
     // public static void serialize(Launcher launcher, File out) {
@@ -516,15 +523,20 @@ public class ApplierHelper implements AutoCloseable {
         for (int i = 0; i < treeTest.length; i++) {
             ITree xx = treeTest[i];
             ITree x = watching.getOrDefault(xx, xx);
+            CtMethod actualTest = (CtMethod) ((AbstractVersionedTree) x).getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+            String simpname = actualTest.getSimpleName();
+
             // Map<VersionCommit, CtElement> map = (Map<VersionCommit, CtElement>) x
             // .getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION);
-            CtElement ele = null;
             // if (map != null) {
             // ele = map.get(afterVersion);
             // }
-            if (ele == null) {
-                ele = (CtElement) ((AbstractVersionedTree)x).getChildren(afterVersion).get(0).getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
-                ele = ele.getParent();
+            CtElement ele = (CtElement) ((AbstractVersionedTree) x).getChildren(afterVersion).get(0)
+                    .getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+            ele = ele.getParent();
+            if (((CtMethod) ele).getSimpleName().equals(simpname)) {
+            } else {
+                ele = (CtMethod)((AbstractVersionedTree) x).getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
             }
             r[i] = ele;
         }
