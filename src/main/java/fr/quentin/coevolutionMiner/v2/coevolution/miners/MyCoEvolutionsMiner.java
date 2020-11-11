@@ -47,6 +47,7 @@ import fr.quentin.coevolutionMiner.v2.impact.Impacts.Impact;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
+import fr.quentin.coevolutionMiner.v2.utils.Iterators2;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsMiner;
@@ -630,7 +631,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         HashSet<Evolutions.Evolution> notUsed = new HashSet<>(by.toSet());
         Map<Evolution, Set<Evolution>> result = new HashMap<>();
 
-        for (Evolution evolution : from) {
+        for (Evolution evolution : Iterators2.createChainIterable(Arrays.asList(from,by))) {
             Set<Evolution> acc = new HashSet<>();
             for (DescRange descRange : evolution.getBefore()) {
                 CtElement ele = (CtElement) descRange.getTarget().getOriginal();
@@ -648,14 +649,14 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     aux(acc, ele);
                 }
             }
-            notUsed.removeAll(acc);
+            // notUsed.removeAll(acc);
             acc.remove(evolution);
             result.put(evolution, acc);
         }
-        // promote
-        for (Evolution evolution : notUsed) {
-            result.put(evolution, Collections.emptySet());
-        }
+        // // promote
+        // for (Evolution evolution : notUsed) {
+        //     result.put(evolution, Collections.emptySet());
+        // }
         return result;
     }
 
