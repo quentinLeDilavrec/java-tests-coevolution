@@ -342,7 +342,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         };
         for (EvolutionsAtProj k : interestingCases.keySet()) {
 
-            try (ApplierHelper ah = new ApplierHelper(k, evoPerProj.get(k), atomizedRefactorings);) {
+            for (InterestingCase c : interestingCases.get(k)) {
+            try (ApplierHelper ah = new ApplierHelper(k, c.evosForThisTest, atomizedRefactorings);) { // evoPerProj.get(k)
                 // ah.setTestDirectories(
                 // ((SpoonAST)
                 // k.getBeforeProj().getAst()).launcher.getPomFile().getSourceDirectories().stream()
@@ -463,7 +464,6 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     }
                 };
                 ah.setValidityLauncher(consumer);
-                for (InterestingCase c : interestingCases.get(k)) {
                     Range testBefore = c.testBefore;
                     consumer.testBefore = testBefore;
                     consumer.evosForThisTest = c.evosForThisTest;
@@ -501,9 +501,9 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     // } else { // evolutions had no effects on success of considered tests
 
                     // }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
                 }
-            } catch (Exception e) {
-                throw new RuntimeException(e);
             }
             currCoevolutions.setInitialResults(initialTestsStatus);
             currCoevolutions.addEImpacts(functionalImpacts);
@@ -650,7 +650,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
         // promote
         for (Evolution evolution : notUsed) {
-            result.put(evolution, Collections.singleton(evolution));
+            result.put(evolution, Collections.emptySet());
         }
         return result;
     }
