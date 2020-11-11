@@ -31,6 +31,7 @@ import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
+import fr.quentin.coevolutionMiner.v2.evolution.EvolutionsImpl;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionsMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution.DescRange;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
@@ -118,7 +119,7 @@ public class RefactoringMiner implements EvolutionsMiner {
         return result;
     }
 
-    public final class EvolutionsExtension extends Evolutions {
+    public final class EvolutionsExtension extends EvolutionsImpl {
 
         private EvolutionsExtension(Specifier spec, Sources sources) {
             super(spec, sources);
@@ -286,14 +287,14 @@ public class RefactoringMiner implements EvolutionsMiner {
         }
 
         @Override
-        public List<Evolutions> perBeforeCommit() {
+        public Map<Commit, Evolutions> perBeforeCommit() {
             Map<String, Set<Evolution>> tmp = new HashMap<>();
             for (Evolution evolution : toSet()) {
                 String cidb = evolution.getCommitBefore().getId();
                 tmp.putIfAbsent(cidb, new HashSet<>());
                 tmp.get(cidb).add(evolution);
             }
-            List<Evolutions> r = new ArrayList<>();
+            Map<Commit, Evolutions> r = new HashMap<>();
             for (Set<Evolution> evolutionsSubSet : tmp.values()) {
                 if (evolutionsSubSet.size() == 0) {
                     continue;
@@ -303,7 +304,7 @@ public class RefactoringMiner implements EvolutionsMiner {
                                 evolutionsSubSet.iterator().next().getCommitBefore().getId(),
                                 evolutionsSubSet.iterator().next().getCommitAfter().getId(), spec.miner),
                         getSources(), evolutionsSubSet);
-                r.add(newEvo);
+                r.put(evolutionsSubSet.iterator().next().getCommitBefore(), newEvo);
             }
             return r;
         }

@@ -18,6 +18,7 @@ import fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.MixedMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.storages.Neo4jEvolutionsStorage;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactsStorage;
@@ -41,7 +42,8 @@ public class EvolutionHandler implements AutoCloseable {
 		return buildSpec(sources, commitIdBefore, commitIdAfter, RefactoringMiner.class);
 	}
 
-	public static Evolutions.Specifier buildSpec(Sources.Specifier sources, String commitIdBefore, String commitIdAfter, Class<? extends EvolutionsMiner> miner) {
+	public static Evolutions.Specifier buildSpec(Sources.Specifier sources, String commitIdBefore, String commitIdAfter,
+			Class<? extends EvolutionsMiner> miner) {
 		return new Evolutions.Specifier(sources, commitIdBefore, commitIdAfter, miner);
 	}
 
@@ -50,8 +52,7 @@ public class EvolutionHandler implements AutoCloseable {
 	}
 
 	enum Miners {
-		RefactoringMiner,
-		GumTreeSpoonMiner
+		RefactoringMiner, GumTreeSpoonMiner, MixedMiner
 	}
 
 	private Evolutions handle(Evolutions.Specifier spec, String storeName) {
@@ -81,22 +82,30 @@ public class EvolutionHandler implements AutoCloseable {
 			Miners z = Miners.valueOf(spec.miner.getSimpleName());
 			// CAUTION miners should mind about circular deps of data given by handlers
 			switch (z) {
-				case RefactoringMiner:
-					RefactoringMiner minerInstRM = new RefactoringMiner(spec, srcHandler, astHandler);
-					res = minerInstRM.compute();
+				case RefactoringMiner: {
+					RefactoringMiner minerInst = new RefactoringMiner(spec, srcHandler, astHandler);
+					res = minerInst.compute();
 					populate(res);
 					break;
-				case GumTreeSpoonMiner:
-					GumTreeSpoonMiner minerInstGTS = new GumTreeSpoonMiner(spec, srcHandler, astHandler);
-					res = minerInstGTS.compute();
+				}
+				case GumTreeSpoonMiner: {
+					GumTreeSpoonMiner minerInst = new GumTreeSpoonMiner(spec, srcHandler, astHandler);
+					res = minerInst.compute();
 					populate(res);
 					break;
+				}
+				case MixedMiner: {
+					MixedMiner minerInst = new MixedMiner(spec, srcHandler, astHandler, this);
+					res = minerInst.compute();
+					populate(res);
+					break;
+				}
 				default:
 					throw new RuntimeException(spec.miner + " is not a registered Evolutions miner.");
 			}
 			if (db != null) {
 				if (z.equals(Miners.RefactoringMiner)) { // TODO generalize uploader
-					db.put(spec, res);	
+					db.put(spec, res);
 				}
 			}
 			tmp.set(res);
@@ -109,7 +118,7 @@ public class EvolutionHandler implements AutoCloseable {
 	}
 
 	private void populate(Evolutions evolutions) {
-		for (Evolutions x : evolutions.perBeforeCommit()) {
+		for (Evolutions x : evolutions.perBeforeCommit().values()) {
 			memoizedEvolutions.putIfAbsent(x.spec, new Data<>());
 			Data<Evolutions> tmp = memoizedEvolutions.get(x.spec);
 			tmp.lock.lock();

@@ -4,14 +4,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedSet;
-import java.util.logging.Logger;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -21,15 +18,13 @@ import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.refactoringminer.api.Refactoring;
 
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
-import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.coevolutionMiner.v2.utils.Utils;
 import spoon.reflect.declaration.CtElement;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.evolution.storages.Neo4jEvolutionsStorage;
 
-public class Evolutions implements Iterable<Evolutions.Evolution> {
-
+public abstract class Evolutions implements Iterable<Evolutions.Evolution> {
     public static class Specifier {
         public final Sources.Specifier sources;
         public final Class<? extends EvolutionsMiner> miner;
@@ -90,65 +85,24 @@ public class Evolutions implements Iterable<Evolutions.Evolution> {
 
     public final Specifier spec;
 
-    // public List<fr.quentin.impactMiner.Evolution<Refactoring>> toList() {
-    // return new ArrayList<>();
-    // }
-    public Set<Evolution> toSet() {
-        return new HashSet<>();
-    }
+    public abstract Set<Evolution> toSet();
 
-    public List<Evolutions> perBeforeCommit() {
-        return new ArrayList<>();
-    }
+    public abstract Map<Sources.Commit, Evolutions> perBeforeCommit();
 
-    public JsonElement toJson() {
-        return new JsonObject();
-    }
+    public abstract JsonElement toJson();
 
-    // TODO see if it is needed
-    // public Evolution getEvolution(String type, List<ImmutablePair<Range,String>>
-    // before, List<ImmutablePair<Range,String>> after) {
-    // return null;
-    // }
-
-    protected final Set<Evolution> evolutions = new HashSet<>();
-    private final Map<ImmutablePair<String, List<ImmutablePair<Range, String>>>, Evolution> evoByBeforeList = new HashMap<>();
     protected final Sources sources;
 
-    public Sources getSources() {
+    public final Sources getSources() {
         return sources;
     }
 
-    public Evolution getEvolution(final String type, final List<ImmutablePair<Range, String>> before,
-            final Project<?> target) {
-        final Evolution tmp = evoByBeforeList.get(new ImmutablePair<>(type, before));
-        if (tmp == null) {
-            throw new RuntimeException("evo of type " + type + " and " + before + " is not in list");
-        }
-        // TODO do some checks on target
-        return tmp;
-    }
+    public abstract Set<Evolution> getEvolution(String type, Project<?> source,
+            List<ImmutablePair<Range, String>> before, Project<?> target, List<ImmutablePair<Range, String>> after);
 
     public Evolutions(final Specifier spec, final Sources sources) {
         this.spec = spec;
         this.sources = sources;
-    }
-
-    protected final Evolution addEvolution(final String type, final List<ImmutablePair<Range, String>> before,
-            final List<ImmutablePair<Range, String>> after, final Commit commitBefore, final Commit commitAfter,
-            final Object original) {
-        final Evolution evo = new Evolutions.Evolution(original, type, commitBefore, commitAfter);
-        for (final ImmutablePair<Range, String> immutablePair : before) {
-            evo.addBefore(immutablePair.getLeft(), immutablePair.getRight());
-        }
-        for (final ImmutablePair<Range, String> immutablePair : after) {
-            evo.addAfter(immutablePair.getLeft(), immutablePair.getRight());
-        }
-        evolutions.add(evo);
-        final Evolution old = evoByBeforeList.put(new ImmutablePair<>(type, before), evo);
-        if (old != null && evo.equals(old))
-            Logger.getLogger("evo").info("evo sharing same type and before");
-        return evo;
     }
 
     // @uniq // (also put relations as attributs)
@@ -223,20 +177,6 @@ public class Evolutions implements Iterable<Evolutions.Evolution> {
         void addAfter(final Range range, final String description) {
             after.add(new DescRange(range, description));
         }
-
-        // // @relation
-        // public class Before extends DescRange {
-        // Before(Range range, String description) {
-        // super(range, description);
-        // }
-        // }
-
-        // // @relation
-        // public class After extends DescRange {
-        // After(Range range, String description) {
-        // super(range, description);
-        // }
-        // }
 
         // @relation
         public class DescRange {
@@ -377,55 +317,43 @@ public class Evolutions implements Iterable<Evolutions.Evolution> {
 
             final List<Object> leftSideLocations = new ArrayList<>();
             res.put("leftSideLocations", leftSideLocations);
-            for (final DescRange e : getBefore()) { // TODO sort list
-                final Map<String, Object> o = new HashMap<>();
-                leftSideLocations.add(o);
-                o.put("filePath", e.getTarget().getFile().getPath());
-                o.put("start", e.getTarget().getStart());
-                o.put("end", e.getTarget().getEnd());
-                final CtElement e_ori = (CtElement) e.getTarget().getOriginal();
+            for (final DescRange descR : getBefore()) { // TODO sort list
+                Range targetR = descR.getTarget();
+                final Map<String, Object> rDescR = targetR.toMap();
+                leftSideLocations.add(rDescR);
+                final CtElement e_ori = (CtElement) targetR.getOriginal();
                 if (e_ori != null) {
-                    o.put("type", Utils.formatedType(e_ori));
+                    rDescR.put("type", Utils.formatedType(e_ori));
                 } else {
-                    o.put("type", "evo null");
+                    rDescR.put("type", "evo null");
                 }
-                o.put("description", e.getDescription());
-                evofields.putIfAbsent("before_" + abrv(e.getDescription()), new ArrayList<>());
-                ((List<String>)evofields.get("before_" + abrv(e.getDescription()))).add(rangeToString(o));
+                rDescR.put("description", descR.getDescription());
+                evofields.putIfAbsent("before_" + abrv(descR.getDescription()), new ArrayList<>());
+                ((List<String>) evofields.get("before_" + abrv(descR.getDescription()))).add(rangeToString(rDescR));
             }
-            final Map<String, List<String>> after_e = new HashMap<>();
             final List<Object> rightSideLocations = new ArrayList<>();
             res.put("rightSideLocations", rightSideLocations);
-            for (final DescRange e : getAfter()) { // TODO sort list
-                final Map<String, Object> o = new HashMap<>();
-                rightSideLocations.add(o);
-                o.put("filePath", e.getTarget().getFile().getPath());
-                o.put("start", e.getTarget().getStart());
-                o.put("end", e.getTarget().getEnd());
-                final CtElement e_ori = (CtElement) e.getTarget().getOriginal();
+            for (final DescRange descR : getAfter()) { // TODO sort list
+                Range targetR = descR.getTarget();
+                final Map<String, Object> rDescR = targetR.toMap();
+                rightSideLocations.add(rDescR);
+                final CtElement e_ori = (CtElement) targetR.getOriginal();
                 if (e_ori != null) {
-                    o.put("type", Utils.formatedType(e_ori));
+                    rDescR.put("type", Utils.formatedType(e_ori));
                 } else {
-                    o.put("type", "evo null");
+                    rDescR.put("type", "evo null");
                 }
-                o.put("description", e.getDescription());
-                evofields.putIfAbsent("after_" + abrv(e.getDescription()), new ArrayList<>());
-                ((List<String>)evofields.get("after_" + abrv(e.getDescription()))).add(rangeToString(o));
+                rDescR.put("description", descR.getDescription());
+                evofields.putIfAbsent("after_" + abrv(descR.getDescription()), new ArrayList<>());
+                ((List<String>) evofields.get("after_" + abrv(descR.getDescription()))).add(rangeToString(rDescR));
             }
             addUrl(res);
             return res;
         }
     }
 
-    public Project<?>.AST.FileSnapshot.Range map(final Project<?>.AST.FileSnapshot.Range testBefore,
-            final Project<?> target) {
-        return null;
-    }
-
-    @Override
-    public Iterator<Evolution> iterator() {
-        return evolutions.iterator();
-    }
+    public abstract Project<?>.AST.FileSnapshot.Range map(final Project<?>.AST.FileSnapshot.Range testBefore,
+            final Project<?> target);
 
     public List<Map<String, Object>> asListofMaps() {
         List<Map<String, Object>> tmp = new ArrayList<>();

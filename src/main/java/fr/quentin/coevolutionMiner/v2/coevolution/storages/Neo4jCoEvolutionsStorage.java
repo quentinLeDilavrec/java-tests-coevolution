@@ -285,7 +285,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                     before.add(descRange);
             }
             try {
-                r.add(evolutions.getEvolution(evoType, before, projAfter));
+                r.addAll(evolutions.getEvolution(evoType,projAfter, before, projAfter, Collections.emptyList()));
             } catch (Exception e) {
                 e.printStackTrace();
             }
