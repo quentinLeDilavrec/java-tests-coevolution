@@ -28,8 +28,8 @@ FOREACH (l IN e.leftSideLocations |
 	MERGE (snap:FileSnapshot {path:l.file, repo:e.content.repository, commitId:e.content.commitIdBefore})
 	MERGE (snap)-[:IS_SNAPSHOT_IN]->(commitIdBefore)
 	MERGE (r:Range {range:[toInteger(l.start),toInteger(l.end)], start:toInteger(l.start), end:toInteger(l.end), path:l.file, repo:e.content.repository, commitId:e.content.commitIdBefore})
-	ON MATCH SET r.type = l.type
-	ON CREATE SET r.type = l.type
+	ON MATCH SET r.type = l.type, r.path = l.astPath
+	ON CREATE SET r.type = l.type, r.path = l.astPath
 	MERGE (r)-[:IS_RANGE_IN]->(snap)
 	MERGE (desc:Kind {desc:l.description})
 	MERGE (evo)-[:BEFORE {desc:l.description}]->(r)
@@ -40,8 +40,8 @@ FOREACH (l IN e.rightSideLocations |
 	MERGE (snap:FileSnapshot {path:l.file, repo:e.content.repository, commitId:e.content.commitIdAfter})
 	MERGE (snap)-[:IS_SNAPSHOT_IN]->(commitIdAfter)
 	MERGE (r:Range {range:[toInteger(l.start),toInteger(l.end)], start:toInteger(l.start), start:toInteger(l.start), end:toInteger(l.end), path:l.file, repo:e.content.repository, commitId:e.content.commitIdAfter})
-	ON MATCH SET r.type = l.type
-	ON CREATE SET r.type = l.type
+	ON MATCH SET r.type = l.type, r.path = l.astPath
+	ON CREATE SET r.type = l.type, r.path = l.astPath
 	MERGE (r)-[:IS_RANGE_IN]->(snap)
 	MERGE (desc:Kind {desc:l.description})
 	MERGE (evo)-[:AFTER  {desc:l.description}]->(r)
