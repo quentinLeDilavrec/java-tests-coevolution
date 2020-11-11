@@ -20,7 +20,7 @@ public class Iterators2 {
 
         @Override
         public boolean hasNext() {
-            if (current.hasNext()) {
+            if (current!=null && current.hasNext()) {
                 return true;
             } else {
                 while (inputs.hasNext()) {
