@@ -347,22 +347,19 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 int start, end;
                 Path path;
                 if (ele == null) {
-                    return null;
-                    // ele = (CtElement)
-                    // tree.getParent().getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
-                    // if (tree.getMetadata("type").equals("LABEL")) {
-                    // if (ele instanceof CtAbstractInvocation) {
-
-                    // }
-                    // DeclarationSourcePosition position = (DeclarationSourcePosition)
-                    // ele.getPosition();
-                    // path = position.getFile().toPath();
-                    // start = position.getNameStart();
-                    // end = position.getNameEnd();
+                    ele = (CtElement)  tree.getParent().getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+                    SourcePosition position = ele.getPosition();
+                    if (position == null || !position.isValidPosition()) {
+                        return null;
+                    }
+                    path = position.getFile().toPath();
+                    // if(position instanceof DeclarationSourcePosition) {
+                    //     start = ((DeclarationSourcePosition)position).getNameStart();
+                    //     end = ((DeclarationSourcePosition)position).getNameEnd();
                     // } else {
-                    // throw null;
+                    start = position.getSourceStart();
+                    end = position.getSourceEnd();
                     // }
-                    // ele = new CtWrapper<>(tree.getLabel(), ele);
                 } else {
                     SourcePosition position = ele.getPosition();
                     if (position == null || !position.isValidPosition()) {
@@ -419,10 +416,10 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             private void augment(DescRange dr) {
                 CtElement ori = (CtElement) dr.getTarget().getOriginal();
                 assert ori != null;
-                if (ori instanceof CtReference) {
+                if (ori instanceof CtReference || ori instanceof CtWrapper) {
                     ori = ori.getParent();
                 }
-                HashSet<DescRange> md = (HashSet<DescRange>) ori.getMetadata(METADATA_KEY_EVO);
+                Set<DescRange> md = (Set<DescRange>) ori.getMetadata(METADATA_KEY_EVO);
                 if (md == null) {
                     md = new HashSet<>();
                     ori.putMetadata(METADATA_KEY_EVO, md);
