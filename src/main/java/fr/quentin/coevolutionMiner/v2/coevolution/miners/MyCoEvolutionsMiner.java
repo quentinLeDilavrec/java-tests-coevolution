@@ -36,6 +36,7 @@ import fr.quentin.coevolutionMiner.v2.evolution.EvolutionsMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution.DescRange;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.MixedMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsAtCommit;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsAtCommit.EvolutionsAtProj;
@@ -196,6 +197,9 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         Project.Specifier<SpoonMiner> before_ast_id = astHandler.buildSpec(spec.evoSpec.sources, currentCommit.getId());
         Project.Specifier<SpoonMiner> after_ast_id = astHandler.buildSpec(spec.evoSpec.sources, nextCommit.getId());
 
+        Evolutions.Specifier currEvoSpecMixed = EvolutionHandler.buildSpec(sourcesProvider.spec, currentCommit.getId(),
+                nextCommit.getId(), MixedMiner.class);
+
         Evolutions.Specifier currEvoSpecGTS = EvolutionHandler.buildSpec(sourcesProvider.spec, currentCommit.getId(),
                 nextCommit.getId(), GumTreeSpoonMiner.class);
         Evolutions currentDiff = evoHandler.handle(currEvoSpecGTS);
@@ -233,7 +237,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             }
         }
 
-        Impacts currentImpacts = impactHandler.handle(impactHandler.buildSpec(before_ast_id, currEvoSpecRM));
+        Impacts currentImpacts = impactHandler.handle(impactHandler.buildSpec(before_ast_id, currEvoSpecMixed));
 
         // Map<FileSnapshot, Set<Evolution>> byFileBefore = new HashMap<>();
         // Map<FileSnapshot, Set<Evolution>> byFileAfter = new HashMap<>();
@@ -317,7 +321,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        CoEvolutions.Specifier coevoSpec = CoEvolutionHandler.buildSpec(sourcesProvider.spec, currEvoSpecRM);
+        CoEvolutions.Specifier coevoSpec = CoEvolutionHandler.buildSpec(sourcesProvider.spec, currEvoSpecMixed);
         CoEvolutionsExtension currCoevolutions = new CoEvolutionsExtension(coevoSpec, currentEvolutions, before_proj,
                 after_proj);
 
