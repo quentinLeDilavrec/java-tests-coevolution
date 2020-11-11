@@ -3,6 +3,7 @@ package fr.quentin.coevolutionMiner.v2.evolution.miners;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -268,11 +269,6 @@ public class RefactoringMiner implements EvolutionsMiner {
                 return null;
             }
             return new ImmutablePair<>(tmp, range.getDescription());
-        }
-
-        @Override
-        public Set<Evolution> toSet() {
-            return evolutions;
         }
 
         @Override
