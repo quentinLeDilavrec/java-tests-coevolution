@@ -86,12 +86,18 @@ public class EvolutionHandler implements AutoCloseable {
 					RefactoringMiner minerInst = new RefactoringMiner(spec, srcHandler, astHandler);
 					res = minerInst.compute();
 					populate(res);
+					if (db != null) {
+						db.put(spec, res);
+					}
 					break;
 				}
 				case GumTreeSpoonMiner: {
 					GumTreeSpoonMiner minerInst = new GumTreeSpoonMiner(spec, srcHandler, astHandler);
 					res = minerInst.compute();
 					populate(res);
+					if (db != null) {
+						db.put(spec, res);
+					}
 					break;
 				}
 				case MixedMiner: {
@@ -102,11 +108,6 @@ public class EvolutionHandler implements AutoCloseable {
 				}
 				default:
 					throw new RuntimeException(spec.miner + " is not a registered Evolutions miner.");
-			}
-			if (db != null) {
-				if (z.equals(Miners.RefactoringMiner)) { // TODO generalize uploader
-					db.put(spec, res);
-				}
 			}
 			tmp.set(res);
 			return res;
