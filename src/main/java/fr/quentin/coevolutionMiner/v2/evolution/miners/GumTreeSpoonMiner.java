@@ -355,15 +355,6 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                         return null;
                     }
                     path = position.getFile().toPath();
-                    if (!path.startsWith(proj.getAst().rootDir)) {
-                        CtPath p = ele.getPath();
-                        ele = p.evaluateOn(((SpoonAST)proj.getAst()).launcher.getFactory().getModel().getRootPackage()).get(0); 
-                        position = ele.getPosition();
-                        if (position == null || !position.isValidPosition()) {
-                            return null;
-                        }
-                        path = position.getFile().toPath();
-                    }
                     // if(position instanceof DeclarationSourcePosition) {
                     //     start = ((DeclarationSourcePosition)position).getNameStart();
                     //     end = ((DeclarationSourcePosition)position).getNameEnd();
