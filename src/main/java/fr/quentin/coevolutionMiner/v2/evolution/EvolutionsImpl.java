@@ -10,7 +10,9 @@ import java.util.Set;
 import java.util.logging.Logger;
 
 import com.google.gson.JsonElement;
+import com.googlecode.javaewah.IteratorUtil;
 
+import org.apache.commons.compress.utils.Sets;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import fr.quentin.coevolutionMiner.v2.ast.Project;
@@ -59,8 +61,7 @@ public class EvolutionsImpl extends Evolutions {
 
     @Override
     public Set<Evolution> toSet() {
-        // TODO Auto-generated method stub
-        return null;
+        return Collections.unmodifiableSet(evolutions);
     }
 
     @Override
