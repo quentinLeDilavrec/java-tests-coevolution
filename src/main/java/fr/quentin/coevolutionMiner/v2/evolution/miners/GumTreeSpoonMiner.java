@@ -39,6 +39,7 @@ import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon;
+import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon.SpoonAST;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionsMiner;
@@ -63,6 +64,7 @@ import spoon.reflect.cu.position.DeclarationSourcePosition;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtPackage;
+import spoon.reflect.path.CtPath;
 import spoon.reflect.reference.CtReference;
 
 public class GumTreeSpoonMiner implements EvolutionsMiner {
@@ -347,12 +349,21 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 int start, end;
                 Path path;
                 if (ele == null) {
-                    ele = (CtElement)  tree.getParent().getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+                    ele = (CtElement) tree.getParent().getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
                     SourcePosition position = ele.getPosition();
                     if (position == null || !position.isValidPosition()) {
                         return null;
                     }
                     path = position.getFile().toPath();
+                    if (!path.startsWith(proj.getAst().rootDir)) {
+                        CtPath p = ele.getPath();
+                        ele = p.evaluateOn(((SpoonAST)proj.getAst()).launcher.getFactory().getModel().getRootPackage()).get(0); 
+                        position = ele.getPosition();
+                        if (position == null || !position.isValidPosition()) {
+                            return null;
+                        }
+                        path = position.getFile().toPath();
+                    }
                     // if(position instanceof DeclarationSourcePosition) {
                     //     start = ((DeclarationSourcePosition)position).getNameStart();
                     //     end = ((DeclarationSourcePosition)position).getNameEnd();
