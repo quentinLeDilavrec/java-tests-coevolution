@@ -25,9 +25,9 @@ ON CREATE SET t.name = tool
 MERGE (evo)-[:WAS_MINED_BY]->(t)
 
 FOREACH (l IN e.leftSideLocations |
-	MERGE (snap:FileSnapshot {path:l.filePath, repo:e.content.repository, commitId:e.content.commitIdBefore})
+	MERGE (snap:FileSnapshot {path:l.file, repo:e.content.repository, commitId:e.content.commitIdBefore})
 	MERGE (snap)-[:IS_SNAPSHOT_IN]->(commitIdBefore)
-	MERGE (r:Range {range:[toInteger(l.start),toInteger(l.end)], start:toInteger(l.start), end:toInteger(l.end), path:l.filePath, repo:e.content.repository, commitId:e.content.commitIdBefore})
+	MERGE (r:Range {range:[toInteger(l.start),toInteger(l.end)], start:toInteger(l.start), end:toInteger(l.end), path:l.file, repo:e.content.repository, commitId:e.content.commitIdBefore})
 	ON MATCH SET r.type = l.type
 	ON CREATE SET r.type = l.type
 	MERGE (r)-[:IS_RANGE_IN]->(snap)
@@ -37,9 +37,9 @@ FOREACH (l IN e.leftSideLocations |
 )
 
 FOREACH (l IN e.rightSideLocations |
-	MERGE (snap:FileSnapshot {path:l.filePath, repo:e.content.repository, commitId:e.content.commitIdAfter})
+	MERGE (snap:FileSnapshot {path:l.file, repo:e.content.repository, commitId:e.content.commitIdAfter})
 	MERGE (snap)-[:IS_SNAPSHOT_IN]->(commitIdAfter)
-	MERGE (r:Range {range:[toInteger(l.start),toInteger(l.end)], start:toInteger(l.start), start:toInteger(l.start), end:toInteger(l.end), path:l.filePath, repo:e.content.repository, commitId:e.content.commitIdAfter})
+	MERGE (r:Range {range:[toInteger(l.start),toInteger(l.end)], start:toInteger(l.start), start:toInteger(l.start), end:toInteger(l.end), path:l.file, repo:e.content.repository, commitId:e.content.commitIdAfter})
 	ON MATCH SET r.type = l.type
 	ON CREATE SET r.type = l.type
 	MERGE (r)-[:IS_RANGE_IN]->(snap)
