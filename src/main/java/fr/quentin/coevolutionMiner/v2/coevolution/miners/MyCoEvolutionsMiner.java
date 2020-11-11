@@ -342,128 +342,128 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         };
         for (EvolutionsAtProj k : interestingCases.keySet()) {
 
+            for (Range initialTest : impactedTestsPerProj.get(k)) {
+                String resInitial = executeTest(sourcesProvider, path,
+                        ((CtMethod) initialTest.getOriginal()).getDeclaringType().getQualifiedName(),
+                        ((CtMethod) initialTest.getOriginal()).getSimpleName());
+                initialTestsStatus.put((initialTest), resInitial);
+            }
             for (InterestingCase c : interestingCases.get(k)) {
-            try (ApplierHelper ah = new ApplierHelper(k, c.evosForThisTest, atomizedRefactorings);) { // evoPerProj.get(k)
-                // ah.setTestDirectories(
-                // ((SpoonAST)
-                // k.getBeforeProj().getAst()).launcher.getPomFile().getSourceDirectories().stream()
-                // .map(x -> k.getBeforeProj().getAst().rootDir.relativize(x.toPath()))
-                // .collect(Collectors.toList()));
-                // ah.setSourceDirectories(
-                // ((SpoonAST)
-                // k.getBeforeProj().getAst()).launcher.getPomFile().getTestDirectories().stream()
-                // .map(x -> k.getBeforeProj().getAst().rootDir.relativize(x.toPath()))
-                // .collect(Collectors.toList()));
-                for (Range initialTest : impactedTestsPerProj.get(k)) {
-                    String resInitial = executeTest(sourcesProvider, path,
-                            ((CtMethod) initialTest.getOriginal()).getDeclaringType().getQualifiedName(),
-                            ((CtMethod) initialTest.getOriginal()).getSimpleName());
-                    initialTestsStatus.put((initialTest), resInitial);
-                }
-                abstract class FunctionalImpactHelper implements Consumer<Set<Evolution>> {
+                try (ApplierHelper ah = new ApplierHelper(k, c.evosForThisTest, atomizedRefactorings);) { // evoPerProj.get(k)
+                    // ah.setTestDirectories(
+                    // ((SpoonAST)
+                    // k.getBeforeProj().getAst()).launcher.getPomFile().getSourceDirectories().stream()
+                    // .map(x -> k.getBeforeProj().getAst().rootDir.relativize(x.toPath()))
+                    // .collect(Collectors.toList()));
+                    // ah.setSourceDirectories(
+                    // ((SpoonAST)
+                    // k.getBeforeProj().getAst()).launcher.getPomFile().getTestDirectories().stream()
+                    // .map(x -> k.getBeforeProj().getAst().rootDir.relativize(x.toPath()))
+                    // .collect(Collectors.toList()));
+                    abstract class FunctionalImpactHelper implements Consumer<Set<Evolution>> {
 
-                    public Range testBefore;
-                    public Set<Evolution> evosForThisTest;
-                    public CtMethod elementTestBefore;
-                    public String sigTestBefore;
+                        public Range testBefore;
+                        public Set<Evolution> evosForThisTest;
+                        public CtMethod elementTestBefore;
+                        public String sigTestBefore;
 
-                }
-
-                Factory mFacto = (Factory) k.getMdiff().getMiddle().getMetadata("Factory");
-                mFacto.getEnvironment().setOutputDestinationHandler(outDestHandler);
-                outputProcessor.setFactory(mFacto);
-
-                FunctionalImpactHelper consumer = new FunctionalImpactHelper() {
-                    @Override
-                    public void accept(Set<Evolution> t) {
-                        for (Evolution ddd : t) {
-                            System.err.println(ddd.getOriginal());
-                        }
-                        ITree treeTestBefore = (ITree) ((CtElement) this.testBefore.getOriginal())
-                                .getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
-                        CtMethod elementTestAfter = (CtMethod) ah.getUpdatedElement(currEvoAtCommit.afterVersion,
-                                treeTestBefore)[0];
-                        String testSig = elementTestAfter.getDeclaringType().getQualifiedName() + "#"
-                                + elementTestAfter.getSimpleName();
-                        String resInitial = initialTestsStatus.get(this.testBefore);
-                        String testClassQualName = elementTestAfter.getDeclaringType().getQualifiedName();
-                        String testSimpName = elementTestAfter.getSimpleName();
-                        // String testSignature = elementTestAfter.getSignature();
-                        // boolean isSameTestNameAndPlace = testClassQualName
-                        // .equals(elementTestBefore.getDeclaringType().getQualifiedName())
-                        // && testSimpName.equals(elementTestBefore.getSimpleName());
-                        boolean isSameTestSig = testSig.equals(sigTestBefore);
-                        SourcePosition position = elementTestAfter.getPosition();
-                        if (position == null || !position.isValidPosition()) {
-                            throw new RuntimeException(); // TODO make it less hard, but it shouldn't append anyway
-                        }
-                        // need to get the new Range corresponding the the test
-                        Range testToExec;
-                        if (isSameTestSig) {
-                            // can point to the original test ?
-                            testToExec = testBefore;
-                        } else {
-                            String elePath = k.getAfterProj().getAst().rootDir.relativize(position.getFile().toPath())
-                                    .toString();
-                            if (elePath.startsWith("..")) {
-                                elePath = k.getBeforeProj().getAst().rootDir.relativize(position.getFile().toPath())
-                                        .toString();
-                            }
-                            Range testAfter = k.getAfterProj().getRange(elePath, position.getSourceStart(),
-                                    position.getSourceEnd());
-                            if (testAfter == null)
-                                throw new RuntimeException();
-                            testToExec = testAfter;
-                            // TODO save that testBefore --> testAfter
-                        }
-                        // DescRange descRange = (Evolution.DescRange) elementTestAfter
-                        // .getMetadata(EvolutionsMiner.METADATA_KEY_EVO);
-                        // if (descRange.getTarget().equals(testBefore)) {
-                        // }
-
-                        for (CtType p : mFacto.getModel().getAllTypes()) {
-                            if (!p.isShadow()) {
-                                outputProcessor.createJavaFile(p);
-                            }
-                        }
-
-                        EImpact eimpact = new EImpact();
-                        for (Evolution e : t) {
-                            eimpact.evolutions.put(e, ah.evoState.ratio(e));
-                        }
-                        String res = null;
-                        String failAtStep = null;
-                        EImpact.FailureReport report = null;
-                        if (report == null) {
-                            res = compileApp(sourcesProvider, path);
-                            if (res != null) {
-                                report = new EImpact.FailureReport();
-                                report.when = "App compiling";
-                                report.what = res;
-                            }
-                        }
-                        if (report == null) {
-                            res = compileAllTests(sourcesProvider, path);
-                            if (res != null) {
-                                report = new EImpact.FailureReport();
-                                report.when = "Tests compiling";
-                                report.what = res;
-                            }
-                        }
-                        if (report == null) {
-                            res = executeTest(sourcesProvider, path, testClassQualName, testSimpName);
-                            if (res != null) {
-                                report = new EImpact.FailureReport();
-                                report.when = "Tests execution";
-                                report.what = res;
-                            }
-                        }
-                        eimpact.tests.put(testBefore, new ImmutablePair<>(testToExec, report));
-                        functionalImpacts.putIfAbsent(t, new HashSet<>());
-                        functionalImpacts.get(t).add(eimpact);
                     }
-                };
-                ah.setValidityLauncher(consumer);
+
+                    Factory mFacto = (Factory) k.getMdiff().getMiddle().getMetadata("Factory");
+                    mFacto.getEnvironment().setOutputDestinationHandler(outDestHandler);
+                    outputProcessor.setFactory(mFacto);
+
+                    FunctionalImpactHelper consumer = new FunctionalImpactHelper() {
+                        @Override
+                        public void accept(Set<Evolution> t) {
+                            for (Evolution ddd : t) {
+                                System.err.println(ddd.getOriginal());
+                            }
+                            ITree treeTestBefore = (ITree) ((CtElement) this.testBefore.getOriginal())
+                                    .getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
+                            CtMethod elementTestAfter = (CtMethod) ah.getUpdatedElement(currEvoAtCommit.afterVersion,
+                                    treeTestBefore)[0];
+                            String testSig = elementTestAfter.getDeclaringType().getQualifiedName() + "#"
+                                    + elementTestAfter.getSimpleName();
+                            String resInitial = initialTestsStatus.get(this.testBefore);
+                            String testClassQualName = elementTestAfter.getDeclaringType().getQualifiedName();
+                            String testSimpName = elementTestAfter.getSimpleName();
+                            // String testSignature = elementTestAfter.getSignature();
+                            // boolean isSameTestNameAndPlace = testClassQualName
+                            // .equals(elementTestBefore.getDeclaringType().getQualifiedName())
+                            // && testSimpName.equals(elementTestBefore.getSimpleName());
+                            boolean isSameTestSig = testSig.equals(sigTestBefore);
+                            SourcePosition position = elementTestAfter.getPosition();
+                            if (position == null || !position.isValidPosition()) {
+                                throw new RuntimeException(); // TODO make it less hard, but it shouldn't append anyway
+                            }
+                            // need to get the new Range corresponding the the test
+                            Range testToExec;
+                            if (isSameTestSig) {
+                                // can point to the original test ?
+                                testToExec = testBefore;
+                            } else {
+                                String elePath = k.getAfterProj().getAst().rootDir
+                                        .relativize(position.getFile().toPath()).toString();
+                                if (elePath.startsWith("..")) {
+                                    elePath = k.getBeforeProj().getAst().rootDir.relativize(position.getFile().toPath())
+                                            .toString();
+                                }
+                                Range testAfter = k.getAfterProj().getRange(elePath, position.getSourceStart(),
+                                        position.getSourceEnd());
+                                if (testAfter == null)
+                                    throw new RuntimeException();
+                                testToExec = testAfter;
+                                // TODO save that testBefore --> testAfter
+                            }
+                            // DescRange descRange = (Evolution.DescRange) elementTestAfter
+                            // .getMetadata(EvolutionsMiner.METADATA_KEY_EVO);
+                            // if (descRange.getTarget().equals(testBefore)) {
+                            // }
+
+                            for (CtType p : mFacto.getModel().getAllTypes()) {
+                                if (!p.isShadow()) {
+                                    outputProcessor.createJavaFile(p);
+                                }
+                            }
+
+                            EImpact eimpact = new EImpact();
+                            for (Evolution e : t) {
+                                eimpact.evolutions.put(e, ah.evoState.ratio(e));
+                            }
+                            String res = null;
+                            String failAtStep = null;
+                            EImpact.FailureReport report = null;
+                            if (report == null) {
+                                res = compileApp(sourcesProvider, path);
+                                if (res != null) {
+                                    report = new EImpact.FailureReport();
+                                    report.when = "App compiling";
+                                    report.what = res;
+                                }
+                            }
+                            if (report == null) {
+                                res = compileAllTests(sourcesProvider, path);
+                                if (res != null) {
+                                    report = new EImpact.FailureReport();
+                                    report.when = "Tests compiling";
+                                    report.what = res;
+                                }
+                            }
+                            if (report == null) {
+                                res = executeTest(sourcesProvider, path, testClassQualName, testSimpName);
+                                if (res != null) {
+                                    report = new EImpact.FailureReport();
+                                    report.when = "Tests execution";
+                                    report.what = res;
+                                }
+                            }
+                            eimpact.tests.put(testBefore, new ImmutablePair<>(testToExec, report));
+                            functionalImpacts.putIfAbsent(t, new HashSet<>());
+                            functionalImpacts.get(t).add(eimpact);
+                        }
+                    };
+                    ah.setValidityLauncher(consumer);
                     Range testBefore = c.testBefore;
                     consumer.testBefore = testBefore;
                     consumer.evosForThisTest = c.evosForThisTest;
