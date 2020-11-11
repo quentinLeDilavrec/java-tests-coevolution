@@ -49,6 +49,7 @@ import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import gumtree.spoon.AstComparator;
 import gumtree.spoon.apply.AAction;
+import gumtree.spoon.apply.operations.MyScriptGenerator;
 import gumtree.spoon.builder.CtWrapper;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.Diff;
@@ -325,12 +326,13 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 ITree source = ((AAction) op).getSource();
                 AbstractVersionedTree target = ((AAction) op).getTarget();
                 ImmutablePair<Range, String> rangeBef = toRange(astBefore, op instanceof Delete ? target : source,
-                        "src");
+                        "src", beforeVersion);
                 if (rangeBef != null) {
                     before.add(rangeBef);
                 }
                 List<ImmutablePair<Range, String>> after = new ArrayList<>();
-                ImmutablePair<Range, String> rangeAft = op instanceof Delete ? null : toRange(astAfter, target, "dst");
+                ImmutablePair<Range, String> rangeAft = op instanceof Delete ? null
+                        : toRange(astAfter, target, "dst", afterVersion);
                 if (rangeAft != null) {
                     after.add(rangeAft);
                 }
@@ -344,10 +346,16 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 }
             }
 
-            private <T> ImmutablePair<Range, String> toRange(Project<T> proj, ITree tree, String desc) {
+            private <T> ImmutablePair<Range, String> toRange(Project<T> proj, ITree tree, String desc,
+                    Version version) {
                 CtElement ele = (CtElement) tree.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
                 int start, end;
                 Path path;
+                if (ele == null) {
+                    Map<Version, CtElement> map = (Map<Version, CtElement>) tree.getParent()
+                            .getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION);
+                    ele = map.get(version);
+                }
                 if (ele == null) {
                     ele = (CtElement) tree.getParent().getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
                     SourcePosition position = ele.getPosition();
@@ -356,8 +364,8 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     }
                     path = position.getFile().toPath();
                     // if(position instanceof DeclarationSourcePosition) {
-                    //     start = ((DeclarationSourcePosition)position).getNameStart();
-                    //     end = ((DeclarationSourcePosition)position).getNameEnd();
+                    // start = ((DeclarationSourcePosition)position).getNameStart();
+                    // end = ((DeclarationSourcePosition)position).getNameEnd();
                     // } else {
                     start = position.getSourceStart();
                     end = position.getSourceEnd();
