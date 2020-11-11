@@ -6,8 +6,13 @@ import java.util.function.Function;
 
 public class Iterators2 {
 
-    public static <I> Iterator<I> createChainIterable(Iterable<Iterable<I>> input) {
-        return new Iterators2.ChainIterable<>(input);
+    public static <I> Iterable<I> createChainIterable(Iterable<Iterable<I>> input) {
+        return new Iterable<I>(){
+            @Override
+            public Iterator<I> iterator() {
+                return new Iterators2.ChainIterable<>(input);
+            }
+        };
     }
 
     private static class ChainIterable<I> implements Iterator<I> {

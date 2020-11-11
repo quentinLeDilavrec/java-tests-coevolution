@@ -55,7 +55,7 @@ public class MixedMiner implements EvolutionsMiner {
         }
 
         public Iterator<Evolution> iterator() {
-            return Iterators2.<Evolution>createChainIterable(Arrays.asList(rmEvos, gtsEvos));
+            return Iterators2.<Evolution>createChainIterable(Arrays.asList(rmEvos, gtsEvos)).iterator();
         }
 
         @Override
