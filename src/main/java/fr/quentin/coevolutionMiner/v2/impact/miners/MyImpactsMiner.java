@@ -344,7 +344,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                                         Collections.singleton(
                                                 new ImmutablePair<>(ie2range(ast, prev.getLast()), "cause")),
                                         Collections.singleton(
-                                                new ImmutablePair<>(ie2range(ast, ic.getLast()), "effect")));
+                                                new ImmutablePair<>(ie2range(ast, last), "effect")));
                                 break;
                         }
                         sinceLastRedOrEnd.add(current);
