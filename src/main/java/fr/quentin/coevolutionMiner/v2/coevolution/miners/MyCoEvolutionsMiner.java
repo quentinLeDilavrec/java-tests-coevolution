@@ -354,7 +354,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 initialTestsStatus.put((initialTest), resInitial);
             }
             for (InterestingCase c : interestingCases.get(k)) {
-                try (ApplierHelper ah = new ApplierHelper(k, c.evosForThisTest, atomizedRefactorings);) { // evoPerProj.get(k)
+                try (ApplierHelper ah = new ApplierHelper(k, atomizedRefactorings);) { // evoPerProj.get(k)
                     // ah.setTestDirectories(
                     // ((SpoonAST)
                     // k.getBeforeProj().getAst()).launcher.getPomFile().getSourceDirectories().stream()

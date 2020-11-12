@@ -90,8 +90,8 @@ public class ApplierHelper implements AutoCloseable {
         private Map<AAction, Boolean> reqState = new HashMap<>(); // false by default
         private Set<Evolution> validable = new HashSet<>();
 
-        EvoStateMaintainer(Collection<Evolution> evos) {
-            for (Evolution e : evos) {
+        EvoStateMaintainer() {
+            for (Evolution e : evoToEvo.keySet()) {
                 markRequirements(new Chain<>(this, e));
             }
             for (Set<Evolution> values : presentMap.values()) {
@@ -250,7 +250,7 @@ public class ApplierHelper implements AutoCloseable {
     }
 
     private ApplierHelper(SpoonGumTreeBuilder scanner, AbstractVersionedTree middle, Diff diff,
-            Collection<Evolution> allPossiblyConsideredEvos, Map<Evolution, Set<Evolution>> atomizedRefactorings) {
+            Map<Evolution, Set<Evolution>> atomizedRefactorings) {
         this.scanner = scanner;
         this.middle = middle;
         this.factory = (Factory) middle.getMetadata("Factory");
@@ -258,13 +258,11 @@ public class ApplierHelper implements AutoCloseable {
         this.diff = diff;
         this.actions = (List) ((DiffImpl) diff).getAtomicActions();
         this.evoToEvo = atomizedRefactorings;
-        this.evoState = new EvoStateMaintainer(allPossiblyConsideredEvos);
+        this.evoState = new EvoStateMaintainer();
     }
 
-    public ApplierHelper(EvolutionsAtProj eap, Collection<Evolution> allPossiblyConsideredEvos,
-            Map<Evolution, Set<Evolution>> atomizedRefactorings) {
-        this(eap.getScanner(), eap.getMdiff().getMiddle(), eap.getDiff(), allPossiblyConsideredEvos,
-                atomizedRefactorings);
+    public ApplierHelper(EvolutionsAtProj eap, Map<Evolution, Set<Evolution>> atomizedRefactorings) {
+        this(eap.getScanner(), eap.getMdiff().getMiddle(), eap.getDiff(), atomizedRefactorings);
         this.mdiff = eap.getMdiff();
     }
 
@@ -536,7 +534,7 @@ public class ApplierHelper implements AutoCloseable {
             ele = ele.getParent();
             if (((CtMethod) ele).getSimpleName().equals(simpname)) {
             } else {
-                ele = (CtMethod)((AbstractVersionedTree) x).getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+                ele = (CtMethod) ((AbstractVersionedTree) x).getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
             }
             r[i] = ele;
         }
