@@ -282,7 +282,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                     ImpactType type = current.getType();
                     ImpactElement last = current.getLast();
                     ImpactChain prev = current.getPrevious();
-
+                    toProcess.add(prev);
 
                     // if current is evolved
                     if (prev == null) {
@@ -302,7 +302,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                         }
                         break;
                     }
-                    
+
                     // make into an impact
                     Impact imp;
                     switch (type) {
