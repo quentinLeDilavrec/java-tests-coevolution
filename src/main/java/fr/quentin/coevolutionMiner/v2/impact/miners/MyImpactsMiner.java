@@ -277,7 +277,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                             if (marched.contains(redu)) {
                                 continue;
                             }
-                                toProcess.add(redu);
+                            toProcess.add(redu);
                         }
                     }
 
@@ -292,8 +292,8 @@ public class MyImpactsMiner implements ImpactsMiner {
                         for (Entry<Object, Position> entry : root.getEvolutionWithNonCorrectedPosition().entrySet()) {
                             Position rootPosition = root.getPosition();
                             String relPath = ast.rootDir.relativize(Paths.get(rootPosition.getFilePath())).toString();
-                            Range source = ast.getRange(relPath,
-                                    rootPosition.getStart(), rootPosition.getEnd(), root.getContent());
+                            Range source = ast.getRange(relPath, rootPosition.getStart(), rootPosition.getEnd(),
+                                    root.getContent());
                             Evolutions.Evolution.DescRange impactingDescRange = (Evolutions.Evolution.DescRange) entry
                                     .getKey();
                             Range target = impactingDescRange.getTarget();
@@ -302,7 +302,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                             }
                             rootsDescsForTest.add(impactingDescRange);
                         }
-                        break;
+                        continue;
                     }
 
                     // make into an impact
@@ -404,7 +404,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                                     ((Set) marched.get(x)).add(b.getKey());
                                 }
                             }
-                            break;
+                            continue;
                         }
                         Impact imp;
                         switch (current.getType()) {
