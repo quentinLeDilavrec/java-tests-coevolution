@@ -271,10 +271,13 @@ public class MyImpactsMiner implements ImpactsMiner {
                         marched.add(current);
                     }
 
-                    HashSet<ImpactChain> redundants = current.getMD(ImpactChain.REDUNDANT, new HashSet<ImpactChain>());
+                    Set<ImpactChain> redundants = current.getMD(ImpactChain.REDUNDANT, new HashSet<>());
                     if (redundants.size() > 0) { // current has redudant impacts
                         for (ImpactChain redu : redundants) {
-                            toProcess.add(redu);
+                            if (marched.contains(redu)) {
+                                continue;
+                            }
+                                toProcess.add(redu);
                         }
                     }
 
