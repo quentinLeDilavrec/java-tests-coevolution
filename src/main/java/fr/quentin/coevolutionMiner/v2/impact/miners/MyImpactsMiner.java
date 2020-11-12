@@ -249,14 +249,84 @@ public class MyImpactsMiner implements ImpactsMiner {
             }
             logger.info("Number of Impacted tests X number of evolutions " + imptst1.getFinishedChains().size());
             logger.info("Assembling Impacts");
-            // fr.quentin.impactMiner.Impacts rawImpacts = new fr.quentin.impactMiner.Impacts(imptst1.getFinishedChains());
-            // logger.info("Serializing Impacts");
-            // logger.info(Integer.toString(rawImpacts.getRoots().size()));
-            // logger.info(new GsonBuilder().setPrettyPrinting().create().toJson(rawImpacts.toJson()));
 
-            // for (Entry<ImpactElement, Map<ImpactElement, Relations>> entry : rawImpacts.getVerticesPerRoots()
-            //         .entrySet()) {
-            Map<ImpactChain, Object> marched = new HashMap<>(); // Map<ImpactChain, Set<Evolutions.Evolution.DescRange> || ImpactChain>
+            // complexeDissection(ast, imptst1);
+            simpleDissection(ast, imptst1);
+
+            return this;
+        }
+
+        private void simpleDissection(SpoonAST ast, Explorer imptst1) {
+            for (ImpactChain ic : imptst1.getFinishedChains()) {
+                Set<ImpactChain> marched = new HashSet<>();
+                ConcurrentLinkedQueue<ImpactChain> toProcess = new ConcurrentLinkedQueue<>();
+                Set<Object> rootsDescsForTest = new HashSet<>();
+                toProcess.add(ic);
+                while (!toProcess.isEmpty()) {
+                    ImpactChain current = toProcess.poll();
+                    // avoid loops
+                    if (marched.contains(current)) {
+                        continue;
+                    } else {
+                        marched.add(current);
+                    }
+
+                    HashSet<ImpactChain> redundants = current.getMD(ImpactChain.REDUNDANT, new HashSet<ImpactChain>());
+                    if (redundants.size() > 0) { // current has redudant impacts
+                        for (ImpactChain redu : redundants) {
+                            toProcess.add(redu);
+                        }
+                    }
+
+                    // usefull
+                    ImpactType type = current.getType();
+                    ImpactElement last = current.getLast();
+                    ImpactChain prev = current.getPrevious();
+
+
+                    // if current is evolved
+                    if (prev == null) {
+                        ImpactElement root = last; // equiv to current.getRoot() but cleaner that way
+                        for (Entry<Object, Position> entry : root.getEvolutionWithNonCorrectedPosition().entrySet()) {
+                            Position rootPosition = root.getPosition();
+                            String relPath = ast.rootDir.relativize(Paths.get(rootPosition.getFilePath())).toString();
+                            Range source = ast.getRange(relPath,
+                                    rootPosition.getStart(), rootPosition.getEnd(), root.getContent());
+                            Evolutions.Evolution.DescRange impactingDescRange = (Evolutions.Evolution.DescRange) entry
+                                    .getKey();
+                            Range target = impactingDescRange.getTarget();
+                            if (!source.equals(target)) {
+                                addAdjusment(entry.getKey(), target, source);
+                            }
+                            rootsDescsForTest.add(impactingDescRange);
+                        }
+                        break;
+                    }
+                    
+                    // make into an impact
+                    Impact imp;
+                    switch (type) {
+                        case CALL:
+                            imp = addImpact(type.toString(), // TODO try to put more metadata here
+                                    Collections.singleton(
+                                            new ImmutablePair<>(ie2range(ast, prev.getLast()), "declaration")),
+                                    Collections.emptySet());
+                            addEffect(imp, ie2range(ast, last), "reference");
+                            break;
+                        default:
+                            imp = addImpact(type.toString(), // TODO try to put more metadata here
+                                    Collections.singleton(new ImmutablePair<>(ie2range(ast, prev.getLast()), "cause")),
+                                    Collections.singleton(new ImmutablePair<>(ie2range(ast, last), "effect")));
+                            break;
+                    }
+                }
+                addImpactedTest(ie2range(ast, ic.getLast()), rootsDescsForTest);
+            }
+        }
+
+        private void complexeDissection(SpoonAST ast, Explorer imptst1) {
+            Map<ImpactChain, Object> marched = new HashMap<>(); // Map<ImpactChain, Set<Evolutions.Evolution.DescRange>
+                                                                // || ImpactChain>
             for (ImpactChain ic : imptst1.getFinishedChains()) {
                 ConcurrentLinkedQueue<ImmutablePair<ImpactChain, MySLL<ImpactChain>>> toProcess = new ConcurrentLinkedQueue<>();
                 toProcess.add(new ImmutablePair<>(ic, MySLL.EMPTY.cons(ic)));
@@ -270,7 +340,8 @@ public class MyImpactsMiner implements ImpactsMiner {
                     }
                     current = currentPair.left;
                     List<ImpactChain> sinceLastRedOrEnd = new ArrayList<>(); // consecutive
-                    MySLL<ImpactChain> prevsRedOrEnd = currentPair.right; // all since end of chain, in marched give Set<Evolutions.Evolution.DescRange>
+                    MySLL<ImpactChain> prevsRedOrEnd = currentPair.right; // all since end of chain, in marched give
+                                                                          // Set<Evolutions.Evolution.DescRange>
                     for (;;) {
                         Object marchedVal = marched.get(current);
                         if (marchedVal != null && prevsRedOrEnd.tail != MySLL.EMPTY) {
@@ -283,11 +354,13 @@ public class MyImpactsMiner implements ImpactsMiner {
                                     if (object instanceof Set) {
                                         ((Set) object).addAll((Set) marchedVal); // TODO can be an impact chain???
                                     } else {
-                                        throw new RuntimeException("marchedVal should be a set but was"+ object.getClass());
+                                        throw new RuntimeException(
+                                                "marchedVal should be a set but was" + object.getClass());
                                     }
                                 }
                             } else {
-                                throw new RuntimeException("marchedVal should be a set but was"+ marchedVal.getClass());
+                                throw new RuntimeException(
+                                        "marchedVal should be a set but was" + marchedVal.getClass());
                             }
                             break;
                         }
@@ -341,10 +414,9 @@ public class MyImpactsMiner implements ImpactsMiner {
                                 break;
                             default:
                                 imp = addImpact(current.getType().toString(), // TODO try to put more metadata here
-                                        Collections.singleton(
-                                                new ImmutablePair<>(ie2range(ast, prev.getLast()), "cause")),
-                                        Collections.singleton(
-                                                new ImmutablePair<>(ie2range(ast, last), "effect")));
+                                        Collections
+                                                .singleton(new ImmutablePair<>(ie2range(ast, prev.getLast()), "cause")),
+                                        Collections.singleton(new ImmutablePair<>(ie2range(ast, last), "effect")));
                                 break;
                         }
                         sinceLastRedOrEnd.add(current);
@@ -353,67 +425,66 @@ public class MyImpactsMiner implements ImpactsMiner {
                 }
                 addImpactedTest(ie2range(ast, ic.getLast()), rootsDescsForTest);
                 // continue;
-                //     ImpactElement root = ic.getRoot();
-                //     Set<Object> roots = new HashSet<>();
-                //     for (Entry<Object, Position> b : root.getEvolutionWithNonCorrectedPosition().entrySet()) {
-                //         roots.add(b.getKey());
-                //         Position rootPosition = root.getPosition();
-                //         String relPath = ast.rootDir.relativize(Paths.get(rootPosition.getFilePath())).toString();
-                //         Project<CtElement>.AST.FileSnapshot.Range source = ast.getRange(relPath, rootPosition.getStart(),
-                //                 rootPosition.getEnd(), root.getContent());
-                //         Evolutions.Evolution.DescRange impactingDescRange = (Evolutions.Evolution.DescRange) b.getKey();
-                //         Project<CtElement>.AST.FileSnapshot.Range target = impactingDescRange.getTarget();
-                //         if (!source.equals(target)) {
-                //             addAdjusment(b.getKey(), target, source);
-                //         }
-                //     }
-                //     for (Relations rel : entry.getValue().values()) {
-                //         ImpactElement currIE = rel.getVertice();
-                //         Position currIEPos = currIE.getPosition();
-                //         String relPath = ast.rootDir.relativize(Paths.get(currIEPos.getFilePath())).toString();
-                //         Project<CtElement>.AST.FileSnapshot.Range currRange = ast.getRange(relPath, currIEPos.getStart(),
-                //                 currIEPos.getEnd(), currIE.getContent());
+                // ImpactElement root = ic.getRoot();
+                // Set<Object> roots = new HashSet<>();
+                // for (Entry<Object, Position> b :
+                // root.getEvolutionWithNonCorrectedPosition().entrySet()) {
+                // roots.add(b.getKey());
+                // Position rootPosition = root.getPosition();
+                // String relPath =
+                // ast.rootDir.relativize(Paths.get(rootPosition.getFilePath())).toString();
+                // Project<CtElement>.AST.FileSnapshot.Range source = ast.getRange(relPath,
+                // rootPosition.getStart(),
+                // rootPosition.getEnd(), root.getContent());
+                // Evolutions.Evolution.DescRange impactingDescRange =
+                // (Evolutions.Evolution.DescRange) b.getKey();
+                // Project<CtElement>.AST.FileSnapshot.Range target =
+                // impactingDescRange.getTarget();
+                // if (!source.equals(target)) {
+                // addAdjusment(b.getKey(), target, source);
+                // }
+                // }
+                // for (Relations rel : entry.getValue().values()) {
+                // ImpactElement currIE = rel.getVertice();
+                // Position currIEPos = currIE.getPosition();
+                // String relPath =
+                // ast.rootDir.relativize(Paths.get(currIEPos.getFilePath())).toString();
+                // Project<CtElement>.AST.FileSnapshot.Range currRange = ast.getRange(relPath,
+                // currIEPos.getStart(),
+                // currIEPos.getEnd(), currIE.getContent());
 
-                //         Set<ImpactElement> calls = rel.getEffects().get("call");
-                //         if (calls != null && calls.size() > 0) {
-                //             addCalls(roots, currRange,
-                //                     calls.stream().map(x -> extracted(ast, x)).collect(Collectors.toSet()));
-                //         }
+                // Set<ImpactElement> calls = rel.getEffects().get("call");
+                // if (calls != null && calls.size() > 0) {
+                // addCalls(roots, currRange,
+                // calls.stream().map(x -> extracted(ast, x)).collect(Collectors.toSet()));
+                // }
 
-                //         for (ImpactType imp_t : rel.getCauses().keySet()) {
-                //             String key = imp_t.toString();
-                //             Set<ImpactElement> others = rel.getCauses().get(key);
-                //             if (others == null) {
-                //                 continue;
-                //             } else if (key.equals("call")) {
-                //             } else if (key.equals("expand to executable")) {
-                //                 if (others.size() > 0) {
-                //                     addExpands(roots,
-                //                             others.stream().map(x -> extracted(ast, x)).collect(Collectors.toSet()),
-                //                             currRange);
-                //                 }
-                //             } else {
-                //                 for (ImpactElement other : others) {
-                //                     Impact imp = addImpact(key,
-                //                             Collections.singleton(new ImmutablePair<>(extracted(ast, other), "cause")),
-                //                             Collections.singleton(new ImmutablePair<>(currRange, "effect")));
-                //                     for (Object root1 : roots) {
-                //                         perRoot.putIfAbsent(root1, new HashSet<>());
-                //                         perRoot.get(root1).add(imp);
-                //                     }
-                //                 }
-                //             }
-                //         }
-                //     }
+                // for (ImpactType imp_t : rel.getCauses().keySet()) {
+                // String key = imp_t.toString();
+                // Set<ImpactElement> others = rel.getCauses().get(key);
+                // if (others == null) {
+                // continue;
+                // } else if (key.equals("call")) {
+                // } else if (key.equals("expand to executable")) {
+                // if (others.size() > 0) {
+                // addExpands(roots,
+                // others.stream().map(x -> extracted(ast, x)).collect(Collectors.toSet()),
+                // currRange);
+                // }
+                // } else {
+                // for (ImpactElement other : others) {
+                // Impact imp = addImpact(key,
+                // Collections.singleton(new ImmutablePair<>(extracted(ast, other), "cause")),
+                // Collections.singleton(new ImmutablePair<>(currRange, "effect")));
+                // for (Object root1 : roots) {
+                // perRoot.putIfAbsent(root1, new HashSet<>());
+                // perRoot.get(root1).add(imp);
+                // }
+                // }
+                // }
+                // }
+                // }
             }
-            // for (Entry<ImpactElement, Set<Object>> entry : rawImpacts.getTests().entrySet()) {
-            //     ImpactElement test = entry.getKey();
-            //     addImpactedTest(
-            //             ast.getRange(ast.rootDir.relativize(Paths.get(test.getPosition().getFilePath())).toString(),
-            //                     test.getPosition().getStart(), test.getPosition().getEnd(), test.getContent()),
-            //             entry.getValue()); // TODO
-            // }
-            return this;
         }
 
         private Project<CtElement>.AST.FileSnapshot.Range ie2range(SpoonAST ast, ImpactElement x) {
