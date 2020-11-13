@@ -1,6 +1,7 @@
 package fr.quentin.coevolutionMiner.v2.ast;
 
 import java.io.File;
+import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
@@ -347,11 +348,34 @@ public class Project<T> implements Iterable<Project> {
                     } else if (original instanceof CtElement) {
                         r.put("astPath", ((CtElement) original).getPath().toString());
                         if (original instanceof CtLiteral) {
-                            r.put("value", ((CtLiteral) original).getValue().toString());
+                            r.put("value", litToString((CtLiteral<?>) original));
                         }
                     }
                     return r;
                 }
+            }
+            private <T> String litToString(CtLiteral<T> literal) {
+                T val = literal.getValue();
+                String label;
+                if (val instanceof String) {
+                    label = "\"" + ((String) val) + "\"";
+                } else if (val instanceof Character) {
+                    label = "'" + ((Character) val).toString() + "'";
+                } else if (val instanceof Number) {
+                    try {
+                        Class<?> c = Class.forName("spoon.reflect.visitor.LiteralHelper");
+                        Method m = c.getDeclaredMethod("getLiteralToken", CtLiteral.class);
+                        m.setAccessible(true);
+                        label = (String) m.invoke(null, literal);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                } else if (val != null) {
+                    label = val.toString();
+                } else {
+                    label = "null";
+                }
+                return label;
             }
 
             @Override
