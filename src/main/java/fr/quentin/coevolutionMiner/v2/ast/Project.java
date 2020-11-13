@@ -18,9 +18,12 @@ import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.coevolutionMiner.v2.utils.Iterators2;
 import fr.quentin.coevolutionMiner.v2.utils.Utils;
+import spoon.reflect.code.CtLiteral;
 import spoon.reflect.declaration.CtElement;
+import spoon.reflect.declaration.CtExecutable;
 import spoon.reflect.path.CtRole;
 import spoon.reflect.reference.CtExecutableReference;
+import spoon.reflect.reference.CtReference;
 
 public class Project<T> implements Iterable<Project> {
     public final Specifier spec;
@@ -322,8 +325,14 @@ public class Project<T> implements Iterable<Project> {
                     r.put("end", getEnd());
                     if (original instanceof CtExecutableReference) {
                         r.put("astPath", ((CtElement) original).getParent().getPath().toString()+"#"+CtRole.EXECUTABLE_REF.toString());
+                        r.put("value", ((CtExecutableReference) original).getSimpleName().toString());
                     } else if (original instanceof CtElement) {
                         r.put("astPath", ((CtElement) original).getPath().toString());
+                        if (original instanceof CtLiteral) {
+                            r.put("value", ((CtLiteral) original).getValue().toString());
+                        } else if (original instanceof CtReference) {
+                            r.put("value", ((CtReference) original).getSimpleName().toString());
+                        }
                     }
                     return r;
                 }

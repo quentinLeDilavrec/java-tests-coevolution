@@ -8,8 +8,8 @@ FOREACH (l IN $rangesToType |
     MERGE (commitIdCause)<-[:CONTAIN_COMMIT]-(repoCause)
     MERGE (cause:Range {range:[toInteger(l.start),toInteger(l.end)], start:toInteger(l.start), end:toInteger(l.end), 
     path:l.file, repo:l.repository, commitId:l.commitId})
-    ON CREATE SET cause.type = l.type, cause.isTest = l.isTest, cause.sig = l.sig, cause.astPath = l.astPath
-    ON MATCH SET cause.isTest = l.isTest, cause.sig = l.sig, cause.astPath = l.astPath
+    ON CREATE SET cause.type = l.type, cause.isTest = l.isTest, cause.sig = l.sig, cause.astPath = l.astPath, cause.value = l.value
+    ON MATCH SET cause.isTest = l.isTest, cause.sig = l.sig, cause.astPath = l.astPath, cause.value = l.value
     MERGE (snapCause:FileSnapshot {path:l.file, repo:l.repository, commitId:l.commitId})
     MERGE (snapCause)-[:IS_SNAPSHOT_IN]->(commitIdCause)
     MERGE (cause)-[:IS_RANGE_IN]->(snapCause)
@@ -31,8 +31,8 @@ FOREACH (l IN imp.causes |
 
     MERGE (cause:Range {range:[toInteger(l.start),toInteger(l.end)], start:toInteger(l.start), end:toInteger(l.end), 
     path:l.file, repo:l.repository, commitId:l.commitId})
-    ON CREATE SET cause.type = l.type, cause.isTest = l.isTest, cause.sig = l.sig, cause.astPath = l.astPath
-    ON MATCH SET cause.type = l.type, cause.isTest = l.isTest, cause.sig = l.sig, cause.astPath = l.astPath
+    ON CREATE SET cause.type = l.type, cause.isTest = l.isTest, cause.sig = l.sig, cause.astPath = l.astPath, cause.value = l.value
+    ON MATCH SET cause.type = l.type, cause.isTest = l.isTest, cause.sig = l.sig, cause.astPath = l.astPath, cause.value = l.value
     MERGE (impact)-[:IMPACT_CAUSE {type: l.description}]->(cause)
     MERGE (snapCause:FileSnapshot {path:l.file, repo:l.repository, commitId:l.commitId})
     MERGE (snapCause)-[:IS_SNAPSHOT_IN]->(commitIdCause)
@@ -50,8 +50,8 @@ FOREACH (l IN imp.effects |
 
     MERGE (effect:Range {range:[toInteger(l.start),toInteger(l.end)],start:toInteger(l.start), end:toInteger(l.end), 
     path:l.file, repo:l.repository, commitId:l.commitId})
-    ON CREATE SET effect.type = l.type, effect.isTest = l.isTest, effect.sig = l.sig
-    ON MATCH SET effect.type = l.type, effect.isTest = l.isTest, effect.sig = l.sig
+    ON CREATE SET effect.type = l.type, effect.isTest = l.isTest, effect.sig = l.sig, effect.astPath = l.astPath, effect.value = l.value
+    ON MATCH SET effect.type = l.type, effect.isTest = l.isTest, effect.sig = l.sig, effect.astPath = l.astPath, effect.value = l.value
     MERGE (impact)-[:IMPACT_EFFECT {type: l.description}]->(effect)
     MERGE (snapEffect:FileSnapshot {path:l.file, repo:l.repository, commitId:l.commitId})
     MERGE (snapEffect)-[:IS_SNAPSHOT_IN]->(commitIdEffect)
