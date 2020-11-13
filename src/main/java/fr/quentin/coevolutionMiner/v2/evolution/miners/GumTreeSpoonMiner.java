@@ -371,6 +371,9 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 }
                 if (ele == null) {
                     ele = (CtElement) tree.getParent().getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+                    if (ele == null) {
+                        ele = (CtElement) tree.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+                    }
                     SourcePosition position = ele.getPosition();
                     if (position == null || !position.isValidPosition()) {
                         return null;
