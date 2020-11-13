@@ -19,11 +19,14 @@ import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.coevolutionMiner.v2.utils.Iterators2;
 import fr.quentin.coevolutionMiner.v2.utils.Utils;
 import spoon.reflect.code.CtLiteral;
+import spoon.reflect.code.CtTypeAccess;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtExecutable;
+import spoon.reflect.declaration.CtNamedElement;
 import spoon.reflect.path.CtRole;
 import spoon.reflect.reference.CtExecutableReference;
 import spoon.reflect.reference.CtReference;
+import spoon.reflect.reference.CtTypeReference;
 
 public class Project<T> implements Iterable<Project> {
     public final Specifier spec;
@@ -323,15 +326,28 @@ public class Project<T> implements Iterable<Project> {
                     r.put("file", file.getPath());
                     r.put("start", getStart());
                     r.put("end", getEnd());
-                    if (original instanceof CtExecutableReference) {
-                        r.put("astPath", ((CtElement) original).getParent().getPath().toString()+"#"+CtRole.EXECUTABLE_REF.toString());
-                        r.put("value", ((CtExecutableReference) original).getSimpleName().toString());
+                    if (original instanceof CtReference) {
+                        r.put("value", ((CtReference) original).getSimpleName().toString());
+                        try {
+                            r.put("astPath", ((CtElement) original).getPath().toString());
+                        } catch (Exception e) {
+                            try {
+                                r.put("astPath",((CtElement) original).getParent().getPath().toString() + "#" + ((CtReference)original).getRoleInParent().toString());
+                            } catch (Exception ee) {
+                                if (original instanceof CtExecutableReference) {
+                                    r.put("astPath", ((CtElement) original).getParent().getPath().toString() + "#" + CtRole.EXECUTABLE_REF.toString());
+                                } else if (original instanceof CtTypeReference && ((CtElement) original).getParent() instanceof CtTypeAccess) {
+                                    r.put("astPath", ((CtElement) original).getParent().getPath().toString() + "#" + CtRole.ACCESSED_TYPE.toString());
+                                } else if (((CtElement) original).getParent() instanceof CtNamedElement) {
+                                    r.put("astPath", ((CtElement) original).getParent().getPath().toString() + "#" + CtRole.NAME.toString());
+                                } else {
+                                    r.put("astPath", ((CtElement) original).getParent().getPath().toString() + "#?");
+                                }
+                            }}
                     } else if (original instanceof CtElement) {
                         r.put("astPath", ((CtElement) original).getPath().toString());
                         if (original instanceof CtLiteral) {
                             r.put("value", ((CtLiteral) original).getValue().toString());
-                        } else if (original instanceof CtReference) {
-                            r.put("value", ((CtReference) original).getSimpleName().toString());
                         }
                     }
                     return r;
