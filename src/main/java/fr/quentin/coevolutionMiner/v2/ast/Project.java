@@ -368,7 +368,7 @@ public class Project<T> implements Iterable<Project> {
                         m.setAccessible(true);
                         label = (String) m.invoke(null, literal);
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        throw new RuntimeException(e);
                     }
                 } else if (val != null) {
                     label = val.toString();
