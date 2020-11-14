@@ -576,7 +576,9 @@ public class ApplierHelper implements AutoCloseable {
         if (r == null) {
             Map<Version, Object> map = (Map<Version, Object>) x
                     .getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION);
-            r = map.get(afterVersion);
+            if(map != null){
+                r = map.get(afterVersion);
+            }
         }
         return (T) r;
     }
