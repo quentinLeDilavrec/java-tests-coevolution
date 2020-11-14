@@ -5,10 +5,12 @@ import static org.neo4j.driver.Values.parameters;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
@@ -16,6 +18,7 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
+import org.neo4j.driver.TransactionConfig;
 import org.neo4j.driver.TransactionWork;
 import org.neo4j.driver.exceptions.TransientException;
 
@@ -28,24 +31,49 @@ import fr.quentin.coevolutionMiner.v2.utils.Utils;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactsStorage;
 
 public class Neo4jImpactsStorage implements ImpactsStorage {
+    static Logger logger = Logger.getLogger(Neo4jImpactsStorage.class.getName());
+    static final int STEP = 1000;
 
     @Override
     public void put(Impacts impacts) {
         Map<String, Object> value = impacts.asMap();
-        try (Session session = driver.session()) {
-            String done = session.writeTransaction(new TransactionWork<String>() {
-                @Override
-                public String execute(Transaction tx) {
-                    Result result = tx.run(getCypher(), value);
-                    result.consume();
-                    return "done impact on " + impacts.spec.evoSpec.sources.repository;
+        List tmp = (List) value.get("json");
+        int index = 0;
+        int step = STEP;
+        boolean[] success = new boolean[] { false };
+        while (index < tmp.size()) {
+            final int findex = index;
+            final int fstep = step;
+            success[0] = false;
+
+            long start = System.nanoTime();
+            try (Session session = driver.session()) {
+                String done = session.writeTransaction(new TransactionWork<String>() {
+                    @Override
+                    public String execute(Transaction tx) {
+                        Result result = tx.run(getCypher(), parameters("json", tmp.subList(findex, findex + fstep),
+                                "tool", value.get("tool"), "rangesToType", value.get("rangesToType")));
+                        result.consume();
+                        success[0] = true;
+                        return "uploaded impacts chunk of " + impacts.spec.evoSpec.sources.repository;
+                    }
+                }, TransactionConfig.builder().withTimeout(Duration.ofMinutes(5)).build());
+                // System.out.println(done);
+            } catch (TransientException e) {
+                e.printStackTrace();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            logger.info(
+                    "uploaded impacts of " + impacts.spec.evoSpec.sources.repository + ": " + index + "/" + tmp.size());
+            if (success[0]) {
+                index += step;
+                if (((System.nanoTime() - start) / 1000000 / 60 < 2)) {
+                    step = step * 2;
                 }
-            });
-            System.out.println(done);
-        } catch (TransientException e) {
-            e.printStackTrace();
-        } catch (Exception e) {
-            e.printStackTrace();
+            } else {
+                step = step / 2;
+            }
         }
     }
 

@@ -8,6 +8,7 @@ import org.neo4j.driver.Query;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
+import org.neo4j.driver.TransactionConfig;
 import org.neo4j.driver.TransactionWork;
 import org.neo4j.driver.exceptions.TransientException;
 
@@ -27,12 +28,14 @@ import static org.neo4j.driver.Values.parameters;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
+import java.util.logging.Logger;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
@@ -40,25 +43,48 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 public class Neo4jEvolutionsStorage implements EvolutionsStorage {
+    static Logger logger = Logger.getLogger(Neo4jEvolutionsStorage.class.getName());
+    static final int STEP = 1000;
 
     @Override
     public void put(Specifier evos_spec, Evolutions evolutions) {
         List<Map<String, Object>> tmp = evolutions.asListofMaps();
-        try (Session session = driver.session()) {
-            String done = session.writeTransaction(new TransactionWork<String>() {
-                @Override
-                public String execute(Transaction tx) {
-                    Result result = tx.run(getCypher(),
-                            parameters("json", tmp, "tool", evos_spec.miner.getSimpleName() + 2));
-                    result.consume();
-                    return "done evolution on " + evolutions.spec.sources.repository;
+        int index = 0;
+        int step = STEP;
+        boolean[] success = new boolean[] { false };
+        while (index < tmp.size()) {
+            final int findex = index;
+            final int fstep = step;
+            success[0] = false;
+
+            long start = System.nanoTime();
+            try (Session session = driver.session()) {
+                String done = session.writeTransaction(new TransactionWork<String>() {
+                    @Override
+                    public String execute(Transaction tx) {
+                        Result result = tx.run(getCypher(), parameters("json", tmp.subList(findex, findex + fstep),
+                                "tool", evos_spec.miner.getSimpleName() + 2));
+                        result.consume();
+                        success[0] = true;
+                        return "uploaded evolutions chunk of  " + evolutions.spec.sources.repository;
+                    }
+                }, TransactionConfig.builder().withTimeout(Duration.ofMinutes(5)).build());
+                System.out.println(done);
+            } catch (TransientException e) {
+                e.printStackTrace();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            logger.info(
+                    "uploaded evolutions of " + evolutions.spec.sources.repository + ": " + index + "/" + tmp.size());
+            if (success[0]) {
+                index += step;
+                if (((System.nanoTime() - start) / 1000000 / 60 < 2)) {
+                    step = step * 2;
                 }
-            });
-            System.out.println(done);
-        } catch (TransientException e) {
-            e.printStackTrace();
-        } catch (Exception e) {
-            e.printStackTrace();
+            } else {
+                step = step / 2;
+            }
         }
     }
 
