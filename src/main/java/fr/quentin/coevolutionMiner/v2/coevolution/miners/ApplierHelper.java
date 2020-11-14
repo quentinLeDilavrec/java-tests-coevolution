@@ -25,6 +25,7 @@ import com.github.gumtreediff.actions.model.Move;
 import com.github.gumtreediff.actions.model.Update;
 import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.ITree;
+import com.github.gumtreediff.tree.Version;
 import com.github.gumtreediff.tree.VersionedTree;
 
 import org.apache.commons.compress.utils.Iterators;
@@ -55,6 +56,7 @@ import spoon.reflect.declaration.CtModule;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.factory.Factory;
+import spoon.reflect.reference.CtExecutableReference;
 import spoon.support.DefaultOutputDestinationHandler;
 import spoon.support.JavaOutputProcessor;
 import spoon.support.OutputDestinationHandler;
@@ -371,7 +373,7 @@ public class ApplierHelper implements AutoCloseable {
             AbstractVersionedTree dst = invertableAction.getTarget();
             AAction<Move> mact = (AAction<Move>) dst.getMetadata(MyScriptGenerator.MOVE_SRC_ACTION);
             if (mact != null) {
-                ITree src = mact.getSource();
+                AbstractVersionedTree src = (AbstractVersionedTree) mact.getSource();
                 if (watching.containsKey(src)) {
                     watching.put(src, dst);
                 }
@@ -382,6 +384,17 @@ public class ApplierHelper implements AutoCloseable {
             // return evoState.set(invertableAction.getTarget(), false, true);
         } else if (invertableAction instanceof Update) {
             ActionApplier.applyAUpdate(facto, scanner.getTreeContext(), (Update & AAction<Update>) invertableAction);
+            AbstractVersionedTree target = invertableAction.getTarget();
+            if (inverted) {
+                if (watching.containsKey(target)) {
+                    watching.put(target, target);
+                }
+            } else {
+                AbstractVersionedTree src = (AbstractVersionedTree) invertableAction.getSource();
+                if (watching.containsKey(src)) {
+                    watching.put(src, target);
+                }
+            }
             // return evoState.set((AbstractVersionedTree) invertableAction.getSource(),
             // false, true)
             // & evoState.set(invertableAction.getTarget(), true, true);
@@ -406,7 +419,7 @@ public class ApplierHelper implements AutoCloseable {
             AbstractVersionedTree dst = action.getTarget();
             AAction<Move> mact = (AAction<Move>) dst.getMetadata(MyScriptGenerator.MOVE_SRC_ACTION);
             if (mact != null) {
-                ITree src = mact.getSource();
+                AbstractVersionedTree src = (AbstractVersionedTree) mact.getSource();
                 if (watching.containsKey(src)) {
                     watching.put(src, dst);
                 }
@@ -420,6 +433,9 @@ public class ApplierHelper implements AutoCloseable {
         } else if (action instanceof Update) {
             ActionApplier.applyAUpdate(facto, scanner.getTreeContext(),
                     AAction.build(Update.class, action.getTarget(), (AbstractVersionedTree) action.getSource()));
+            if (watching.containsKey(action.getTarget())) {
+                watching.put(action.getTarget(), (AbstractVersionedTree) action.getSource());
+            }
             // evoState.set((AbstractVersionedTree) action.getTarget(), false, true);
             // evoState.set((AbstractVersionedTree) action.getSource(), true, true);
             // } else if (action instanceof Move){
@@ -500,12 +516,12 @@ public class ApplierHelper implements AutoCloseable {
     // public static void serialize(Launcher launcher, File out) {
     // }
 
-    private Map<ITree, ITree> watching = new HashMap<>();
+    private Map<AbstractVersionedTree, AbstractVersionedTree> watching = new HashMap<>();
 
-    public CtElement[] watchApply(VersionCommit beforeVersion, ITree... treeTest) {
+    public CtElement[] watchApply(AbstractVersionedTree... treeTest) {
         CtElement[] r = new CtElement[treeTest.length];
         for (int i = 0; i < treeTest.length; i++) {
-            ITree x = treeTest[i];
+            AbstractVersionedTree x = treeTest[i];
             watching.put(x, x);
             CtElement ele = (CtElement) x.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
             if (ele == null) {
@@ -516,27 +532,54 @@ public class ApplierHelper implements AutoCloseable {
         return r;
     }
 
-    public CtElement[] getUpdatedElement(VersionCommit afterVersion, ITree... treeTest) {
+    public CtElement[] getUpdatedElement(VersionCommit afterVersion, AbstractVersionedTree... treeTest) {
         CtElement[] r = new CtElement[treeTest.length];
         for (int i = 0; i < treeTest.length; i++) {
-            ITree xx = treeTest[i];
-            ITree x = watching.getOrDefault(xx, xx);
-            CtMethod actualTest = (CtMethod) ((AbstractVersionedTree) x).getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-            String simpname = actualTest.getSimpleName();
-
-            // Map<VersionCommit, CtElement> map = (Map<VersionCommit, CtElement>) x
-            // .getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION);
-            // if (map != null) {
-            // ele = map.get(afterVersion);
-            // }
-            CtElement ele = (CtElement) ((AbstractVersionedTree) x).getChildren(afterVersion).get(0)
-                    .getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
-            ele = ele.getParent();
-            if (((CtMethod) ele).getSimpleName().equals(simpname)) {
-            } else {
-                ele = (CtMethod) ((AbstractVersionedTree) x).getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+            AbstractVersionedTree xx = treeTest[i];
+            AbstractVersionedTree x = watching.getOrDefault(xx, xx);
+            if (x.getAddedVersion() != afterVersion) {
+                continue;
             }
-            r[i] = ele;
+            r[i] = (CtElement) x.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+        }
+        return r;
+    }
+
+    public CtMethod getUpdatedMethod(VersionCommit afterVersion, AbstractVersionedTree treeTest) {
+        AbstractVersionedTree xx = treeTest;
+        AbstractVersionedTree xxName = treeTest.getChildren(treeTest.getAddedVersion()).get(0);
+        AbstractVersionedTree x = watching.getOrDefault(xx, xx);
+        AbstractVersionedTree xName = watching.getOrDefault(xxName, xxName);
+        CtMethod actualTest = (CtMethod) x.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+        CtExecutableReference actualTestRef = (CtExecutableReference) xName
+                .getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+        if (actualTest != actualTestRef.getParent()) {
+            throw new RuntimeException();
+        }
+        String simpname = actualTest.getSimpleName();
+        String qualDeclClass = actualTest.getDeclaringType().getQualifiedName();
+
+        CtMethod ele = (CtMethod) computeAfter(afterVersion, x);
+        if (ele == null) {
+            ele = (CtMethod)((CtExecutableReference) computeAfter(afterVersion, xName)).getParent();
+        }
+
+        if (ele.getSimpleName().equals(simpname) && ele.getDeclaringType().getQualifiedName().equals(qualDeclClass)) {
+        } else {
+            ele = (CtMethod) x.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+        }
+        return ele;
+    }
+
+    private Object computeAfter(VersionCommit afterVersion, AbstractVersionedTree x) {
+        Object r = null;
+        if (x.getAddedVersion() == afterVersion) {
+            r = x.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+        }
+        if (r == null) {
+            Map<Version, Object> map = (Map<Version, Object>) x
+                    .getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION);
+            r = map.get(afterVersion);
         }
         return r;
     }

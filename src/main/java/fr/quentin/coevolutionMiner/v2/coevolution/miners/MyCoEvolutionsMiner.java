@@ -16,6 +16,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.VersionedTree;
 import com.google.gson.JsonElement;
@@ -386,8 +387,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                             }
                             ITree treeTestBefore = (ITree) ((CtElement) this.testBefore.getOriginal())
                                     .getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
-                            CtMethod elementTestAfter = (CtMethod) ah.getUpdatedElement(currEvoAtCommit.afterVersion,
-                                    treeTestBefore)[0];
+                            CtMethod elementTestAfter = ah.getUpdatedMethod(currEvoAtCommit.afterVersion,
+                                    treeTestBefore);
                             String testSig = elementTestAfter.getDeclaringType().getQualifiedName() + "#"
                                     + elementTestAfter.getSimpleName();
                             String resInitial = initialTestsStatus.get(this.testBefore);
@@ -472,10 +473,14 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     Range testBefore = c.testBefore;
                     consumer.testBefore = testBefore;
                     consumer.evosForThisTest = c.evosForThisTest;
-                    ITree treeTestBefore = (ITree) ((CtElement) testBefore.getOriginal())
-                            .getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
-                    consumer.elementTestBefore = (CtMethod) ah.watchApply(currEvoAtCommit.beforeVersion,
-                            treeTestBefore)[0];
+                    AbstractVersionedTree treeTestBefore = (AbstractVersionedTree) ((CtElement) testBefore
+                            .getOriginal()).getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
+                    CtElement[] ttt = ah.watchApply(currEvoAtCommit.beforeVersion, treeTestBefore,
+                            treeTestBefore.getChildren(currEvoAtCommit.beforeVersion).get(0));
+                    if (ttt[0] != ttt[1].getParent()) {
+                        throw new RuntimeException();
+                    }
+                    consumer.elementTestBefore = (CtMethod) ttt[0];
                     consumer.sigTestBefore = consumer.elementTestBefore.getDeclaringType().getQualifiedName() + "#"
                             + consumer.elementTestBefore.getSimpleName();
                     // ITree treeTestBefore = (ITree) ((CtElement) testBefore.getOriginal())
@@ -631,7 +636,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         HashSet<Evolutions.Evolution> notUsed = new HashSet<>(by.toSet());
         Map<Evolution, Set<Evolution>> result = new HashMap<>();
 
-        for (Evolution evolution : Iterators2.createChainIterable(Arrays.asList(from,by))) {
+        for (Evolution evolution : Iterators2.createChainIterable(Arrays.asList(from, by))) {
             Set<Evolution> acc = new HashSet<>();
             for (DescRange descRange : evolution.getBefore()) {
                 CtElement ele = (CtElement) descRange.getTarget().getOriginal();
@@ -655,7 +660,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
         // // promote
         // for (Evolution evolution : notUsed) {
-        //     result.put(evolution, Collections.emptySet());
+        // result.put(evolution, Collections.emptySet());
         // }
         return result;
     }
