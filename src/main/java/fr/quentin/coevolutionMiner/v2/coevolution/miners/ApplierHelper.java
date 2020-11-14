@@ -323,7 +323,7 @@ public class ApplierHelper implements AutoCloseable {
     private AAction invertAction(AAction action) {
         AAction r;
         if (action instanceof Insert) {
-            r = AAction.build(Delete.class, null, action.getTarget());
+            r = AAction.build(Delete.class, action.getTarget(), null);
         } else if (action instanceof Delete) {
             r = AAction.build(Insert.class, action.getTarget(), action.getTarget());
         } else if (action instanceof Update) {
