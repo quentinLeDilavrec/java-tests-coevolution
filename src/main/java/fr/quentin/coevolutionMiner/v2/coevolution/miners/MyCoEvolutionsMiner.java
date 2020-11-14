@@ -385,8 +385,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                             for (Evolution ddd : t) {
                                 System.err.println(ddd.getOriginal());
                             }
-                            ITree treeTestBefore = (ITree) ((CtElement) this.testBefore.getOriginal())
-                                    .getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
+                            AbstractVersionedTree treeTestBefore = (AbstractVersionedTree) ((CtElement) this.testBefore
+                                    .getOriginal()).getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
                             CtMethod elementTestAfter = ah.getUpdatedMethod(currEvoAtCommit.afterVersion,
                                     treeTestBefore);
                             String testSig = elementTestAfter.getDeclaringType().getQualifiedName() + "#"
@@ -475,7 +475,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     consumer.evosForThisTest = c.evosForThisTest;
                     AbstractVersionedTree treeTestBefore = (AbstractVersionedTree) ((CtElement) testBefore
                             .getOriginal()).getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
-                    CtElement[] ttt = ah.watchApply(currEvoAtCommit.beforeVersion, treeTestBefore,
+                    CtElement[] ttt = ah.watchApply(treeTestBefore,
                             treeTestBefore.getChildren(currEvoAtCommit.beforeVersion).get(0));
                     if (ttt[0] != ttt[1].getParent()) {
                         throw new RuntimeException();
