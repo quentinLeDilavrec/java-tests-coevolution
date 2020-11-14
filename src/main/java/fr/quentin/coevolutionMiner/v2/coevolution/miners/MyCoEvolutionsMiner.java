@@ -475,7 +475,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     consumer.evosForThisTest = c.evosForThisTest;
                     AbstractVersionedTree treeTestBefore = (AbstractVersionedTree) ((CtElement) testBefore
                             .getOriginal()).getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
-                    CtElement[] ttt = ah.watchApply(treeTestBefore,
+                    CtElement[] ttt = ah.watchApply(currEvoAtCommit.beforeVersion, treeTestBefore,
                             treeTestBefore.getChildren(currEvoAtCommit.beforeVersion).get(0));
                     if (ttt[0] != ttt[1].getParent()) {
                         throw new RuntimeException();

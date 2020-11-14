@@ -518,34 +518,31 @@ public class ApplierHelper implements AutoCloseable {
 
     private Map<AbstractVersionedTree, AbstractVersionedTree> watching = new HashMap<>();
 
-    public CtElement[] watchApply(AbstractVersionedTree... treeTest) {
+    public CtElement[] watchApply(VersionCommit version, AbstractVersionedTree... treeTest) {
         CtElement[] r = new CtElement[treeTest.length];
         for (int i = 0; i < treeTest.length; i++) {
             AbstractVersionedTree x = treeTest[i];
             watching.put(x, x);
-            CtElement ele = (CtElement) x.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-            if (ele == null) {
-                ele = (CtElement) x.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
-            }
+            CtElement ele = computeAt(version, x);
             r[i] = ele;
         }
         return r;
     }
 
-    public CtElement[] getUpdatedElement(VersionCommit afterVersion, AbstractVersionedTree... treeTest) {
+    public CtElement[] getUpdatedElement(VersionCommit version, AbstractVersionedTree... treeTest) {
         CtElement[] r = new CtElement[treeTest.length];
         for (int i = 0; i < treeTest.length; i++) {
             AbstractVersionedTree xx = treeTest[i];
             AbstractVersionedTree x = watching.getOrDefault(xx, xx);
-            if (x.getAddedVersion() != afterVersion) {
+            if (x.getAddedVersion() != version) {
                 continue;
             }
-            r[i] = (CtElement) x.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+            r[i] = computeAt(version, x);
         }
         return r;
     }
 
-    public CtMethod getUpdatedMethod(VersionCommit afterVersion, AbstractVersionedTree treeTest) {
+    public CtMethod getUpdatedMethod(VersionCommit version, AbstractVersionedTree treeTest) {
         AbstractVersionedTree xx = treeTest;
         AbstractVersionedTree xxName = treeTest.getChildren(treeTest.getAddedVersion()).get(0);
         AbstractVersionedTree x = watching.getOrDefault(xx, xx);
@@ -559,9 +556,9 @@ public class ApplierHelper implements AutoCloseable {
         String simpname = actualTest.getSimpleName();
         String qualDeclClass = actualTest.getDeclaringType().getQualifiedName();
 
-        CtMethod ele = (CtMethod) computeAfter(afterVersion, x);
+        CtMethod ele = computeAt(version, x);
         if (ele == null) {
-            ele = (CtMethod)((CtExecutableReference) computeAfter(afterVersion, xName)).getParent();
+            ele = (CtMethod) ((CtExecutableReference) computeAt(version, xName)).getParent();
         }
 
         if (ele.getSimpleName().equals(simpname) && ele.getDeclaringType().getQualifiedName().equals(qualDeclClass)) {
@@ -571,7 +568,7 @@ public class ApplierHelper implements AutoCloseable {
         return ele;
     }
 
-    private Object computeAfter(VersionCommit afterVersion, AbstractVersionedTree x) {
+    private <T> T computeAt(VersionCommit afterVersion, AbstractVersionedTree x) {
         Object r = null;
         if (x.getAddedVersion() == afterVersion) {
             r = x.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
@@ -581,7 +578,7 @@ public class ApplierHelper implements AutoCloseable {
                     .getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION);
             r = map.get(afterVersion);
         }
-        return r;
+        return (T) r;
     }
 
 }
