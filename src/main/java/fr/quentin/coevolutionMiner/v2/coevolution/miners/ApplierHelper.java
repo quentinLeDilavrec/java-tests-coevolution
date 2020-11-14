@@ -558,10 +558,13 @@ public class ApplierHelper implements AutoCloseable {
 
         CtMethod ele = computeAt(version, x);
         if (ele == null) {
-            ele = (CtMethod) ((CtExecutableReference) computeAt(version, xName)).getParent();
+            CtExecutableReference ref = computeAt(version, xName);
+            if(ref != null){
+                ele = (CtMethod) ref.getParent();
+            }
         }
 
-        if (ele.getSimpleName().equals(simpname) && ele.getDeclaringType().getQualifiedName().equals(qualDeclClass)) {
+        if (ele!=null && ele.getSimpleName().equals(simpname) && ele.getDeclaringType().getQualifiedName().equals(qualDeclClass)) {
         } else {
             ele = (CtMethod) x.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
         }
