@@ -67,7 +67,7 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
                                 "tool", evos_spec.miner.getSimpleName() + 3));
                         result.consume();
                         success[0] = true;
-                        return "uploaded evolutions chunk of " + evolutions.spec.sources.repository + ": " + findex + "/" + tmp.size();
+                        return "uploaded evolutions chunk of " + evolutions.spec.sources.repository + ": " + (findex + fstep) + "/" + tmp.size();
                     }
                 }, TransactionConfig.builder().withTimeout(Duration.ofMinutes(TIMEOUT)).build());
                 logger.info(done);
