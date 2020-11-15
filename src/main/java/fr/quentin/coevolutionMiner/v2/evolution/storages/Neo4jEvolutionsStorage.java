@@ -44,7 +44,8 @@ import com.google.gson.reflect.TypeToken;
 
 public class Neo4jEvolutionsStorage implements EvolutionsStorage {
     static Logger logger = Logger.getLogger(Neo4jEvolutionsStorage.class.getName());
-    static final int STEP = 1000;
+    static final int STEP = 512;
+    static final int TIMEOUT = 10;
 
     @Override
     public void put(Specifier evos_spec, Evolutions evolutions) {
@@ -63,12 +64,12 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
                     @Override
                     public String execute(Transaction tx) {
                         Result result = tx.run(getCypher(), parameters("json", tmp.subList(findex, findex + fstep),
-                                "tool", evos_spec.miner.getSimpleName() + 2));
+                                "tool", evos_spec.miner.getSimpleName() + 3));
                         result.consume();
                         success[0] = true;
                         return "uploaded evolutions chunk of  " + evolutions.spec.sources.repository;
                     }
-                }, TransactionConfig.builder().withTimeout(Duration.ofMinutes(5)).build());
+                }, TransactionConfig.builder().withTimeout(Duration.ofMinutes(TIMEOUT)).build());
                 System.out.println(done);
             } catch (TransientException e) {
                 e.printStackTrace();
@@ -79,7 +80,7 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
                     "uploaded evolutions of " + evolutions.spec.sources.repository + ": " + index + "/" + tmp.size());
             if (success[0]) {
                 index += step;
-                if (((System.nanoTime() - start) / 1000000 / 60 < 2)) {
+                if (((System.nanoTime() - start) / 1000000 / 60 < (TIMEOUT/2))) {
                     step = step * 2;
                 }
             } else {

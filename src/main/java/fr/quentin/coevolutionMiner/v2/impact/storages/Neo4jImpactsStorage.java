@@ -32,7 +32,8 @@ import fr.quentin.coevolutionMiner.v2.impact.ImpactsStorage;
 
 public class Neo4jImpactsStorage implements ImpactsStorage {
     static Logger logger = Logger.getLogger(Neo4jImpactsStorage.class.getName());
-    static final int STEP = 1000;
+    static final int STEP = 512;
+    static final int TIMEOUT = 10;
 
     @Override
     public void put(Impacts impacts) {
@@ -57,7 +58,7 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
                         success[0] = true;
                         return "uploaded impacts chunk of " + impacts.spec.evoSpec.sources.repository;
                     }
-                }, TransactionConfig.builder().withTimeout(Duration.ofMinutes(5)).build());
+                }, TransactionConfig.builder().withTimeout(Duration.ofMinutes(TIMEOUT)).build());
                 // System.out.println(done);
             } catch (TransientException e) {
                 e.printStackTrace();
@@ -68,7 +69,7 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
                     "uploaded impacts of " + impacts.spec.evoSpec.sources.repository + ": " + index + "/" + tmp.size());
             if (success[0]) {
                 index += step;
-                if (((System.nanoTime() - start) / 1000000 / 60 < 2)) {
+                if (((System.nanoTime() - start) / 1000000 / 60 < (TIMEOUT/2))) {
                     step = step * 2;
                 }
             } else {
