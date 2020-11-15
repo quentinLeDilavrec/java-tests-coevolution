@@ -432,9 +432,24 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                             // if (descRange.getTarget().equals(testBefore)) {
                             // }
 
-                            for (CtType p : mFacto.getModel().getAllTypes()) {
-                                if (!p.isShadow()) {
-                                    outputProcessor.createJavaFile(p);
+                            String res = null;
+                            String failAtStep = null;
+                            EImpact.FailureReport report = null;
+
+                            try {
+                                for (CtType p : mFacto.getModel().getAllTypes()) {
+                                    if (!p.isShadow()) {
+                                        outputProcessor.createJavaFile(p);
+                                    }
+                                }
+                            } catch (Exception e) {
+                                if (report == null) {
+                                    res = compileApp(sourcesProvider, path);
+                                    if (res != null) {
+                                        report = new EImpact.FailureReport();
+                                        report.when = "App compiling";
+                                        report.what = e.toString();
+                                    }
                                 }
                             }
 
@@ -442,9 +457,6 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                             for (Evolution e : t) {
                                 eimpact.evolutions.put(e, ah.evoState.ratio(e));
                             }
-                            String res = null;
-                            String failAtStep = null;
-                            EImpact.FailureReport report = null;
                             if (report == null) {
                                 res = compileApp(sourcesProvider, path);
                                 if (res != null) {
