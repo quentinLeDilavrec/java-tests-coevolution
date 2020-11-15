@@ -356,6 +356,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 initialTestsStatus.put((initialTest), resInitial);
             }
             for (InterestingCase c : interestingCases.get(k)) {
+                if (c.evosForThisTest.size()>20) {
+                    logger.info(c.evosForThisTest.size() + "elements for combination is too much");
+                    continue;
+                }
                 try (ApplierHelper ah = new ApplierHelper(k, atomizedRefactorings);) { // evoPerProj.get(k)
                     // ah.setTestDirectories(
                     // ((SpoonAST)
@@ -493,7 +497,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     // String resBefore = executeTest(sourcesProvider, path,
                     // ((CtMethod) testsBefore[0]).getDeclaringType().getQualifiedName(),
                     // ((CtMethod) testsBefore[0]).getSimpleName());
-
+                    ah.setLeafsActionsLimit(6);
                     ah.applyEvolutions(c.evosForThisTest);
 
                     // CtElement[] testsAfter = ah.getUpdatedElement(currEvoAtCommit.beforeVersion,

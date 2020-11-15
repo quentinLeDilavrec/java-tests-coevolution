@@ -17,6 +17,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.logging.Logger;
 
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Delete;
@@ -63,6 +64,7 @@ import spoon.support.OutputDestinationHandler;
 import spoon.support.StandardEnvironment;
 
 public class ApplierHelper implements AutoCloseable {
+    Logger logger = Logger.getLogger(ApplierHelper.class.getName());
 
     private SpoonGumTreeBuilder scanner;
     private AbstractVersionedTree middle;
@@ -81,6 +83,7 @@ public class ApplierHelper implements AutoCloseable {
     private Factory factory;
     private Launcher launcher;
     private MultiDiffImpl mdiff;
+    private int leafsActionsLimit;
 
     class EvoStateMaintainer {
         private Map<Evolution, Integer> evoState = new HashMap<>();
@@ -268,6 +271,10 @@ public class ApplierHelper implements AutoCloseable {
         this.mdiff = eap.getMdiff();
     }
 
+    void setLeafsActionsLimit(int limit){
+        this.leafsActionsLimit = limit;
+    }
+
     public Launcher applyEvolutions(Set<Evolution> wantedEvos) {
         Set<AAction> acts = new HashSet<>();
         extractActions(wantedEvos, acts);
@@ -337,6 +344,11 @@ public class ApplierHelper implements AutoCloseable {
     private Launcher applyCombActions(Collection<AAction> wantedActions) {
         Map<AbstractVersionedTree, Boolean> waitingToBeApplied = new HashMap<>();
         Combination.CombinationHelper<AbstractVersionedTree> combs = Combination.build(middle, wantedActions);
+        int exp = combs.minExposant();
+        if(exp>leafsActionsLimit){
+            logger.warning(exp + " leafs would make too much combinations");
+            return null;
+        }
         do {
             Combination.CHANGE<AbstractVersionedTree> change = combs.next();
             try {
