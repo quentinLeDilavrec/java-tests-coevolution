@@ -163,7 +163,18 @@ class GumtreeSpoonTest {
         public void test42() throws Exception {
                 CLI.batch(
                     Arrays.asList(
-                    "https://github.com/quentinLeDilavrec/dummyCoevo1 0 32231dbb59a5958fe3f54e7e27c9ccec336a8aed cd0c256da4f6670fa2512a85325f84b1ac61b24e da0be38f50616019175f32c89e0a52fafcaf516f").stream(), 
+                        "https://github.com/quentinLeDilavrec/dummyCoevo1 0 32231dbb59a5958fe3f54e7e27c9ccec336a8aed cd0c256da4f6670fa2512a85325f84b1ac61b24e", 
+                        "https://github.com/quentinLeDilavrec/dummyCoevo1 0 cd0c256da4f6670fa2512a85325f84b1ac61b24e da0be38f50616019175f32c89e0a52fafcaf516f").stream(), 
+                        1, 10);
+        }
+
+
+
+        @Test
+        public void test42bis() throws Exception {
+                CLI.batch(
+                    Arrays.asList(
+                        "https://github.com/quentinLeDilavrec/dummyCoevo1 0 32231dbb59a5958fe3f54e7e27c9ccec336a8aed cd0c256da4f6670fa2512a85325f84b1ac61b24e da0be38f50616019175f32c89e0a52fafcaf516f").stream(), 
                     1, 10);
         }
 
