@@ -16,6 +16,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import com.github.gumtreediff.actions.model.Move;
 import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.VersionedTree;
@@ -71,6 +72,8 @@ import spoon.support.DefaultOutputDestinationHandler;
 import spoon.support.JavaOutputProcessor;
 import spoon.support.OutputDestinationHandler;
 import fr.quentin.impactMiner.Position;
+import gumtree.spoon.apply.AAction;
+import gumtree.spoon.apply.operations.MyScriptGenerator;
 import gumtree.spoon.diff.Diff;
 import gumtree.spoon.diff.DiffImpl;
 import gumtree.spoon.diff.operations.DeleteOperation;
@@ -240,6 +243,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
 
         Impacts currentImpacts = impactHandler.handle(impactHandler.buildSpec(before_ast_id, currEvoSpecMixed));
+        Impacts afterImpacts = impactHandler.handle(impactHandler.buildSpec(after_ast_id, currEvoSpecMixed));
 
         // Map<FileSnapshot, Set<Evolution>> byFileBefore = new HashMap<>();
         // Map<FileSnapshot, Set<Evolution>> byFileAfter = new HashMap<>();
@@ -258,6 +262,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             impactedTestsByProject.putIfAbsent(impactedTests.getKey().getFile().getAST().getProject(), new HashSet<>());
             impactedTestsByProject.get(impactedTests.getKey().getFile().getAST().getProject()).add(impactedTests);
         }
+        for (Entry<Range, Set<Object>> impactedTests : afterImpacts.getImpactedTests().entrySet()) {
+            impactedTestsByProject.putIfAbsent(impactedTests.getKey().getFile().getAST().getProject(), new HashSet<>());
+            impactedTestsByProject.get(impactedTests.getKey().getFile().getAST().getProject()).add(impactedTests);
+        }
         class InterestingCase {
             public EvolutionsAtProj evolutionsAtProj;
             public Set<Evolution> evosForThisTest;
@@ -267,53 +275,69 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         Map<EvolutionsAtProj, Set<Evolution>> evoPerProj = new HashMap<>();
         Map<EvolutionsAtProj, Set<Range>> impactedTestsPerProj = new HashMap<>();
         for (Entry<Project, Set<Entry<Range, Set<Object>>>> entry : impactedTestsByProject.entrySet()) {
-            Project projectBefore = entry.getKey();
-            Project.Specifier projectSpecAfter = currEvoAtCommit.getProjectSpec(projectBefore.spec);
+            boolean isBefore = entry.getKey().spec.commitId.equals(spec.evoSpec.commitIdBefore);
+            Project projectCurr = entry.getKey();
+            Project.Specifier projectSpecBefore = isBefore ? projectCurr.spec : currEvoAtCommit.getProjectSpec(projectCurr.spec);
+            Project.Specifier projectSpecAfter = isBefore ? currEvoAtCommit.getProjectSpec(projectCurr.spec) : projectCurr.spec;
+            EvolutionsAtProj evolutionsAtProj = currEvoAtCommit.getModule(projectSpecBefore, projectSpecAfter);
+            Project projectBefore = evolutionsAtProj.getBeforeProj();
+            Project projectAfter = evolutionsAtProj.getAfterProj();
+
+            Map<Range, InterestingCase> intInterestingCases = new HashMap<>();
             for (Entry<Range, Set<Object>> impactedTest : entry.getValue()) {
-                Range testBefore = impactedTest.getKey();
-                // Set<Project<?>.AST.FileSnapshot.Range> testsAfter = new HashSet<>();
-                // Project<?>.AST.FileSnapshot.Range mappingResult = currentDiff.map(testBefore,
-                // after_proj);
-                // if (mappingResult != null) {
-                // testsAfter.add(mappingResult);
-                // }
+                Range testAfter = isBefore ? null : impactedTest.getKey();
+                Range testBefore = isBefore ? impactedTest.getKey() : null;
+                // TODO extract functionality
+                if(isBefore){
+                    AbstractVersionedTree treeTestBefore = (AbstractVersionedTree) ((CtElement) testBefore
+                            .getOriginal()).getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
+                    AbstractVersionedTree treeTestAfter = treeTestBefore;
+                    AAction<Move> mov = (AAction<Move>)treeTestBefore.getMetadata(MyScriptGenerator.MOVE_SRC_ACTION);
+                    if(mov != null) {
+                        treeTestAfter = mov.getTarget();
+                    }
+                    testAfter = GumTreeSpoonMiner.toRange(projectAfter, treeTestAfter, currEvoAtCommit.afterVersion);
+                } else {
+                    AbstractVersionedTree treeTestAfter = (AbstractVersionedTree) ((CtElement) testAfter
+                            .getOriginal()).getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
+                    AbstractVersionedTree treeTestBefore = treeTestAfter;
+                    AAction<Move> mov = (AAction<Move>)treeTestAfter.getMetadata(MyScriptGenerator.MOVE_DST_ACTION);
+                    if(mov != null) {
+                        treeTestAfter = mov.getTarget();
+                    }
+                    testBefore = GumTreeSpoonMiner.toRange(projectBefore, treeTestBefore, currEvoAtCommit.beforeVersion);
+                }
                 Set<Evolutions.Evolution.DescRange> evosInGame = (Set) impactedTest.getValue();
-                // for (Evolutions.Evolution.DescRange descR : evosInGame) {
-                // if (descR.getTarget() == testBefore) {
-                // if (descR.getSource().getType().equals("Move Method")) {
-                // testsAfter.add(descR.getSource().getAfter().get(0).getTarget());
-                // }
-                // }
-                // }
-                // for (Project<?>.AST.FileSnapshot.Range testAfter : testsAfter) {
-                Set<Evolution> evosForThisTest = new HashSet<>();
+
+                Set<Evolution> evosForThisTest;
+                InterestingCase curr = intInterestingCases.get(testBefore);
+                if(curr == null){
+                    curr = new InterestingCase();
+                    intInterestingCases.put(testBefore, curr);
+                    evosForThisTest = new HashSet<>();
+                    curr.testBefore = testBefore;
+                    curr.evolutionsAtProj = evolutionsAtProj;
+                } else {
+                    evosForThisTest = curr.evosForThisTest;
+                    if (!testBefore.equals(curr.testBefore)){
+                        throw new RuntimeException("not same test before");
+                    }
+                }
+
                 for (Evolutions.Evolution.DescRange obj : evosInGame) {
                     Evolution src = ((Evolutions.Evolution.DescRange) obj).getSource();
                     evosForThisTest.add(src);
                     evosForThisTest.addAll(atomizedRefactorings.get(src));
                 }
-                EvolutionsAtProj evolutionsAtProj = currEvoAtCommit.getModule(projectBefore.spec, projectSpecAfter);
-
-                InterestingCase curr = new InterestingCase();
-                // curr.projectBefore = projectBefore;
-                // curr.projectAfter =
-                // evolutionsAtProj.getAfterProj();//testAfter.getFile().getAST().getProject();
-                curr.evosForThisTest = evosForThisTest;
-                curr.testBefore = testBefore;
-                curr.evolutionsAtProj = evolutionsAtProj;
-                curr.evosForThisTest = evosForThisTest;
-
-                interestingCases.putIfAbsent(evolutionsAtProj, new HashSet<>());
-                interestingCases.get(evolutionsAtProj).add(curr);
 
                 evoPerProj.putIfAbsent(evolutionsAtProj, new HashSet<>());
                 evoPerProj.get(evolutionsAtProj).addAll(evosForThisTest);
 
                 impactedTestsPerProj.putIfAbsent(evolutionsAtProj, new HashSet<>());
                 impactedTestsPerProj.get(evolutionsAtProj).add(testBefore);
-
-                // }
             }
+            interestingCases.get(evolutionsAtProj).addAll(intInterestingCases.values());
+            interestingCases.putIfAbsent(evolutionsAtProj, new HashSet<>());
         }
         // Validation phase, by compiling and running tests
         Path path = Paths.get("/tmp/applyResults/");
