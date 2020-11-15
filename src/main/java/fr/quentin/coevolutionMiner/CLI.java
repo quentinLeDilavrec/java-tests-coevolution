@@ -349,8 +349,8 @@ public class CLI {
                                 logger.info("no commits for " + s.get(0));
                             } else if (evos == null) {
                                 logger.info("evolution not working " + s.get(0));
-                            } else if (evos.toSet().size() <= 0) {
-                                logger.info("no evolutions found for " + s.get(0));
+                            // } else if (evos.toSet().size() <= 0) {
+                            //     logger.info("no evolutions found for " + s.get(0));
                             } else {
                                 impact_computed += 1;
                                 logger.info(Integer.toString(evos.toSet().size()) + " evolutions found for " + s.get(0)
