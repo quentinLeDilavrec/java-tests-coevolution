@@ -356,49 +356,10 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     augment(dr);
                 }
             }
-
+    
             private <T> ImmutablePair<Range, String> toRange(Project<T> proj, ITree tree, String desc,
                     Version version) {
-                CtElement ele = (CtElement) tree.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
-                int start, end;
-                Path path;
-                if (ele == null) {
-                    Map<Version, CtElement> map = (Map<Version, CtElement>) tree.getParent()
-                            .getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION);
-                    if (map != null) {
-                        ele = map.get(version);
-                    }
-                }
-                if (ele == null) {
-                    ele = (CtElement) tree.getParent().getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
-                    if (ele == null) {
-                        ele = (CtElement) tree.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-                    }
-                    if (ele == null) {
-                        ele = (CtElement) tree.getParent().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-                    }
-                    SourcePosition position = ele.getPosition();
-                    if (position == null || !position.isValidPosition()) {
-                        return null;
-                    }
-                    path = position.getFile().toPath();
-                    // if(position instanceof DeclarationSourcePosition) {
-                    // start = ((DeclarationSourcePosition)position).getNameStart();
-                    // end = ((DeclarationSourcePosition)position).getNameEnd();
-                    // } else {
-                    start = position.getSourceStart();
-                    end = position.getSourceEnd();
-                    // }
-                } else {
-                    SourcePosition position = ele.getPosition();
-                    if (position == null || !position.isValidPosition()) {
-                        return null;
-                    }
-                    path = position.getFile().toPath();
-                    start = position.getSourceStart();
-                    end = position.getSourceEnd();
-                }
-                Range range = proj.getRange(proj.getAst().rootDir.relativize(path).toString(), start, end, ele);
+                Range range = GumTreeSpoonMiner.toRange(proj, tree, version);
                 if (range == null) {
                     return null;
                 }
@@ -796,5 +757,51 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         // return posTopo.get(topoIndex);
         // }
         // }
+    }
+    
+    // TODO extract functionality in utils
+    public static <T> Range toRange(Project<T> proj, ITree tree,
+            Version version) {
+        CtElement ele = (CtElement) tree.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+        int start, end;
+        Path path;
+        if (ele == null) {
+            Map<Version, CtElement> map = (Map<Version, CtElement>) tree.getParent()
+                    .getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION);
+            if (map != null) {
+                ele = map.get(version);
+            }
+        }
+        if (ele == null) {
+            ele = (CtElement) tree.getParent().getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+            if (ele == null) {
+                ele = (CtElement) tree.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+            }
+            if (ele == null) {
+                ele = (CtElement) tree.getParent().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+            }
+            SourcePosition position = ele.getPosition();
+            if (position == null || !position.isValidPosition()) {
+                return null;
+            }
+            path = position.getFile().toPath();
+            // if(position instanceof DeclarationSourcePosition) {
+            // start = ((DeclarationSourcePosition)position).getNameStart();
+            // end = ((DeclarationSourcePosition)position).getNameEnd();
+            // } else {
+            start = position.getSourceStart();
+            end = position.getSourceEnd();
+            // }
+        } else {
+            SourcePosition position = ele.getPosition();
+            if (position == null || !position.isValidPosition()) {
+                return null;
+            }
+            path = position.getFile().toPath();
+            start = position.getSourceStart();
+            end = position.getSourceEnd();
+        }
+        Range range = proj.getRange(proj.getAst().rootDir.relativize(path).toString(), start, end, ele);
+        return range;
     }
 }
