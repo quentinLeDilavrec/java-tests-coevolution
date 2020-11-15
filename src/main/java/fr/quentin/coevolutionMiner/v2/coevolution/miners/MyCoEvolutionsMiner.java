@@ -336,8 +336,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 impactedTestsPerProj.putIfAbsent(evolutionsAtProj, new HashSet<>());
                 impactedTestsPerProj.get(evolutionsAtProj).add(testBefore);
             }
-            interestingCases.get(evolutionsAtProj).addAll(intInterestingCases.values());
-            interestingCases.putIfAbsent(evolutionsAtProj, new HashSet<>());
+            if (intInterestingCases.size()>0) {
+                interestingCases.putIfAbsent(evolutionsAtProj, new HashSet<>());
+                interestingCases.get(evolutionsAtProj).addAll(intInterestingCases.values());
+            }
         }
         // Validation phase, by compiling and running tests
         Path path = Paths.get("/tmp/applyResults/");
