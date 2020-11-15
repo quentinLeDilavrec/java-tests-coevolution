@@ -63,27 +63,27 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
                 String done = session.writeTransaction(new TransactionWork<String>() {
                     @Override
                     public String execute(Transaction tx) {
-                        Result result = tx.run(getCypher(), parameters("json", tmp.subList(findex, findex + fstep),
+                        Result result = tx.run(getCypher(), parameters("json", tmp.subList(findex, Math.min(findex + fstep, tmp.size())),
                                 "tool", evos_spec.miner.getSimpleName() + 3));
                         result.consume();
                         success[0] = true;
-                        return "uploaded evolutions chunk of  " + evolutions.spec.sources.repository;
+                        return "uploaded evolutions chunk of " + evolutions.spec.sources.repository + ": " + findex + "/" + tmp.size();
                     }
                 }, TransactionConfig.builder().withTimeout(Duration.ofMinutes(TIMEOUT)).build());
-                System.out.println(done);
+                logger.info(done);
             } catch (TransientException e) {
                 e.printStackTrace();
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            logger.info(
-                    "uploaded evolutions of " + evolutions.spec.sources.repository + ": " + index + "/" + tmp.size());
             if (success[0]) {
                 index += step;
                 if (((System.nanoTime() - start) / 1000000 / 60 < (TIMEOUT/2))) {
                     step = step * 2;
                 }
             } else {
+                logger.info(
+                    "took too long to upload evolutions of " + evolutions.spec.sources.repository + " with a chunk of size " + step);
                 step = step / 2;
             }
         }

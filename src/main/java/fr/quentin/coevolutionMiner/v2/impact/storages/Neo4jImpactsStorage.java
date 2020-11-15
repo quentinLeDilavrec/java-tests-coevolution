@@ -52,27 +52,27 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
                 String done = session.writeTransaction(new TransactionWork<String>() {
                     @Override
                     public String execute(Transaction tx) {
-                        Result result = tx.run(getCypher(), parameters("json", tmp.subList(findex, findex + fstep),
+                        Result result = tx.run(getCypher(), parameters("json", tmp.subList(findex, Math.min(findex + fstep, tmp.size())),
                                 "tool", value.get("tool"), "rangesToType", value.get("rangesToType")));
                         result.consume();
                         success[0] = true;
-                        return "uploaded impacts chunk of " + impacts.spec.evoSpec.sources.repository;
+                        return "uploaded impacts chunk of " + impacts.spec.evoSpec.sources.repository + ": " + findex + "/" + tmp.size();
                     }
                 }, TransactionConfig.builder().withTimeout(Duration.ofMinutes(TIMEOUT)).build());
-                // System.out.println(done);
+                logger.info(done);
             } catch (TransientException e) {
                 e.printStackTrace();
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            logger.info(
-                    "uploaded impacts of " + impacts.spec.evoSpec.sources.repository + ": " + index + "/" + tmp.size());
             if (success[0]) {
                 index += step;
                 if (((System.nanoTime() - start) / 1000000 / 60 < (TIMEOUT/2))) {
                     step = step * 2;
                 }
             } else {
+                logger.info(
+                    "took too long to upload impacts of " + impacts.spec.evoSpec.sources.repository + " with a chunk of size " + step);
                 step = step / 2;
             }
         }
