@@ -311,7 +311,7 @@ public class CLI {
                         String commitIdBefore = null;
                         int commit_index = 1;
                         int impact_computed = 0;
-                        while (commit_index < s.size() && impact_computed < max_commits_impacts) {
+                        while (commit_index < s.size() - 2 && impact_computed < max_commits_impacts) {
 
                             while (commit_index < s.size() - 2) {
                                 commit_index++;
@@ -431,7 +431,7 @@ public class CLI {
                         String commitIdBefore = null;
                         int commit_index = 1;
                         int impact_computed = 0;
-                        while (commit_index < s.size() && impact_computed < max_commits_impacts) {
+                        while (commit_index < s.size() - 2 && impact_computed < max_commits_impacts) {
 
                             while (commit_index < s.size() - 2) {
                                 commit_index++;
@@ -554,7 +554,7 @@ public class CLI {
                         String commitIdBefore = null;
                         int commit_index = 1;
                         int impact_computed = 0;
-                        while (commit_index < s.size() && impact_computed < max_commits) {
+                        while (commit_index < s.size() - 2 && impact_computed < max_commits) {
 
                             while (commit_index < s.size() - 2) {
                                 commit_index++;
