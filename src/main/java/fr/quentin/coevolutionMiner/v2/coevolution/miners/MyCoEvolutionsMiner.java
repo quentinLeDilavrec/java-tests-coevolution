@@ -314,15 +314,15 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 if(curr == null){
                     curr = new InterestingCase();
                     intInterestingCases.put(testBefore, curr);
-                    evosForThisTest = new HashSet<>();
+                    curr.evosForThisTest = new HashSet<>();
                     curr.testBefore = testBefore;
                     curr.evolutionsAtProj = evolutionsAtProj;
                 } else {
-                    evosForThisTest = curr.evosForThisTest;
                     if (!testBefore.equals(curr.testBefore)){
                         throw new RuntimeException("not same test before");
                     }
                 }
+                evosForThisTest = curr.evosForThisTest;
 
                 for (Evolutions.Evolution.DescRange obj : evosInGame) {
                     Evolution src = ((Evolutions.Evolution.DescRange) obj).getSource();
@@ -382,7 +382,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 initialTestsStatus.put((initialTest), resInitial);
             }
             for (InterestingCase c : interestingCases.get(k)) {
-                if (c.evosForThisTest.size()>20) {
+                if (c.evosForThisTest.size()>40) {
                     logger.info(c.evosForThisTest.size() + "elements for combination is too much");
                     continue;
                 }
