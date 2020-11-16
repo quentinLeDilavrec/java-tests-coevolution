@@ -56,7 +56,7 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
                                 "tool", value.get("tool"), "rangesToType", value.get("rangesToType")));
                         result.consume();
                         success[0] = true;
-                        return "uploaded impacts chunk of " + impacts.spec.evoSpec.sources.repository + ": " + (findex + fstep) + "/" + tmp.size();
+                        return "uploaded impacts chunk of " + impacts.spec.evoSpec.sources.repository + ": " + Math.min(findex + fstep, tmp.size()) + "/" + tmp.size();
                     }
                 }, TransactionConfig.builder().withTimeout(Duration.ofMinutes(TIMEOUT)).build());
                 logger.info(done);
