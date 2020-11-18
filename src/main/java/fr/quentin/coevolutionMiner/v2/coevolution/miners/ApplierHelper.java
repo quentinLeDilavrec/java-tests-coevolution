@@ -546,7 +546,7 @@ public class ApplierHelper implements AutoCloseable {
         for (int i = 0; i < treeTest.length; i++) {
             AbstractVersionedTree xx = treeTest[i];
             AbstractVersionedTree x = watching.getOrDefault(xx, xx);
-            if (x.getAddedVersion() != version) {
+            if (x.getInsertVersion() != version) {
                 continue;
             }
             r[i] = computeAt(version, x);
@@ -556,7 +556,7 @@ public class ApplierHelper implements AutoCloseable {
 
     public CtMethod getUpdatedMethod(VersionCommit version, AbstractVersionedTree treeTest) {
         AbstractVersionedTree xx = treeTest;
-        AbstractVersionedTree xxName = treeTest.getChildren(treeTest.getAddedVersion()).get(0);
+        AbstractVersionedTree xxName = treeTest.getChildren(treeTest.getInsertVersion()).get(0);
         AbstractVersionedTree x = watching.getOrDefault(xx, xx);
         AbstractVersionedTree xName = watching.getOrDefault(xxName, xxName);
         CtMethod actualTest = (CtMethod) x.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
@@ -585,7 +585,7 @@ public class ApplierHelper implements AutoCloseable {
 
     private <T> T computeAt(VersionCommit afterVersion, AbstractVersionedTree x) {
         Object r = null;
-        if (x.getAddedVersion() == afterVersion) {
+        if (x.getInsertVersion() == afterVersion) {
             r = x.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
         }
         if (r == null) {

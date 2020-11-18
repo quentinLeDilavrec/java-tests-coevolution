@@ -33,6 +33,8 @@ import org.junit.jupiter.api.Test;
 import fr.quentin.coevolutionMiner.CLI;
 import fr.quentin.coevolutionMiner.utils.MyProperties;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner;
+import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.impactMiner.types.Evolution.Before;
 import gumtree.spoon.apply.AAction;
 import gumtree.spoon.apply.ActionApplier;
@@ -57,6 +59,40 @@ import spoon.support.compiler.VirtualFile;
  * Unit test for spoon model builder.
  */
 class GumtreeSpoonTest {
+    
+    @Test
+    public void testVersion() throws Exception {
+        Sources src = new Sources(new Sources.Specifier("repository","Test")){
+            @Override
+            public SourcesHelper open() throws Exception {
+                return null;
+            }
+
+            @Override
+            public List<Commit> getCommitsBetween(String commitIdBefore, String commitIdAfter) throws Exception {
+                Commit c0 = this.createCommit("0");
+                this.commits.put("0", c0);
+                Commit c1 = this.createCommit("1");
+                this.commits.put("1", c1);
+                Commit c2 = this.createCommit("2");
+                this.commits.put("2", c2);
+                this.addChildren(c0, c1);
+                this.addChildren(c1, c2);
+                this.addParent(c1, c0);
+                this.addParent(c2, c1);
+                return null;
+            }
+            
+        };
+        src.getCommitsBetween(null, null);
+        Version v0 = GumTreeSpoonMiner.VersionCommit.build(src.getCommit("0"));
+        Version v1 = GumTreeSpoonMiner.VersionCommit.build(src.getCommit("1"));
+        Version v2 = GumTreeSpoonMiner.VersionCommit.build(src.getCommit("2"));
+        assertTrue(v0.compareTo(v0)==0);
+        assertTrue(v0.compareTo(v1)<0);
+        assertTrue(v0.compareTo(v2)<0);
+        assertTrue(v1.compareTo(v0)>0);
+    }
 
         public MavenLauncher build(String gitURL, String commitId) throws Exception {
                 String mvnHome = MyProperties.getPropValues().getProperty("mavenHome");
