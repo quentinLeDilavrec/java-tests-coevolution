@@ -536,6 +536,9 @@ public class ApplierHelper implements AutoCloseable {
             AbstractVersionedTree x = treeTest[i];
             watching.put(x, x);
             CtElement ele = computeAt(version, x);
+            if (ele == null && x.getInsertVersion() == null) {
+                ele = (CtElement)x.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+            }
             r[i] = ele;
         }
         return r;
@@ -583,16 +586,16 @@ public class ApplierHelper implements AutoCloseable {
         return ele;
     }
 
-    private <T> T computeAt(VersionCommit afterVersion, AbstractVersionedTree x) {
+    private <T> T computeAt(VersionCommit version, AbstractVersionedTree x) {
         Object r = null;
-        if (x.getInsertVersion() == afterVersion) {
+        if (x.getInsertVersion() == version) {
             r = x.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
         }
         if (r == null) {
             Map<Version, Object> map = (Map<Version, Object>) x
                     .getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION);
             if(map != null){
-                r = map.get(afterVersion);
+                r = map.get(version);
             }
         }
         return (T) r;
