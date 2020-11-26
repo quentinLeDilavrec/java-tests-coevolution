@@ -18,6 +18,10 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.LinkedBlockingDeque;
 
+import com.github.gumtreediff.actions.MyAction.MyDelete;
+import com.github.gumtreediff.actions.MyAction.MyInsert;
+import com.github.gumtreediff.actions.MyAction.MyMove;
+import com.github.gumtreediff.actions.MyAction.MyUpdate;
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Delete;
 import com.github.gumtreediff.actions.model.Insert;
@@ -36,7 +40,6 @@ import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.impactMiner.types.Evolution.Before;
-import gumtree.spoon.apply.AAction;
 import gumtree.spoon.apply.ActionApplier;
 import gumtree.spoon.apply.MyUtils;
 import gumtree.spoon.apply.WrongAstContextException;
@@ -128,14 +131,14 @@ class GumtreeSpoonTest {
                 srcTree = scanner.getTree(left);
                 MultiDiffImpl mdiff = new MultiDiffImpl(srcTree, leftV);
                 ITree dstTree = scanner.getTree(right);
-                DiffImpl diff = mdiff.compute(scanner.getTreeContext(), dstTree, rightV);
+                DiffImpl diff = mdiff.compute(dstTree, rightV);
 
                 ITree middle = mdiff.getMiddle();
                 // System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), srcTree));
                 // System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), dstTree));
                 // System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), middle));
                 List<Action> retryList = new ArrayList<>();
-                for (Action action : diff.getAtomicActions()) {
+                for (Action action : diff.getAtomic()) {
                         try {
                                 auxApply(scanner, middle, action);
                                 
@@ -165,8 +168,8 @@ class GumtreeSpoonTest {
                         srctree1 = scanner1.getTree(made1);
                         MultiDiffImpl mdiff1 = new MultiDiffImpl(srctree1, leftV);
                         ITree dstTree1 = scanner1.getTree(ori1);
-                        DiffImpl diff1 = mdiff1.compute(scanner1.getTreeContext(), dstTree1, rightV);
-                        for (Action action : diff1.getAtomicActions()) {
+                        DiffImpl diff1 = mdiff1.compute(dstTree1, rightV);
+                        for (Action action : diff1.getAtomic()) {
                             System.err.println(action);
                         }
                         check1(right, pp, middleE);
@@ -179,17 +182,17 @@ class GumtreeSpoonTest {
         private void auxApply(final SpoonGumTreeBuilder scanner, ITree middle, Action action)
                         throws WrongAstContextException {
                 if (action instanceof Insert) {
-                        ActionApplier.applyAInsert((Factory) middle.getMetadata("Factory"),
-                                        scanner.getTreeContext(), (Insert & AAction<Insert>) action);
+                        ActionApplier.applyMyInsert((Factory) middle.getMetadata("Factory"),
+                                        scanner.getTreeContext(), (MyInsert) action);
                 } else if (action instanceof Delete) {
-                        ActionApplier.applyADelete((Factory) middle.getMetadata("Factory"),
-                                        scanner.getTreeContext(), (Delete & AAction<Delete>) action);
+                        ActionApplier.applyMyDelete((Factory) middle.getMetadata("Factory"),
+                                        scanner.getTreeContext(), (MyDelete) action);
                 } else if (action instanceof Update) {
-                        ActionApplier.applyAUpdate((Factory) middle.getMetadata("Factory"),
-                                        scanner.getTreeContext(), (Update & AAction<Update>) action);
-                } else if (action instanceof Move) {
-                        ActionApplier.applyAMove((Factory) middle.getMetadata("Factory"),
-                                        scanner.getTreeContext(), (Move & AAction<Move>) action);
+                        ActionApplier.applyMyUpdate((Factory) middle.getMetadata("Factory"),
+                                        scanner.getTreeContext(), (MyUpdate) action);
+                // } else if (action instanceof Move) {
+                //         ActionApplier.applyMyMove((Factory) middle.getMetadata("Factory"),
+                //                         scanner.getTreeContext(), (MyMove) action);
                 } else {
                         throw null;
                 }
