@@ -16,6 +16,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import com.github.gumtreediff.actions.MyAction.MyMove;
 import com.github.gumtreediff.actions.model.Move;
 import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.ITree;
@@ -72,7 +73,6 @@ import spoon.support.DefaultOutputDestinationHandler;
 import spoon.support.JavaOutputProcessor;
 import spoon.support.OutputDestinationHandler;
 import fr.quentin.impactMiner.Position;
-import gumtree.spoon.apply.AAction;
 import gumtree.spoon.apply.operations.MyScriptGenerator;
 import gumtree.spoon.diff.Diff;
 import gumtree.spoon.diff.DiffImpl;
@@ -292,18 +292,18 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     AbstractVersionedTree treeTestBefore = (AbstractVersionedTree) ((CtElement) testBefore
                             .getOriginal()).getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
                     AbstractVersionedTree treeTestAfter = treeTestBefore;
-                    AAction<Move> mov = (AAction<Move>)treeTestBefore.getMetadata(MyScriptGenerator.MOVE_SRC_ACTION);
+                    MyMove mov = (MyMove)treeTestBefore.getMetadata(MyScriptGenerator.MOVE_SRC_ACTION);
                     if(mov != null) {
-                        treeTestAfter = mov.getTarget();
+                        treeTestAfter = mov.getInsert().getTarget();
                     }
                     testAfter = GumTreeSpoonMiner.toRange(projectAfter, treeTestAfter, currEvoAtCommit.afterVersion);
                 } else {
                     AbstractVersionedTree treeTestAfter = (AbstractVersionedTree) ((CtElement) testAfter
                             .getOriginal()).getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
                     AbstractVersionedTree treeTestBefore = treeTestAfter;
-                    AAction<Move> mov = (AAction<Move>)treeTestAfter.getMetadata(MyScriptGenerator.MOVE_DST_ACTION);
+                    MyMove mov = (MyMove)treeTestAfter.getMetadata(MyScriptGenerator.MOVE_DST_ACTION);
                     if(mov != null) {
-                        treeTestAfter = mov.getTarget();
+                        treeTestAfter = mov.getInsert().getTarget();
                     }
                     testBefore = GumTreeSpoonMiner.toRange(projectBefore, treeTestBefore, currEvoAtCommit.beforeVersion);
                 }
@@ -386,7 +386,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     logger.info(c.evosForThisTest.size() + "elements for combination is too much");
                     continue;
                 }
-                try (ApplierHelper ah = new ApplierHelper(k, atomizedRefactorings);) { // evoPerProj.get(k)
+                try (ApplierHelperImpl ah = new ApplierHelperImpl(k, atomizedRefactorings);) { // evoPerProj.get(k)
                     // ah.setTestDirectories(
                     // ((SpoonAST)
                     // k.getBeforeProj().getAst()).launcher.getPomFile().getSourceDirectories().stream()
@@ -481,7 +481,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
                             EImpact eimpact = new EImpact();
                             for (Evolution e : t) {
-                                eimpact.evolutions.put(e, ah.evoState.ratio(e));
+                                eimpact.evolutions.put(e, ah.ratio(e));
                             }
                             if (report == null) {
                                 res = compileApp(sourcesProvider, path);

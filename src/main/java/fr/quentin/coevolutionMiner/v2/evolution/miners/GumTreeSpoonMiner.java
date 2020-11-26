@@ -16,8 +16,12 @@ import java.util.Set;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import com.github.gumtreediff.actions.MyAction;
+import com.github.gumtreediff.actions.MyAction.AtomicAction;
+import com.github.gumtreediff.actions.MyAction.ComposedAction;
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Delete;
+import com.github.gumtreediff.actions.model.Insert;
 import com.github.gumtreediff.actions.model.Move;
 import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.ITree;
@@ -49,7 +53,6 @@ import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import gumtree.spoon.AstComparator;
-import gumtree.spoon.apply.AAction;
 import gumtree.spoon.apply.operations.MyScriptGenerator;
 import gumtree.spoon.builder.CtWrapper;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
@@ -176,7 +179,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             result.compute();
             return result;
         }
-        
+
         @Override
         public Map<Commit, Evolutions> perBeforeCommit() {
             throw new UnsupportedOperationException(); // TODO put another exception such as CurrEvo already split by commit
@@ -292,26 +295,30 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     srcTree = scanner.getTree(left);
                     this.mdiff = new MultiDiffImpl(srcTree, beforeVersion);
                     ITree dstTree = scanner.getTree(right);
-                    this.diff = mdiff.compute(scanner.getTreeContext(), dstTree, afterVersion);
+                    this.diff = mdiff.compute(dstTree, afterVersion);
                     // this.diff = comp.compare(
                     // ((ProjectSpoon.SpoonAST)
                     // beforeProj.getAst()).launcher.getModel().getRootPackage(),
                     // ((ProjectSpoon.SpoonAST)
                     // afterProj.getAst()).launcher.getModel().getRootPackage());
-                    for (Action op : ((DiffImpl) diff).getComposedActions()) {
-                        addEvolution(op, beforeProj, afterProj);
+                    ((DiffImpl) diff).getComposed().forEach(op -> {
+                        addComposedEvolution(op, beforeProj, afterProj);
                         try {
                             LOGGER.info("O- " + op + "\n");
                         } catch (Exception e) {
                         }
-                    }
-                    for (Action op : ((DiffImpl) diff).getAtomicActions()) {
-                        addEvolution(op, beforeProj, afterProj);
+                    });
+                    ((DiffImpl) diff).getAtomic().forEach(op -> {
+                        addAtomicEvolution(op, beforeProj, afterProj);
+                        // if(!isComposed(op)) {
+                        //     addEvolution(op, beforeProj, afterProj);
+                        // }
                         try {
                             LOGGER.info("O- " + op + "\n");
                         } catch (Exception e) {
                         }
-                    }
+
+                    });
                 }
 
                 // TODO handle moved/renamed projects
@@ -327,25 +334,36 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 return this;
             }
 
-            private void linkProjSpecs(Project.Specifier a, Project.Specifier b) {
-                EvolutionsAtCommit.this.projSpecMapping.put(a, b);
-                EvolutionsAtCommit.this.projSpecMapping.put(b, a);
-            }
+            // private boolean isComposed(Action op) {
+            //     if (op instanceof MyAction) {
+            //         MyAction<AbstractVersionedTree> aact = (MyAction)op;
+            //         AbstractVersionedTree target = aact.getTarget();
+            //         if (op instanceof Delete) {
+            //             if (target.getMetadata(MyScriptGenerator.MOVE_SRC_ACTION)!=null) {
+            //                 return true;
+            //             }
+            //         } else if (op instanceof Insert) {
+            //             if (target.getMetadata(MyScriptGenerator.MOVE_DST_ACTION)!=null) {
+            //                 return true;
+            //             }
+            //         }
+            //     }
+            //     return false;
+            // }
 
-            void addEvolution(Action op, Project<?> astBefore, Project<?> astAfter) {
+            private <U extends Action & AtomicAction<AbstractVersionedTree>> void addAtomicEvolution(U op,
+                    Project<?> astBefore, Project<?> astAfter) {
+                AbstractVersionedTree target = op.getTarget();
+
                 List<ImmutablePair<Range, String>> before = new ArrayList<>();
-                ITree source = ((AAction) op).getSource();
-                AbstractVersionedTree target = ((AAction) op).getTarget();
-                ImmutablePair<Range, String> rangeBef = toRange(astBefore, op instanceof Delete ? target : source,
-                        "src", beforeVersion);
-                if (rangeBef != null) {
-                    before.add(rangeBef);
-                }
                 List<ImmutablePair<Range, String>> after = new ArrayList<>();
-                ImmutablePair<Range, String> rangeAft = op instanceof Delete ? null
-                        : toRange(astAfter, target, "dst", afterVersion);
-                if (rangeAft != null) {
+
+                if (target.getInsertVersion() == afterVersion) {
+                    ImmutablePair<Range, String> rangeAft = toRange(astAfter, target, "", afterVersion);
                     after.add(rangeAft);
+                } else {
+                    ImmutablePair<Range, String> rangeBef = toRange(astBefore, target, "", beforeVersion);
+                    before.add(rangeBef);
                 }
                 Evolution evo = super.addEvolution(op.getName(), before, after, astBefore.commit, astAfter.commit,
                         (Object) op);
@@ -356,7 +374,74 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     augment(dr);
                 }
             }
-    
+
+            private <U extends Action & ComposedAction<AbstractVersionedTree>> void addComposedEvolution(U op,
+                    Project<?> astBefore, Project<?> astAfter) {
+                List<ImmutablePair<Range, String>> before = new ArrayList<>();
+                List<ImmutablePair<Range, String>> after = new ArrayList<>();
+                
+                addComposedEvolutionAux(op, astBefore, astAfter, before, after, null);
+                Evolution evo = super.addEvolution(op.getName(), before, after, astBefore.commit, astAfter.commit,
+                        (Object) op);
+                for (DescRange dr : evo.getBefore()) {
+                    augment(dr);
+                }
+                for (DescRange dr : evo.getAfter()) {
+                    augment(dr);
+                }
+            }
+
+            private <U extends Action & ComposedAction<AbstractVersionedTree>> void addComposedEvolutionAux(U op,
+                    Project<?> astBefore, Project<?> astAfter, 
+                    List<ImmutablePair<Range, String>> before, List<ImmutablePair<Range, String>> after,
+                    String label) {
+                for (Action component : op.composed()) {
+                    String desc = label==null?op.getName():label+"->"+op.getName();
+                    if (component instanceof AtomicAction) {
+                        AbstractVersionedTree target = ((AtomicAction<AbstractVersionedTree>)component).getTarget();
+                        if (target.getInsertVersion() == afterVersion) {
+                            ImmutablePair<Range, String> rangeAft = toRange(astAfter, target, desc, afterVersion);
+                            after.add(rangeAft);
+                        } else {
+                            ImmutablePair<Range, String> rangeBef = toRange(astBefore, target, desc, beforeVersion);
+                            before.add(rangeBef);
+                        }
+                    } else {
+                        addComposedEvolutionAux((Action & ComposedAction<AbstractVersionedTree>)component, astBefore, astAfter, before, after, desc);
+                    }
+                }
+            }
+
+            private void linkProjSpecs(Project.Specifier a, Project.Specifier b) {
+                EvolutionsAtCommit.this.projSpecMapping.put(a, b);
+                EvolutionsAtCommit.this.projSpecMapping.put(b, a);
+            }
+
+            // void addEvolution(Action op, Project<?> astBefore, Project<?> astAfter) {
+            //     List<ImmutablePair<Range, String>> before = new ArrayList<>();
+            //     ITree source = ((AAction) op).getSource();
+            //     AbstractVersionedTree target = (MyAction<AbstractVersionedTree> op).getTarget();
+            //     ImmutablePair<Range, String> rangeBef = toRange(astBefore, op instanceof Delete ? target : source,
+            //             "src", beforeVersion);
+            //     if (rangeBef != null) {
+            //         before.add(rangeBef);
+            //     }
+            //     List<ImmutablePair<Range, String>> after = new ArrayList<>();
+            //     ImmutablePair<Range, String> rangeAft = op instanceof Delete ? null
+            //             : toRange(astAfter, target, "dst", afterVersion);
+            //     if (rangeAft != null) {
+            //         after.add(rangeAft);
+            //     }
+            //     Evolution evo = super.addEvolution(op.getName(), before, after, astBefore.commit, astAfter.commit,
+            //             (Object) op);
+            //     for (DescRange dr : evo.getBefore()) {
+            //         augment(dr);
+            //     }
+            //     for (DescRange dr : evo.getAfter()) {
+            //         augment(dr);
+            //     }
+            // }
+
             private <T> ImmutablePair<Range, String> toRange(Project<T> proj, ITree tree, String desc,
                     Version version) {
                 Range range = GumTreeSpoonMiner.toRange(proj, tree, version);
@@ -758,11 +843,17 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         // }
         // }
     }
-    
+
     // TODO extract functionality in utils
-    public static <T> Range toRange(Project<T> proj, ITree tree,
-            Version version) {
-        CtElement ele = (CtElement) tree.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+    public static <T> Range toRange(Project<T> proj, ITree tree, Version version) {
+        CtElement ele = null;
+        if (tree instanceof AbstractVersionedTree) {
+            if (((AbstractVersionedTree) tree).getInsertVersion() == version) {
+                ele = (CtElement) tree.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+            }
+        } else {
+            ele = (CtElement) tree.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+        }
         int start, end;
         Path path;
         if (ele == null) {

@@ -7,21 +7,15 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 class Chain<T> implements Collection<T> {
-    /**
-	 *
-	 */
-	private final ApplierHelper.EvoStateMaintainer evoStateMaintainer;
 	public final Chain<T> prev;
     public final T curr;
 
-    public Chain(ApplierHelper.EvoStateMaintainer evoStateMaintainer, T curr) {
-        this.evoStateMaintainer = evoStateMaintainer;
+    public Chain(T curr) {
 		this.prev = null;
         this.curr = curr;
     }
 
-    public Chain(ApplierHelper.EvoStateMaintainer evoStateMaintainer, T curr, Chain<T> prev) {
-        this.evoStateMaintainer = evoStateMaintainer;
+    public Chain(T curr, Chain<T> prev) {
 		this.prev = prev;
         this.curr = curr;
     }
