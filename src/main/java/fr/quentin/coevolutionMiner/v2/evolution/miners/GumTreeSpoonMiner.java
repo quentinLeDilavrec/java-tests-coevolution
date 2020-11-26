@@ -857,6 +857,13 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         int start, end;
         Path path;
         if (ele == null) {
+            Map<Version, CtElement> map = (Map<Version, CtElement>) tree
+                    .getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION);
+            if (map != null) {
+                ele = map.get(version);
+            }
+        }
+        if (ele == null) {
             Map<Version, CtElement> map = (Map<Version, CtElement>) tree.getParent()
                     .getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION);
             if (map != null) {
