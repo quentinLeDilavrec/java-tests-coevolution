@@ -301,7 +301,9 @@ public abstract class Evolutions implements Iterable<Evolutions.Evolution> {
         protected String abrv(String str) {
             StringBuilder strB = new StringBuilder();
             for (String word : str.split(" ")) {
-                strB.append(word.substring(0, 1));
+                if (word.length()>0) {
+                    strB.append(word.substring(0, 1));
+                }
             }
             return strB.toString();
         }
