@@ -19,6 +19,8 @@ import java.util.stream.Collectors;
 import com.github.gumtreediff.actions.MyAction;
 import com.github.gumtreediff.actions.MyAction.AtomicAction;
 import com.github.gumtreediff.actions.MyAction.ComposedAction;
+import com.github.gumtreediff.actions.MyAction.MyInsert;
+import com.github.gumtreediff.actions.MyAction.MyUpdate;
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Delete;
 import com.github.gumtreediff.actions.model.Insert;
@@ -361,6 +363,10 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 if (target.getInsertVersion() == afterVersion) {
                     ImmutablePair<Range, String> rangeAft = toRange(astAfter, target, "", afterVersion);
                     after.add(rangeAft);
+                    if (op instanceof MyUpdate) {
+                        ImmutablePair<Range, String> rangeBef = toRange(astBefore, ((MyUpdate)op).getNode(), "", beforeVersion);
+                        before.add(rangeBef);
+                    }
                 } else {
                     ImmutablePair<Range, String> rangeBef = toRange(astBefore, target, "", beforeVersion);
                     before.add(rangeBef);
@@ -395,7 +401,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     Project<?> astBefore, Project<?> astAfter, 
                     List<ImmutablePair<Range, String>> before, List<ImmutablePair<Range, String>> after,
                     String label) {
-                for (Action component : op.composed()) {
+                for (MyAction<?> component : op.composed()) {
                     String desc = label==null?op.getName():label+"->"+op.getName();
                     if (component instanceof AtomicAction) {
                         AbstractVersionedTree target = ((AtomicAction<AbstractVersionedTree>)component).getTarget();

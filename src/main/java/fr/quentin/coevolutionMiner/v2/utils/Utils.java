@@ -120,6 +120,7 @@ public class Utils {
 	    String name = original.getClass().getSimpleName();
 	    name = name.endsWith("Impl") ? name.substring(0, name.length() - "Impl".length()) : name;
 	    name = name.startsWith("Ct") ? name.substring("Ct".length()) : name;
+	    name = name.endsWith("Wrapper") ? name.substring(0, name.length() - "Wrapper".length()) : name;
 	    return name;
 	}
 }
