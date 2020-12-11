@@ -270,6 +270,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             public EvolutionsAtProj evolutionsAtProj;
             public Set<Evolution> evosForThisTest;
             public Range testBefore;
+            public Range testAfter;
         }
         Map<EvolutionsAtProj, Set<InterestingCase>> interestingCases = new HashMap<>();
         Map<EvolutionsAtProj, Set<Evolution>> evoPerProj = new HashMap<>();
@@ -316,6 +317,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     intInterestingCases.put(testBefore, curr);
                     curr.evosForThisTest = new HashSet<>();
                     curr.testBefore = testBefore;
+                    curr.testAfter = testAfter;
                     curr.evolutionsAtProj = evolutionsAtProj;
                 } else {
                     if (!testBefore.equals(curr.testBefore)){
@@ -341,12 +343,29 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 interestingCases.get(evolutionsAtProj).addAll(intInterestingCases.values());
             }
         }
+        // TODO also put the case without impact optimisation (to avoid missing co-evolutions, for now because we ignore to much evo from the code)
+        for (EvolutionsAtProj k : interestingCases.keySet()) {
+            Set<InterestingCase> tmpIntereSet = new HashSet<>();
+            for (InterestingCase c : interestingCases.get(k)) {
+                InterestingCase curr = new InterestingCase();
+                curr.evosForThisTest = new HashSet<>(k.toSet());
+                curr.testBefore = c.testBefore;
+                curr.testAfter = c.testAfter;
+                curr.evolutionsAtProj = c.evolutionsAtProj;
+                tmpIntereSet.add(curr);
+            }
+            interestingCases.get(k).addAll(tmpIntereSet);
+        }
+
+
+
         // Validation phase, by compiling and running tests
         Path path = Paths.get("/tmp/applyResults/");
         Path oriPath = ((SpoonAST) currEvoAtCommit.getRootModule().getBeforeProj().getAst()).rootDir;
+        Path afterOriPath = ((SpoonAST) currEvoAtCommit.getRootModule().getAfterProj().getAst()).rootDir;
         FileUtils.deleteQuietly(path.toFile());
         try {
-            FileUtils.copyDirectory(oriPath.toFile(), path.toFile());
+            FileUtils.copyDirectory(afterOriPath.toFile(), path.toFile());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -379,7 +398,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 String resInitial = executeTest(sourcesProvider, path,
                         ((CtMethod) initialTest.getOriginal()).getDeclaringType().getQualifiedName(),
                         ((CtMethod) initialTest.getOriginal()).getSimpleName());
-                initialTestsStatus.put((initialTest), resInitial);
+                initialTestsStatus.put(initialTest, resInitial);
             }
             for (InterestingCase c : interestingCases.get(k)) {
                 if (c.evosForThisTest.size()>40) {
