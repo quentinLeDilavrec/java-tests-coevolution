@@ -548,7 +548,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     // String resBefore = executeTest(sourcesProvider, path,
                     // ((CtMethod) testsBefore[0]).getDeclaringType().getQualifiedName(),
                     // ((CtMethod) testsBefore[0]).getSimpleName());
-                    ah.setLeafsActionsLimit(6);
+                    ah.setLeafsActionsLimit(5);
                     ah.applyEvolutions(c.evosForThisTest);
 
                     // CtElement[] testsAfter = ah.getUpdatedElement(currEvoAtCommit.beforeVersion,
