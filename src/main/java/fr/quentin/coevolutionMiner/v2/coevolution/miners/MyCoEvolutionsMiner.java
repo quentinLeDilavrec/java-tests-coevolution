@@ -1,10 +1,12 @@
 package fr.quentin.coevolutionMiner.v2.coevolution.miners;
 
 import java.io.File;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -93,7 +95,7 @@ import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon.SpoonAS
 // CAUTION same limitation as MyImpactsMiner
 public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
-    Logger logger = Logger.getLogger(MyCoEvolutionsMiner.class.getName());
+    static Logger logger = Logger.getLogger(MyCoEvolutionsMiner.class.getName());
 
     private final class CoEvolutionsManyCommit extends CoEvolutions {
         private final Set<CoEvolution> coevolutions = new HashSet<>();
@@ -362,7 +364,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
 
         // Validation phase, by compiling and running tests
-        Path path = Paths.get("/tmp/applyResults/");
+        Path path = Paths.get("/tmp/applyResults", getRepoRawPath(), nextCommit.getId(),
+                currentCommit.getId(), ""+new Date().getTime());
         Path oriPath = ((SpoonAST) currEvoAtCommit.getRootModule().getBeforeProj().getAst()).rootDir;
         Path afterOriPath = ((SpoonAST) currEvoAtCommit.getRootModule().getAfterProj().getAst()).rootDir;
         FileUtils.deleteQuietly(path.toFile());
@@ -404,7 +407,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 EImpact eimpact = new EImpact();
                 eimpact.tests.put(initialTest, new ImmutablePair<>(initialTest, report));
                 initialTestsStatus.put(initialTest, eimpact);
-                
+
                 // EImpact eimpact = new EImpact();
                 // for (Evolution e : t) {
                 //     eimpact.evolutions.put(e, ah.ratio(e));
@@ -413,11 +416,12 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 // functionalImpacts.putIfAbsent(t, new HashSet<>());
                 // functionalImpacts.get(t).add(eimpact);
             }
+
             for (InterestingCase c : interestingCases.get(k)) {
-                if (c.evosForThisTest.size() > 40) {
-                    logger.info(c.evosForThisTest.size() + "elements for combination is too much");
-                    continue;
-                }
+                // if (c.evosForThisTest.size() > 40) {
+                //     logger.info(c.evosForThisTest.size() + "elements for combination is too much");
+                //     continue;
+                // }
                 try (ApplierHelperImpl ah = new ApplierHelperImpl(k, atomizedRefactorings);) { // evoPerProj.get(k)
                     // ah.setTestDirectories(
                     // ((SpoonAST)
@@ -441,7 +445,14 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     Factory mFacto = (Factory) k.getMdiff().getMiddle().getMetadata("Factory");
                     mFacto.getEnvironment().setOutputDestinationHandler(outDestHandler);
                     outputProcessor.setFactory(mFacto);
-
+                    Set<Path> initiallyPresent = new HashSet<>();
+                    for (CtType type : mFacto.getModel().getAllTypes()) {
+                        if (!type.isShadow()) {
+                            Path exactPath = outDestHandler.getOutputPath(type.getPackage().getDeclaringModule(), type.getPackage(), type);
+                            initiallyPresent.add(exactPath);
+                        }
+                    }
+                    
                     FunctionalImpactHelper consumer = new FunctionalImpactHelper() {
                         @Override
                         public void accept(Set<Evolution> t) {
@@ -491,10 +502,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                             // }
                             EImpact.FailureReport report = null;
 
-                            report = serializeChangedCode(sourcesProvider, path, outputProcessor, mFacto, report);
+                            report = serializeChangedCode(sourcesProvider, path, outputProcessor, initiallyPresent, mFacto, report);
 
-                            report = runValidationCheckers(sourcesProvider, path,
-                                    testClassQualName, testSimpName, report);
+                            report = runValidationCheckers(sourcesProvider, path, testClassQualName, testSimpName,
+                                    report);
 
                             saveReport(functionalImpacts, ah, t, testToExec, report, testBefore);
                         }
@@ -615,6 +626,16 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         // }
         // oldEnd();
         return currCoevolutions;
+    }
+
+    private String getRepoRawPath() {
+        String repoRawPath;
+        try {
+            repoRawPath = SourcesHelper.parseAddress(this.spec.srcSpec.repository);
+        } catch (URISyntaxException e1) {
+            throw new RuntimeException(e1);
+        }
+        return repoRawPath;
     }
 
     // More controlled state, isolate compilation failures, but costly to
@@ -805,7 +826,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             for (Entry<Set<Evolution>, Set<EImpact>> aaa : eImpacts.entrySet()) {
                 for (EImpact ei : aaa.getValue()) {
                     for (Entry<Range, ImmutablePair<Range, EImpact.FailureReport>> bbb : ei.tests.entrySet()) {
-                        EImpact.FailureReport resInitial = initialTestsStatus.get(bbb.getKey()).tests.get(bbb.getKey()).right;
+                        EImpact.FailureReport resInitial = initialTestsStatus.get(bbb.getKey()).tests
+                                .get(bbb.getKey()).right;
                         ImmutablePair<Range, EImpact.FailureReport> ccc = bbb.getValue();
                         EImpact.FailureReport resAfter = ccc.getValue();
                         if (resInitial == null && resAfter == null) { // V V
@@ -895,7 +917,6 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
 
         class CoEvolutionExtension extends CoEvolution {
-
             public CoEvolutionExtension(Set<Evolution> causes, Set<Evolution> resolutions, Set<Range> testsBefore,
                     Set<Range> testsAfter) {
                 super(causes, resolutions, testsBefore, testsAfter);
@@ -922,37 +943,6 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             return r;
         }
 
-        public void addCoevolution(Set<Evolution> throughCall, Set<Evolution> directLong, Set<Evolution> directShort,
-                Set<Evolution> directShortAdjusted, Set<Range> testBefore, Impacts impactsAfter) {
-            Set<Evolution> direct = new HashSet<>();
-            Set<Range> testsAfter = new HashSet<>();
-            direct.addAll(directLong);
-            for (Evolution evo : directLong) {
-                for (Evolution.DescRange desc : evo.getAfter()) {
-                    testsAfter.addAll(adjustToTests(impactsAfter, desc));
-                }
-            }
-            direct.addAll(directShort);
-            for (Evolution evo : directShort) {
-                for (Evolution.DescRange desc : evo.getAfter()) {
-                    testsAfter.addAll(adjustToTests(impactsAfter, desc));
-                }
-            }
-            direct.addAll(directShortAdjusted);
-            for (Evolution evo : directShortAdjusted) {
-                if (evo.getType().equals("Move Method") || evo.getType().equals("Change Variable Type")
-                        || evo.getType().equals("Rename Variable")) {
-                    for (Evolution.DescRange desc : evo.getAfter()) {
-                        testsAfter.addAll(adjustToTests(impactsAfter, desc));
-                    }
-                }
-            }
-            // TODO coevolutions should be assembled at some point (maybe here) by subset of
-            // their evolutions
-            CoEvolution tmp = new CoEvolutionExtension(throughCall, direct, testBefore, testsAfter);
-            coevolutions.add(tmp);
-        }
-
         @Override
         public Set<CoEvolution> getCoEvolutions() {
             return Collections.unmodifiableSet(coevolutions);
@@ -962,7 +952,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     private static String executeTest(Sources sourcesProvider, Path path, String declaringClass, String name) {
         try {
             StringBuilder r = new StringBuilder();
-            System.out.println("Launching test: " + declaringClass + "#" + name);
+            logger.info("Launching test: " + declaringClass + "#" + name);
             InvocationResult res = SourcesHelper.executeTests(path, declaringClass + "#" + name, x -> {
                 System.out.println(x);
                 r.append(x + "\n");
@@ -984,7 +974,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     private static String compileAllTests(Sources sourcesProvider, Path path) {
         try {
             StringBuilder r = new StringBuilder();
-            System.out.println("Compiling all tests ");
+            logger.info("Compiling all tests ");
             InvocationResult res = SourcesHelper.compileAllTests(path, x -> {
                 System.out.println(x);
                 r.append(x + "\n");
@@ -1006,7 +996,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     private static String compileApp(Sources sourcesProvider, Path path) {
         try {
             StringBuilder r = new StringBuilder();
-            System.out.println("Compiling all tests ");
+            logger.info("Compiling App");
             InvocationResult res = SourcesHelper.compileApp(path, x -> {
                 System.out.println(x);
                 r.append(x + "\n");
@@ -1026,13 +1016,20 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     }
 
     private static EImpact.FailureReport serializeChangedCode(Sources sourcesProvider, Path path,
-            JavaOutputProcessor outputProcessor, Factory mFacto, EImpact.FailureReport report) {
+            JavaOutputProcessor outputProcessor, Set<Path> initialPaths, Factory mFacto, EImpact.FailureReport report) {
+        Set<Path> diff = new HashSet<>(initialPaths);
         String res;
+        OutputDestinationHandler odh = mFacto.getEnvironment().getOutputDestinationHandler();
         try {
-            for (CtType p : mFacto.getModel().getAllTypes()) {
-                if (!p.isShadow()) {
-                    outputProcessor.createJavaFile(p);
+            for (CtType type : mFacto.getModel().getAllTypes()) {
+                if (!type.isShadow()) {
+                    outputProcessor.createJavaFile(type);
+                    Path exactPath = odh.getOutputPath(type.getPackage().getDeclaringModule(), type.getPackage(), type);
+                    diff.remove(exactPath);
                 }
+            }
+            for (Path toRemove : diff) {
+                FileUtils.deleteQuietly(toRemove.toFile());
             }
         } catch (Exception e) {
             if (report == null) {
@@ -1047,8 +1044,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         return report;
     }
 
-    private static FailureReport runValidationCheckers(Sources sourcesProvider, Path path, String testClassQualName, String testSimpName,
-            EImpact.FailureReport report) {
+    private static FailureReport runValidationCheckers(Sources sourcesProvider, Path path, String testClassQualName,
+            String testSimpName, EImpact.FailureReport report) {
         String res;
         if (report == null) {
             res = compileApp(sourcesProvider, path);
