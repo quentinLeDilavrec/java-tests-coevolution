@@ -47,7 +47,9 @@ import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.CoEvolution;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.Specifier;
+import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner;
+import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact.FailureReport;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner.CoEvolutionsExtension;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
@@ -68,15 +70,15 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
     @Override
     public void put(CoEvolutions value) {
         Set<CoEvolution> coevos = value.getCoEvolutions();
-        List<Map<String, Object>> tmp = new ArrayList<>();
+        List<Map<String, Object>> coevoSimp = new ArrayList<>();
         for (CoEvolution coevolution : coevos) {
-            tmp.add(basifyCoevo(coevolution, true, value.spec.srcSpec.repository));
+            coevoSimp.add(basifyCoevo(coevolution, true, value.spec.srcSpec.repository));
         }
         try (Session session = driver.session()) {
             String done = session.writeTransaction(new TransactionWork<String>() {
                 @Override
                 public String execute(Transaction tx) {
-                    Result result = tx.run(getCypher(), parameters("json", tmp, "tool", value.spec.miner));
+                    Result result = tx.run(getCypher(), parameters("coevoSimp", coevoSimp, "tool", value.spec.miner));
                     result.consume();
                     return "done coevolution on " + value.spec.srcSpec.repository;
                 }
@@ -85,6 +87,84 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        List<Map<String, Object>> eImpacts = new ArrayList<>();
+        for (EImpact eImpact : value.getEImpacts()) {
+            eImpacts.add(basifyEImpacts(eImpact));
+        }
+        try (Session session = driver.session()) {
+            String done = session.writeTransaction(new TransactionWork<String>() {
+                @Override
+                public String execute(Transaction tx) {
+                    Result result = tx.run(getCypher(), parameters("eImpacts", eImpacts, "tool", value.spec.miner));
+                    result.consume();
+                    return "done eImpacts on " + value.spec.srcSpec.repository;
+                }
+            });
+            System.out.println(done);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        List<Map<String, Object>> initTests = new ArrayList<>();
+        for (ImmutablePair<Range, FailureReport> initTest : value.getInitialTests()) {
+            initTests.add(basifyInitTests(initTest));
+        }
+        try (Session session = driver.session()) {
+            String done = session.writeTransaction(new TransactionWork<String>() {
+                @Override
+                public String execute(Transaction tx) {
+                    Result result = tx.run(getCypher(), parameters("initTests", initTests, "tool", value.spec.miner));
+                    result.consume();
+                    return "done initTest on " + value.spec.srcSpec.repository;
+                }
+            });
+            System.out.println(done);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private Map<String, Object> basifyInitTests(ImmutablePair<Range, FailureReport> initialTest) {
+        Map<String, Object> r = initialTest.left.toMap();
+        FailureReport fr = initialTest.right;
+        r.put("what", fr.what);
+        r.put("where", fr.where);
+        r.put("when", fr.when);
+        return r;
+    }
+
+    private Map<String, Object> basifyEImpacts(EImpact eImpact) {
+        Map<String, Object> r = new HashMap<>();
+        List<Map<String, Object>> tests = new ArrayList<>();
+        r.put("tests", tests);
+        for (Entry<Range, ImmutablePair<Range, FailureReport>> t : eImpact.getTests().entrySet()) {
+            Map<String, Object> test = t.getValue().left.toMap();
+            tests.add(test);
+            FailureReport fr = t.getValue().right;
+            test.put("what", fr.what);
+            test.put("where", fr.where);
+            test.put("when", fr.when);
+            List<Map<String, Object>> before = new ArrayList<>();
+            test.put("before", before);
+            if (t.getKey()!=t.getValue().left) {
+                before.add(t.getKey().toMap());
+            }
+        }
+        List<String> evolutions_url = new ArrayList<>();
+        List<Map<String, Object>> evolutions = new ArrayList<>();
+        r.put("evolutions", evolutions);
+        for (Entry<Evolution, ?> evo : eImpact.getEvolutions().entrySet()) {
+            Map<String, Object> evolution = new HashMap<>();
+            evolutions.add(evolution);
+            Map<String, Object> tmp = evo.getKey().asMap();
+            evolution.put("content", tmp);
+            // TODO show fraction? for now it is always at 1
+            evolutions_url.add((String) (((Map<String, Object>) tmp.get("content")).get("url")));
+        }
+        Map<String, Object> content = new HashMap<>();
+        content.put("evolutions", evolutions_url);
+        r.put("content", content);
+
+        return r;
     }
 
     private Map<String, Object> basifyCoevo(CoEvolution coevolution, boolean validated, String repository) { // TODO
@@ -207,64 +287,64 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
      */
     @Override
     public void construct(CoEvolutions.Specifier spec) {
-        Evolutions evolutions = evoHandler.handle(spec.evoSpec);
-        Project astBefore = astHandler.handle(astHandler.buildSpec(spec.srcSpec, spec.evoSpec.commitIdBefore));
-        Project astAfter = astHandler.handle(astHandler.buildSpec(spec.srcSpec, spec.evoSpec.commitIdAfter));
-        Set<Range> startingTests = null;
-        final List<Map<String, Object>> list = startingTests.stream().map(x -> {
-            Map<String, Object> r = new HashMap<>();
-            r.put("repo", spec.srcSpec.repository);
-            r.put("commitId", spec.evoSpec.commitIdBefore);
-            r.put("path", x.getFile().getPath());
-            r.put("start", x.getStart());
-            r.put("end", x.getEnd());
-            return r;
-        }).collect(Collectors.toList());
-        CoEvolutionsExtension r = new CoEvolutionsExtension(spec, evolutions, astBefore, astAfter);
-        try (Session session = driver.session()) {
-            List<CoEvolution> done = session.readTransaction(new TransactionWork<List<CoEvolution>>() {
-                @Override
-                public List<CoEvolution> execute(Transaction tx) {
-                    Result queryResult = tx.run(getMinerCypher(), parameters("data", list));
-                    return queryResult.list(x -> {
-                        Value beforeTestRaw = x.get("test");
-                        Project.AST.FileSnapshot.Range testBefore = astBefore.getRange(
-                                beforeTestRaw.get("path").asString(), beforeTestRaw.get("start").asInt(),
-                                beforeTestRaw.get("end").asInt());
+        // Evolutions evolutions = evoHandler.handle(spec.evoSpec);
+        // Project astBefore = astHandler.handle(astHandler.buildSpec(spec.srcSpec, spec.evoSpec.commitIdBefore));
+        // Project astAfter = astHandler.handle(astHandler.buildSpec(spec.srcSpec, spec.evoSpec.commitIdAfter));
+        // Set<Range> startingTests = null;
+        // final List<Map<String, Object>> list = startingTests.stream().map(x -> {
+        //     Map<String, Object> r = new HashMap<>();
+        //     r.put("repo", spec.srcSpec.repository);
+        //     r.put("commitId", spec.evoSpec.commitIdBefore);
+        //     r.put("path", x.getFile().getPath());
+        //     r.put("start", x.getStart());
+        //     r.put("end", x.getEnd());
+        //     return r;
+        // }).collect(Collectors.toList());
+        // CoEvolutionsExtension r = new CoEvolutionsExtension(spec, evolutions, astBefore, astAfter);
+        // try (Session session = driver.session()) {
+        //     List<CoEvolution> done = session.readTransaction(new TransactionWork<List<CoEvolution>>() {
+        //         @Override
+        //         public List<CoEvolution> execute(Transaction tx) {
+        //             Result queryResult = tx.run(getMinerCypher(), parameters("data", list));
+        //             return queryResult.list(x -> {
+        //                 Value beforeTestRaw = x.get("test");
+        //                 Project.AST.FileSnapshot.Range testBefore = astBefore.getRange(
+        //                         beforeTestRaw.get("path").asString(), beforeTestRaw.get("start").asInt(),
+        //                         beforeTestRaw.get("end").asInt());
 
-                        Set<Evolution> causes = new HashSet<>();
-                        causes.addAll(getEvo(x.get("shortCall"), evolutions, astBefore, astAfter));
-                        causes.addAll(getEvo(x.get("longCall"), evolutions, astBefore, astAfter));
+        //                 Set<Evolution> causes = new HashSet<>();
+        //                 causes.addAll(getEvo(x.get("shortCall"), evolutions, astBefore, astAfter));
+        //                 causes.addAll(getEvo(x.get("longCall"), evolutions, astBefore, astAfter));
 
-                        Set<Evolution> evosLong = getEvo(x.get("long"), evolutions, astBefore, astAfter);
-                        // for (Evolution aaa : evosLong) {
-                        // if (aaa.getType().equals("Move Method")||aaa.getType().equals("Change
-                        // Variable Type")||aaa.getType().equals("Rename Variable")) {
-                        // tmp.TestAfter = aaa.getAfter().get(0).getTarget();
-                        // }
-                        // }
-                        Set<Evolution> evosShort = getEvo(x.get("short"), evolutions, astBefore, astAfter);
+        //                 Set<Evolution> evosLong = getEvo(x.get("long"), evolutions, astBefore, astAfter);
+        //                 // for (Evolution aaa : evosLong) {
+        //                 // if (aaa.getType().equals("Move Method")||aaa.getType().equals("Change
+        //                 // Variable Type")||aaa.getType().equals("Rename Variable")) {
+        //                 // tmp.TestAfter = aaa.getAfter().get(0).getTarget();
+        //                 // }
+        //                 // }
+        //                 Set<Evolution> evosShort = getEvo(x.get("short"), evolutions, astBefore, astAfter);
 
-                        Set<Evolution> evosShortAdjusted = getEvo(x.get("shortAdjusted"), evolutions, astBefore,
-                                astAfter);
+        //                 Set<Evolution> evosShortAdjusted = getEvo(x.get("shortAdjusted"), evolutions, astBefore,
+        //                         astAfter);
 
-                        // for (Evolution aaa : evosShort) {
-                        // if (aaa.getType().equals("Move Method")||aaa.getType().equals("Change
-                        // Variable Type")||aaa.getType().equals("Rename Variable")) {
-                        // tmp.TestAfter = aaa.getAfter().get(0).getTarget();
-                        // }
-                        // }
+        //                 // for (Evolution aaa : evosShort) {
+        //                 // if (aaa.getType().equals("Move Method")||aaa.getType().equals("Change
+        //                 // Variable Type")||aaa.getType().equals("Rename Variable")) {
+        //                 // tmp.TestAfter = aaa.getAfter().get(0).getTarget();
+        //                 // }
+        //                 // }
 
-                        r.addCoevolution(causes, evosLong, evosShort, evosShortAdjusted,
-                                Collections.singleton(testBefore), null);
+        //                 r.addCoevolution(causes, evosLong, evosShort, evosShortAdjusted,
+        //                         Collections.singleton(testBefore), null);
 
-                        return null;
-                    });
-                }
-            });
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        //                 return null;
+        //             });
+        //         }
+        //     });
+        // } catch (Exception e) {
+        //     throw new RuntimeException(e);
+        // }
     }
 
     // TODO use after ranges to make the match

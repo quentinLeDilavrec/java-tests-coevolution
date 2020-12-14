@@ -1,12 +1,12 @@
-WITH $json as data, $tool as tool
-UNWIND data as coevo
-WITH coevo as coevo, tool as tool
+WITH $coevoSimp as coevoSimp
+UNWIND coevoSimp as coevo
+WITH coevo as coevo
 MERGE (coevolution:CoEvolution {causes:coevo.content.causes, resolutions:coevo.content.resolutions})
 ON CREATE SET coevolution.validated = coevo.content.validated
 ON MATCH SET coevolution.validated = coevo.content.validated
 
-MERGE (t:Tool {name:tool})
-ON CREATE SET t.name = tool
+MERGE (t:Tool {name:$tool})
+ON CREATE SET t.name = $tool
 
 MERGE (coevolution)-[rel:WAS_MINED_BY]->(t)
 ON CREATE SET rel.validated = coevo.content.validated

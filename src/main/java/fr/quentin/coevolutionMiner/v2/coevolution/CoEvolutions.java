@@ -11,6 +11,8 @@ import java.util.Set;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
+
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
@@ -20,6 +22,8 @@ import fr.quentin.impactMiner.Impacts.Relations;
 import fr.quentin.impactMiner.Position;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
+import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact;
+import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact.FailureReport;
 
 // TODO try to extends Evolutions or make an interface for inner class Evolution and implement it with CoEvolution
 public abstract class CoEvolutions {
@@ -138,6 +142,8 @@ public abstract class CoEvolutions {
     }
 
     public abstract Set<CoEvolution> getCoEvolutions();
+    public abstract Set<EImpact> getEImpacts();
+    public abstract Set<ImmutablePair<Range, EImpact.FailureReport>> getInitialTests();
 
     public JsonElement toJson() {
         return new JsonObject();

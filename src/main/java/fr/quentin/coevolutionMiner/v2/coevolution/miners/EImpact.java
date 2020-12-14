@@ -1,5 +1,6 @@
 package fr.quentin.coevolutionMiner.v2.coevolution.miners;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -9,16 +10,29 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 
-class EImpact {
+public class EImpact {
 
-    static class FailureReport {
-	    String what;
-	    String where;
-	    String when;
+    public static class FailureReport {
+	    public final String what;
+	    public final String where;
+        public final String when;
+
+        public FailureReport(String what, String where, String when) {
+            this.what = what;
+            this.where = where;
+            this.when = when;
+        }
+        
 	}
 
-	public final Map<Range, ImmutablePair<Range, EImpact.FailureReport>> tests = new HashMap<>();
-    public final Map<Evolution, Fraction> evolutions = new HashMap<>();
+	final Map<Range, ImmutablePair<Range, EImpact.FailureReport>> tests = new HashMap<>();
+    final Map<Evolution, Fraction> evolutions = new HashMap<>();
+    public Map<Evolution, Fraction> getEvolutions() {
+        return Collections.unmodifiableMap(evolutions);
+    }
+    public Map<Range, ImmutablePair<Range, EImpact.FailureReport>> getTests() {
+        return Collections.unmodifiableMap(tests);
+    }
 
     @Override
     public int hashCode() {

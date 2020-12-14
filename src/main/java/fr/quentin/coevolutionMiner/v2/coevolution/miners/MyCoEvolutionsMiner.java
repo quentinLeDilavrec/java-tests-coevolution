@@ -99,6 +99,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
     private final class CoEvolutionsManyCommit extends CoEvolutions {
         private final Set<CoEvolution> coevolutions = new HashSet<>();
+        private final Set<EImpact> eImpacts = new HashSet<>();
+        private final Set<ImmutablePair<Range, EImpact.FailureReport>> initialTests = new HashSet<>();
 
         CoEvolutionsManyCommit(Specifier spec) {
             super(spec);
@@ -116,6 +118,18 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         public void add(CoEvolutionsExtension currCoevolutions) {
             coevolutions.addAll(currCoevolutions.getCoEvolutions());
+            eImpacts.addAll(currCoevolutions.getEImpacts());
+            initialTests.addAll(currCoevolutions.getInitialTests());
+        }
+
+        @Override
+        public Set<EImpact> getEImpacts() {
+            return eImpacts;
+        }
+
+        @Override
+        public Set<ImmutablePair<Range, EImpact.FailureReport>> getInitialTests() {
+            return initialTests;
         }
     }
 
@@ -812,6 +826,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         private final Set<EImpact> probableCoEvoResolutions = new HashSet<>(); // merge won't help much but need to
                                                                                // confirm
         private final Set<EImpact> partialResolutions = new HashSet<>(); // merge with other commits
+        private final Set<EImpact> failfail = new HashSet<>(); // X X
         private final Map<Evolution, Map<Range, EImpact>> probableResolutionsIndex = new HashMap<>();
         private final Map<Evolution, Map<Range, EImpact>> probablyNothing = new HashMap<>();
 
@@ -820,6 +835,25 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             this.evolutions = evolutions;
             this.astBefore = astBefore;
             this.astAfter = astAfter;
+        }
+
+        @Override
+        public Set<EImpact> getEImpacts() {
+            Set<EImpact> r = new HashSet<>();
+            r.addAll(probableCoEvoResolutions);
+            r.addAll(probableCoevoCauses);
+            r.addAll(partialResolutions);
+            r.addAll(failfail);
+            return r;
+        }
+
+        @Override
+        public Set<ImmutablePair<Range,EImpact.FailureReport>> getInitialTests() {
+            Set<ImmutablePair<Range,EImpact.FailureReport>> r = new HashSet<>();
+            for (Entry<Range, EImpact> p : initialTestsStatus.entrySet()) {
+                r.add(p.getValue().tests.get(p.getKey()));
+            }
+            return r;
         }
 
         public void addEImpacts(Map<Set<Evolution>, Set<EImpact>> eImpacts) {
@@ -851,6 +885,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                                 // probableResolutionsIndex.get(ddd).put(ccc.getKey(), ei);
                             }
                         } else { // X X
+                            failfail.add(ei);
                             // here nothing, but could be part of a any, if considering multiple commits
                             // TODO useless to put in the graph? would need to be assembled with evo from
                             // prev commits until test pass
@@ -1035,9 +1070,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             if (report == null) {
                 res = compileApp(sourcesProvider, path);
                 if (res != null) {
-                    report = new EImpact.FailureReport();
-                    report.when = "App compiling";
-                    report.what = e.toString();
+                    report = new EImpact.FailureReport(e.toString(), null,"App compiling");
                 }
             }
         }
@@ -1050,25 +1083,19 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         if (report == null) {
             res = compileApp(sourcesProvider, path);
             if (res != null) {
-                report = new EImpact.FailureReport();
-                report.when = "App compiling";
-                report.what = res;
+                report = new EImpact.FailureReport(res,null,"App compiling");
             }
         }
         if (report == null) {
             res = compileAllTests(sourcesProvider, path);
             if (res != null) {
-                report = new EImpact.FailureReport();
-                report.when = "Tests compiling";
-                report.what = res;
+                report = new EImpact.FailureReport(res,null,"Tests compiling");
             }
         }
         if (report == null) {
             res = executeTest(sourcesProvider, path, testClassQualName, testSimpName);
             if (res != null) {
-                report = new EImpact.FailureReport();
-                report.when = "Tests execution";
-                report.what = res;
+                report = new EImpact.FailureReport(res,null,"Tests execution");
             }
         }
         return report;
