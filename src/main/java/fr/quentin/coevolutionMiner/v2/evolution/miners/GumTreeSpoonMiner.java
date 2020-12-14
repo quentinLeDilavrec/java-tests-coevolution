@@ -362,17 +362,19 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
 
                 if (target.getInsertVersion() == afterVersion) {
                     ImmutablePair<Range, String> rangeAft = toRange(astAfter, target, "", afterVersion);
-                    after.add(rangeAft);
+                    if(rangeAft!=null)
+                        after.add(rangeAft);
                     if (op instanceof MyUpdate) {
                         ImmutablePair<Range, String> rangeBef = toRange(astBefore, ((MyUpdate)op).getNode(), "", beforeVersion);
-                        before.add(rangeBef);
+                        if(rangeBef!=null)
+                            before.add(rangeBef);
                     }
                 } else {
                     ImmutablePair<Range, String> rangeBef = toRange(astBefore, target, "", beforeVersion);
-                    before.add(rangeBef);
+                    if(rangeBef!=null)
+                        before.add(rangeBef);
                 }
-                Evolution evo = super.addEvolution(op.getName(), before, after, astBefore.commit, astAfter.commit,
-                        (Object) op);
+                Evolution evo = super.addEvolution(op.getName(), before, after, astBefore.commit, astAfter.commit, (Object) op);
                 for (DescRange dr : evo.getBefore()) {
                     augment(dr);
                 }
