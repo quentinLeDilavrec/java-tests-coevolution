@@ -95,7 +95,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
             String done = session.writeTransaction(new TransactionWork<String>() {
                 @Override
                 public String execute(Transaction tx) {
-                    Result result = tx.run(getCypher(), parameters("eImpacts", eImpacts, "tool", value.spec.miner));
+                    Result result = tx.run(Utils.memoizedReadResource("eimpact_cypher.cql"), parameters("eImpacts", eImpacts, "tool", value.spec.miner));
                     result.consume();
                     return "done eImpacts on " + value.spec.srcSpec.repository;
                 }
@@ -112,7 +112,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
             String done = session.writeTransaction(new TransactionWork<String>() {
                 @Override
                 public String execute(Transaction tx) {
-                    Result result = tx.run(getCypher(), parameters("initTests", initTests, "tool", value.spec.miner));
+                    Result result = tx.run(Utils.memoizedReadResource("initTest_cypher.cql"), parameters("initTests", initTests, "tool", value.spec.miner));
                     result.consume();
                     return "done initTest on " + value.spec.srcSpec.repository;
                 }
