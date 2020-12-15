@@ -6,8 +6,8 @@ UNWIND $eImpacts as eImp
 
     MERGE (eImpact)-[rel:WAS_MINED_BY]->(t)
 
-    WITH eImpact as eImpact, eImp as eImp, eImp.tests as tests
-    UNWIND tests as test
+    WITH eImpact as eImpact, eImp as eImp
+    UNWIND eImp.tests as test
 
         WITH eImpact as eImpact, eImp as eImp, test as test
         MERGE (r:Range {range:[toInteger(test.start),toInteger(test.end)], start:toInteger(test.start), end:toInteger(test.end),
