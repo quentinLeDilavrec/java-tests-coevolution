@@ -89,7 +89,9 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         }
         List<Map<String, Object>> eImpacts = new ArrayList<>();
         for (EImpact eImpact : value.getEImpacts()) {
-            eImpacts.add(basifyEImpacts(eImpact));
+            if (eImpact.getEvolutions().size()>0) {
+                eImpacts.add(basifyEImpacts(eImpact));
+            }
         }
         try (Session session = driver.session()) {
             String done = session.writeTransaction(new TransactionWork<String>() {
