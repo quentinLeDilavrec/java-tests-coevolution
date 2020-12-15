@@ -1,5 +1,5 @@
 UNWIND $eImpacts as eImp
-    MERGE (eImpact:EImpact {evolutions:eImp.content.evolutions, tests:eImp.content.tests})
+    MERGE (eImpact:EImpact {evolutions:eImp.content.evolutions})
 
     MERGE (t:Tool {name:$tool})
     ON CREATE SET t.name = $tool
