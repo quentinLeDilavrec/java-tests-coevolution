@@ -126,9 +126,9 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
     private Map<String, Object> basifyInitTests(ImmutablePair<Range, FailureReport> initialTest) {
         Map<String, Object> r = initialTest.left.toMap();
         FailureReport fr = initialTest.right;
-        r.put("what", fr.what);
-        r.put("where", fr.where);
-        r.put("when", fr.when);
+        r.put("what", fr==null ? null : fr.what);
+        r.put("where", fr==null ? null : fr.where);
+        r.put("when", fr==null ? null : fr.when);
         return r;
     }
 
@@ -140,9 +140,9 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
             Map<String, Object> test = t.getValue().left.toMap();
             tests.add(test);
             FailureReport fr = t.getValue().right;
-            test.put("what", fr.what);
-            test.put("where", fr.where);
-            test.put("when", fr.when);
+            test.put("what", fr==null ? null : fr.what);
+            test.put("where", fr==null ? null : fr.where);
+            test.put("when", fr==null ? null : fr.when);
             List<Map<String, Object>> before = new ArrayList<>();
             test.put("before", before);
             if (t.getKey()!=t.getValue().left) {
