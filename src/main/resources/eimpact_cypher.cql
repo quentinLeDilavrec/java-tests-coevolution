@@ -17,8 +17,8 @@ UNWIND $eImpacts as eImp
 
         WITH eImpact as eImpact, eImp as eImp, test as test, r as r
         MERGE (eImpact)-[imp:IMPACT]->(r)
-        ON MATCH SET i imp.failureReport = test.report.what, imp.failAt = test.report.`when`
-        ON CREATE SET i imp.failureReport = test.report.what, imp.failAt = test.report.`when`
+        ON MATCH SET imp.failureReport = test.report.what, imp.failAt = test.report.`when`
+        ON CREATE SET imp.failureReport = test.report.what, imp.failAt = test.report.`when`
 
         WITH eImpact as eImpact, eImp as eImp, test as test, r as r
         UNWIND test.before as before
