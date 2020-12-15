@@ -69,6 +69,23 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
 
     @Override
     public void put(CoEvolutions value) {
+        List<Map<String, Object>> initTests = new ArrayList<>();
+        for (ImmutablePair<Range, FailureReport> initTest : value.getInitialTests()) {
+            initTests.add(basifyInitTests(initTest));
+        }
+        try (Session session = driver.session()) {
+            String done = session.writeTransaction(new TransactionWork<String>() {
+                @Override
+                public String execute(Transaction tx) {
+                    Result result = tx.run(Utils.memoizedReadResource("initTest_cypher.cql"), parameters("initTests", initTests, "tool", value.spec.miner));
+                    result.consume();
+                    return "done initTest on " + value.spec.srcSpec.repository;
+                }
+            });
+            System.out.println(done);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         Set<CoEvolution> coevos = value.getCoEvolutions();
         List<Map<String, Object>> coevoSimp = new ArrayList<>();
         for (CoEvolution coevolution : coevos) {
@@ -100,23 +117,6 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                     Result result = tx.run(Utils.memoizedReadResource("eimpact_cypher.cql"), parameters("eImpacts", eImpacts, "tool", value.spec.miner));
                     result.consume();
                     return "done eImpacts on " + value.spec.srcSpec.repository;
-                }
-            });
-            System.out.println(done);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        List<Map<String, Object>> initTests = new ArrayList<>();
-        for (ImmutablePair<Range, FailureReport> initTest : value.getInitialTests()) {
-            initTests.add(basifyInitTests(initTest));
-        }
-        try (Session session = driver.session()) {
-            String done = session.writeTransaction(new TransactionWork<String>() {
-                @Override
-                public String execute(Transaction tx) {
-                    Result result = tx.run(Utils.memoizedReadResource("initTest_cypher.cql"), parameters("initTests", initTests, "tool", value.spec.miner));
-                    result.consume();
-                    return "done initTest on " + value.spec.srcSpec.repository;
                 }
             });
             System.out.println(done);
