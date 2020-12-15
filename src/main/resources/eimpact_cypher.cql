@@ -30,7 +30,7 @@ UNWIND $eImpacts as eImp
             ON CREATE SET rbef.isTest = true
 
             WITH eImpact as eImpact, eImp as eImp, test as test, r as r, rbef as rbef
-            MERGE (eImpact)-[imp:TEST_BEFORE]->(rbef)
+            MERGE (eImpact)-[:TEST_BEFORE]->(rbef)
 
             WITH eImpact as eImpact, eImp as eImp, test as test, r as r, rbef as rbef
             MERGE (r)-[:ORIGIN]->(rbef)
