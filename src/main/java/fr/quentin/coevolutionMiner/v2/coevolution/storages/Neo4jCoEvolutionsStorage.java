@@ -21,6 +21,7 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.text.diff.StringsComparator;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
@@ -163,6 +164,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
             evolutions_url.add((String) (((Map<String, Object>) tmp.get("content")).get("url")));
         }
         Map<String, Object> content = new HashMap<>();
+        evolutions_url.sort((a,b)->a.compareTo(b));
         content.put("evolutions", evolutions_url);
         r.put("content", content);
 
@@ -193,7 +195,9 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         }
         Map<String, Object> content = new HashMap<>();
         content.put("validated", validated);
+        causes_url.sort((a,b)->a.compareTo(b));
         content.put("causes", causes_url);
+        resolutions_url.sort((a,b)->a.compareTo(b));
         content.put("resolutions", resolutions_url);
         coevo.put("content", content);
         coevo.put("pointed", pointed);
