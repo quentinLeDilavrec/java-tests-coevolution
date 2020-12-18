@@ -601,17 +601,24 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
 
                 @Override
                 public boolean hasNext() {
-                    return commitIt.hasNext() || (it != null && it.hasNext());
+                    while (true) {
+                        if (it.hasNext()) {
+                            return true;
+                        }
+                        if (commitIt.hasNext()) {
+                            it = commitIt.next().iterator();
+                        } else {
+                            return false;
+                        }
+                    }
                 }
 
                 @Override
                 public Evolution next() {
-                    while (true) {
-                        try {
-                            return it.next();
-                        } catch (NoSuchElementException e) {
-                            it = commitIt.next().iterator();
-                        }
+                    if(hasNext()) {
+                        return it.next();
+                    } else {
+                        throw new NoSuchElementException();
                     }
                 }
 
