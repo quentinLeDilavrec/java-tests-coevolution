@@ -362,19 +362,21 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
 
                 if (target.getInsertVersion() == afterVersion) {
                     ImmutablePair<Range, String> rangeAft = toRange(astAfter, target, "", afterVersion);
-                    if(rangeAft!=null)
+                    if (rangeAft != null)
                         after.add(rangeAft);
                     if (op instanceof MyUpdate) {
-                        ImmutablePair<Range, String> rangeBef = toRange(astBefore, ((MyUpdate)op).getNode(), "", beforeVersion);
-                        if(rangeBef!=null)
+                        ImmutablePair<Range, String> rangeBef = toRange(astBefore, ((MyUpdate) op).getNode(), "",
+                                beforeVersion);
+                        if (rangeBef != null)
                             before.add(rangeBef);
                     }
                 } else {
                     ImmutablePair<Range, String> rangeBef = toRange(astBefore, target, "", beforeVersion);
-                    if(rangeBef!=null)
+                    if (rangeBef != null)
                         before.add(rangeBef);
                 }
-                Evolution evo = super.addEvolution(op.getName(), before, after, astBefore.commit, astAfter.commit, (Object) op);
+                Evolution evo = super.addEvolution(op.getName(), before, after, astBefore.commit, astAfter.commit,
+                        (Object) op);
                 for (DescRange dr : evo.getBefore()) {
                     augment(dr);
                 }
@@ -387,7 +389,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     Project<?> astBefore, Project<?> astAfter) {
                 List<ImmutablePair<Range, String>> before = new ArrayList<>();
                 List<ImmutablePair<Range, String>> after = new ArrayList<>();
-                
+
                 addComposedEvolutionAux(op, astBefore, astAfter, before, after, null);
                 Evolution evo = super.addEvolution(op.getName(), before, after, astBefore.commit, astAfter.commit,
                         (Object) op);
@@ -400,13 +402,12 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             }
 
             private <U extends Action & ComposedAction<AbstractVersionedTree>> void addComposedEvolutionAux(U op,
-                    Project<?> astBefore, Project<?> astAfter, 
-                    List<ImmutablePair<Range, String>> before, List<ImmutablePair<Range, String>> after,
-                    String label) {
+                    Project<?> astBefore, Project<?> astAfter, List<ImmutablePair<Range, String>> before,
+                    List<ImmutablePair<Range, String>> after, String label) {
                 for (MyAction<?> component : op.composed()) {
-                    String desc = label==null?op.getName():label+"->"+op.getName();
+                    String desc = label == null ? op.getName() : label + "->" + op.getName();
                     if (component instanceof AtomicAction) {
-                        AbstractVersionedTree target = ((AtomicAction<AbstractVersionedTree>)component).getTarget();
+                        AbstractVersionedTree target = ((AtomicAction<AbstractVersionedTree>) component).getTarget();
                         if (target.getInsertVersion() == afterVersion) {
                             ImmutablePair<Range, String> rangeAft = toRange(astAfter, target, desc, afterVersion);
                             after.add(rangeAft);
@@ -415,7 +416,8 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                             before.add(rangeBef);
                         }
                     } else {
-                        addComposedEvolutionAux((Action & ComposedAction<AbstractVersionedTree>)component, astBefore, astAfter, before, after, desc);
+                        addComposedEvolutionAux((Action & ComposedAction<AbstractVersionedTree>) component, astBefore,
+                                astAfter, before, after, desc);
                     }
                 }
             }
@@ -704,17 +706,23 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
 
                 @Override
                 public boolean hasNext() {
-                    return commitIt.hasNext() || (it != null && it.hasNext());
+                    while (true) {
+                        if (it != null && it.hasNext()) {
+                            return true;
+                        } else if (commitIt.hasNext()) {
+                            it = commitIt.next().iterator();
+                        } else {
+                            return false;
+                        }
+                    }
                 }
 
                 @Override
                 public Evolution next() {
-                    while (true) {
-                        try {
-                            return it.next();
-                        } catch (NoSuchElementException e) {
-                            it = commitIt.next().iterator();
-                        }
+                    if (hasNext()) {
+                        return it.next();
+                    } else {
+                        throw new NoSuchElementException();
                     }
                 }
 
@@ -854,60 +862,17 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
 
     // TODO extract functionality in utils
     public static <T> Range toRange(Project<T> proj, ITree tree, Version version) {
-        CtElement ele = null;
-        if (tree instanceof AbstractVersionedTree) {
-            if (((AbstractVersionedTree) tree).getInsertVersion() == version) {
-                ele = (CtElement) tree.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
-            }
-        } else {
-            ele = (CtElement) tree.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+        ImmutablePair<CtElement, SourcePosition> pair = gumtree.spoon.apply.MyUtils.toNormalizedPreciseSpoon(tree,
+                version);
+        if (pair == null) {
+            return null;
+        } else if (pair.left == null || pair.right == null) {
+            return null;
+        } else if (pair.right.getFile() == null) {
+            return null;
         }
-        int start, end;
-        Path path;
-        if (ele == null) {
-            Map<Version, CtElement> map = (Map<Version, CtElement>) tree
-                    .getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION);
-            if (map != null) {
-                ele = map.get(version);
-            }
-        }
-        if (ele == null) {
-            Map<Version, CtElement> map = (Map<Version, CtElement>) tree.getParent()
-                    .getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION);
-            if (map != null) {
-                ele = map.get(version);
-            }
-        }
-        if (ele == null) {
-            ele = (CtElement) tree.getParent().getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
-            if (ele == null) {
-                ele = (CtElement) tree.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-            }
-            if (ele == null) {
-                ele = (CtElement) tree.getParent().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-            }
-            SourcePosition position = ele.getPosition();
-            if (position == null || !position.isValidPosition()) {
-                return null;
-            }
-            path = position.getFile().toPath();
-            // if(position instanceof DeclarationSourcePosition) {
-            // start = ((DeclarationSourcePosition)position).getNameStart();
-            // end = ((DeclarationSourcePosition)position).getNameEnd();
-            // } else {
-            start = position.getSourceStart();
-            end = position.getSourceEnd();
-            // }
-        } else {
-            SourcePosition position = ele.getPosition();
-            if (position == null || !position.isValidPosition()) {
-                return null;
-            }
-            path = position.getFile().toPath();
-            start = position.getSourceStart();
-            end = position.getSourceEnd();
-        }
-        Range range = proj.getRange(proj.getAst().rootDir.relativize(path).toString(), start, end, ele);
+        Range range = proj.getRange(proj.getAst().rootDir.relativize(pair.right.getFile().toPath()).toString(),
+                pair.right.getSourceStart(), pair.right.getSourceEnd(), pair.left);
         return range;
     }
 }
