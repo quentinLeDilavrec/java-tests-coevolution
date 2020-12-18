@@ -327,6 +327,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     }
                     testBefore = GumTreeSpoonMiner.toRange(projectBefore, treeTestBefore,
                             currEvoAtCommit.beforeVersion);
+                    if (testBefore==null) {
+                        // For now we cannnot handle such new test
+                        continue;// TODO handle this
+                    }
                 }
                 Set<Evolutions.Evolution.DescRange> evosInGame = (Set) impactedTest.getValue();
 
