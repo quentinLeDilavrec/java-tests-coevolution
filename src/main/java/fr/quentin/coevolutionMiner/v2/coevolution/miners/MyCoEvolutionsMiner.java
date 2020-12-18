@@ -329,6 +329,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                             currEvoAtCommit.beforeVersion);
                     if (testBefore==null) {
                         // For now we cannnot handle such new test
+                        try {
+                            logger.info("new test ignored: "+((CtMethod)testAfter).getSignature());
+                        } catch (Exception e) {
+                        }
                         continue;// TODO handle this
                     }
                 }
