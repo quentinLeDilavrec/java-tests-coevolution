@@ -297,7 +297,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             // check interesting cases by applying evolutions
             for (InterestingCase c : icExtractor.interestingCases.get(k)) {
                 try (ApplierHelper<Evolution> ah = new ApplierHelper<>(k.getScanner(), k.getMdiff(), k.getDiff(), evoState)) {
-                    consumer.prepareCase(ah, c.testBefore, c.testAfter);
+                    consumer.prepareApply(ah, c.testBefore, c.testAfter);
                     ah.setLeafsActionsLimit(5);
                     ah.applyEvolutions(c.evosForThisTest);
                     for (EImpact imp : consumer.resultingImpacts) {

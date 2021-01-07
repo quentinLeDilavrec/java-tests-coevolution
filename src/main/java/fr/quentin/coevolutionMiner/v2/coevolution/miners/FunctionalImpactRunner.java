@@ -3,6 +3,7 @@ package fr.quentin.coevolutionMiner.v2.coevolution.miners;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
@@ -11,6 +12,7 @@ import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.VersionedTree;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.math.Fraction;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.maven.shared.invoker.InvocationResult;
@@ -60,7 +62,7 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
 
     public JavaOutputProcessor outputProcessor;
     public Range testBefore;
-    private ApplierHelper<Evolution> applierHelper;
+    // private ApplierHelper<Evolution> applierHelper;
     private EvolutionsAtProj evolutionsAtProj;
     public Set<Path> initiallyPresent;
     private Factory middleFactory;
@@ -73,6 +75,12 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
     private String testClassQualName;
 
     private String testSimpName;
+
+    private String sigTestBefore;
+
+    private ApplierHelper<Evolution> applierHelper;
+
+    private Range testAfter;
 
     public Factory getMiddleFactory() {
         return middleFactory;
@@ -105,6 +113,11 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
     public void accept(Set<Evolution> t) {
         EImpact.FailureReport report = serializeChangedCode(outputProcessor, initiallyPresent, middleFactory);
 
+        CtMethod elementTestAfter = applierHelper.getUpdatedMethod(evolutionsAtProj.getEnclosingInstance().afterVersion,
+                (AbstractVersionedTree) ((CtElement) this.testBefore.getOriginal())
+                        .getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE));
+        prepareCheck(elementTestAfter, testBefore, testAfter);
+
         try {
             report = runValidationCheckers(outputProcessor.getOutputDirectory(), testClassQualName, testSimpName,
                     report);
@@ -112,7 +125,7 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
             throw new RuntimeException(e);
         }
 
-        this.resultingImpacts.add(saveReport(applierHelper, t, testToExec, report, testBefore));
+        this.resultingImpacts.add(saveReport(t, report));
     }
 
     private static String executeTest(File baseDir, String declaringClass, String name) throws Exception {
@@ -215,11 +228,10 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
         return report;
     }
 
-    private static EImpact saveReport(ApplierHelper<Evolution> ah, Set<Evolution> t, Range testToExec,
-            EImpact.FailureReport report, Range testBefore) {
+    private EImpact saveReport(Set<Evolution> t, EImpact.FailureReport report) {
         EImpact eimpact = new EImpact();
         for (Evolution e : t) {
-            eimpact.evolutions.put(e, ah.evoState.ratio(e));
+            eimpact.evolutions.put(e, applierHelper.evoState.ratio(e));
         }
         eimpact.tests.put(testBefore, new ImmutablePair<>(testToExec, report));
         return eimpact;
@@ -229,9 +241,10 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
         this.outDestHandler = new OutputDestinationHandlerImpl(expDir);
     }
 
-    public void prepareCase(ApplierHelper<Evolution> applierHelper, Range testBefore, Range testAfter) {
+    public void prepareApply(ApplierHelper<Evolution> applierHelper, Range testBefore, Range testAfter) {
         this.applierHelper = applierHelper;
         this.testBefore = testBefore;
+        this.testAfter = testAfter;
         AbstractVersionedTree treeTestBefore = (AbstractVersionedTree) ((CtElement) this.testBefore.getOriginal())
                 .getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
         CtElement[] ttt = applierHelper.watchApply(evolutionsAtProj.getEnclosingInstance().beforeVersion,
@@ -241,11 +254,11 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
             throw new RuntimeException();
         }
         CtMethod elementTestBefore = (CtMethod) ttt[0];
-        String sigTestBefore = elementTestBefore.getDeclaringType().getQualifiedName() + "#"
+        this.sigTestBefore = elementTestBefore.getDeclaringType().getQualifiedName() + "#"
                 + elementTestBefore.getSimpleName();
+    }
 
-        CtMethod elementTestAfter = applierHelper.getUpdatedMethod(evolutionsAtProj.getEnclosingInstance().afterVersion,
-                treeTestBefore);
+    public void prepareCheck(CtMethod elementTestAfter, Range testBefore, Range testAfter) {
         String testSig = elementTestAfter.getDeclaringType().getQualifiedName() + "#"
                 + elementTestAfter.getSimpleName();
         this.testClassQualName = elementTestAfter.getDeclaringType().getQualifiedName();
@@ -256,9 +269,8 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
             throw new RuntimeException(); // TODO make it less hard, but rest of exp shouldn't append anyway
         }
         // get the "new" Range corresponding the test
-        Range testToExec;
         if (isSameTestSig) {
-            testToExec = testBefore;
+            this.testToExec = testBefore;
         } else {
             String elePath = evolutionsAtProj.getAfterProj().getAst().rootDir.relativize(position.getFile().toPath())
                     .toString();
