@@ -188,6 +188,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         }
 
         public class EvolutionsAtProj extends EvolutionsImpl {
+            
             List<EvolutionsAtProj> modules = new ArrayList<>();
             private Diff diff = null;
             private MultiDiffImpl mdiff = null;
@@ -544,6 +545,10 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 return (Project<?>.AST.FileSnapshot.Range) outProj.getRange(position.getFile().getAbsolutePath(),
                         position.getSourceStart(), position.getSourceEnd());
             }
+
+            public EvolutionsAtCommit getEnclosingInstance() {
+                return EvolutionsAtCommit.this;
+            }
         }
 
         public Diff getDiff(Project.Specifier before, Project.Specifier after) {
@@ -837,8 +842,11 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         }
 
         public static VersionCommit build(Sources.Commit commit) {
-            VersionCommit res = new VersionCommit(commit);
-            commitsToVersions.put(commit, res);
+            VersionCommit res = commitsToVersions.get(commit);
+            if (res == null) {
+                res = new VersionCommit(commit);
+                commitsToVersions.put(commit, res);
+            }
             return res;
         }
 

@@ -479,10 +479,10 @@ public class SourcesHelper implements AutoCloseable {
 		// });
 	}
 
-	public static InvocationResult executeTests(Path path, String filter, InvocationOutputHandler outputHandler)
+	public static InvocationResult executeTests(File baseDir, String filter, InvocationOutputHandler outputHandler)
 			throws Exception {
 		InvocationRequest request = new DefaultInvocationRequest();
-		request.setBaseDirectory(path.toFile());
+		request.setBaseDirectory(baseDir);
 		request.setGoals(Arrays.asList("test"));
 		request.setMavenOpts("-Dtest=" + filter);
 		request.setOutputHandler(outputHandler);
@@ -495,9 +495,9 @@ public class SourcesHelper implements AutoCloseable {
 		}
 	}
 
-	public static InvocationResult compileAllTests(Path path, InvocationOutputHandler outputHandler) throws Exception {
+	public static InvocationResult compileAllTests(File baseDir, InvocationOutputHandler outputHandler) throws Exception {
 		InvocationRequest request = new DefaultInvocationRequest();
-		request.setBaseDirectory(path.toFile());
+		request.setBaseDirectory(baseDir);
 		request.setGoals(Arrays.asList("test-compile"));
 		request.setOutputHandler(outputHandler);
 		Invoker invoker = new DefaultInvoker();
@@ -509,9 +509,9 @@ public class SourcesHelper implements AutoCloseable {
 		}
 	}
 
-	public static InvocationResult compileApp(Path path, InvocationOutputHandler outputHandler) throws Exception {
+	public static InvocationResult compileApp(File baseDir, InvocationOutputHandler outputHandler) throws Exception {
 		InvocationRequest request = new DefaultInvocationRequest();
-		request.setBaseDirectory(path.toFile());
+		request.setBaseDirectory(baseDir);
 		request.setGoals(Arrays.asList("compile"));
 		request.setOutputHandler(outputHandler);
 		Invoker invoker = new DefaultInvoker();

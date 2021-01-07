@@ -1,14 +1,17 @@
 package fr.quentin.coevolutionMiner.v2.coevolution.miners;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
+
+import com.github.gumtreediff.tree.Version;
 
 import org.apache.commons.lang3.math.Fraction;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
-import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsAtCommit.EvolutionsAtProj;
-import gumtree.spoon.apply.ApplierHelper;
+import gumtree.spoon.apply.EvoStateMaintainer;
 import spoon.MavenLauncher;
 import spoon.MavenLauncher.SOURCE_TYPE;
 import spoon.reflect.cu.CompilationUnit;
@@ -16,20 +19,12 @@ import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.reference.CtReference;
 
-public class ApplierHelperImpl extends ApplierHelper<Evolution> {
+public class EvoStateMaintainerImpl extends EvoStateMaintainer<Evolution> {
 
-    @Override
-    protected Object getOriginal(Evolution evolution) {
-        return evolution.getOriginal();
-    }
+    private FunctionalImpactRunner validityLauncher;
 
-    public ApplierHelperImpl(EvolutionsAtProj eap, Map<Evolution, Set<Evolution>> atomizedRefactorings) {
-        super(eap.getScanner(), eap.getMdiff().getMiddle(), eap.getDiff(), atomizedRefactorings);
-        this.mdiff = eap.getMdiff();
-    }
-
-    public Fraction ratio(Evolution e) {
-        return this.evoState.ratio(e);
+    protected EvoStateMaintainerImpl(Version initialState, Map<Evolution, Set<Evolution>> evoToEvo) {
+        super(initialState, evoToEvo);
     }
 
     private ImmutableTriple<?, ?, SOURCE_TYPE> getSourceTypeNRootDirectory(CtElement element) {
@@ -84,4 +79,47 @@ public class ApplierHelperImpl extends ApplierHelper<Evolution> {
                 return null;
         }
     }
+    static final Section APP_SECTION = new Section(){};
+    static final Section TEST_SECTION = new Section(){};
+    private static final float minReqConst = 1.0f;
+    @Override
+    protected Set<Section> sectionSpanning(CtElement element) {
+        ImmutableTriple<?, ?, MavenLauncher.SOURCE_TYPE> tmp = getSourceTypeNRootDirectory(element);
+
+        if (tmp == null) {
+            return null;
+        }
+
+        switch (tmp.getRight()) {
+            case APP_SOURCE:
+                return Collections.singleton(APP_SECTION);
+            case TEST_SOURCE:
+                return Collections.singleton(TEST_SECTION);
+            default:
+                return Collections.emptySet();
+        }
+    }
+
+    @Override
+    protected Consumer<Set<Evolution>> getValidityLauncher() {
+        return this.validityLauncher;
+    }
+
+    public void setValidityLauncher(FunctionalImpactRunner validityLauncher) {
+        this.validityLauncher = validityLauncher;
+    }
+
+    @Override
+    protected boolean isLaunchable(Evolution e) {
+        return ratio(e).floatValue() >= minReqConst;
+    }
+
+    public Fraction ratio(Evolution e) {
+        return Fraction.getFraction(evoState.get(e), evoReqSize.get(e));
+    }
+
+    @Override
+    public Object getOriginal(Evolution evolution) {
+        return evolution.getOriginal();
+    } 
 }
