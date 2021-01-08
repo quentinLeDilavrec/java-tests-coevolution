@@ -116,16 +116,18 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
         CtMethod elementTestAfter = applierHelper.getUpdatedMethod(evolutionsAtProj.getEnclosingInstance().afterVersion,
                 (AbstractVersionedTree) ((CtElement) this.testBefore.getOriginal())
                         .getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE));
-        prepareCheck(elementTestAfter, testBefore, testAfter);
+        if (elementTestAfter != null) {
+            prepareCheck(elementTestAfter, testBefore, testAfter);
 
-        try {
-            report = runValidationCheckers(outputProcessor.getOutputDirectory(), testClassQualName, testSimpName,
-                    report);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            try {
+                report = runValidationCheckers(outputProcessor.getOutputDirectory(), testClassQualName, testSimpName,
+                        report);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+            this.resultingImpacts.add(saveReport(t, report));
         }
-
-        this.resultingImpacts.add(saveReport(t, report));
     }
 
     private static String executeTest(File baseDir, String declaringClass, String name) throws Exception {
