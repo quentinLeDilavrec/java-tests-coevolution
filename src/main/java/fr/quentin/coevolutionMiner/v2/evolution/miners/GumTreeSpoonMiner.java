@@ -406,7 +406,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     Project<?> astBefore, Project<?> astAfter, List<ImmutablePair<Range, String>> before,
                     List<ImmutablePair<Range, String>> after, String label) {
                 for (MyAction<?> component : op.composed()) {
-                    String desc = label == null ? op.getName() : label + "->" + op.getName();
+                    String desc = label == null ? component.getName() : label + "->" + component.getName();
                     if (component instanceof AtomicAction) {
                         AbstractVersionedTree target = ((AtomicAction<AbstractVersionedTree>) component).getTarget();
                         if (target.getInsertVersion() == afterVersion) {
