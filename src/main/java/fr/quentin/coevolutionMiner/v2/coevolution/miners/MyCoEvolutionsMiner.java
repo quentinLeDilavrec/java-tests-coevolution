@@ -647,8 +647,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         if (mov != null) {
                             treeTestAfter = mov.getInsert().getTarget();
                         }
-                        testBefore = GumTreeSpoonMiner.toRange(projectBefore, treeTestBefore,
-                                currEvoAtCommit.beforeVersion);
+                        if (treeTestBefore.getInsertVersion() != currEvoAtCommit.afterVersion) {
+                            testBefore = GumTreeSpoonMiner.toRange(projectBefore, treeTestBefore,
+                                currEvoAtCommit.afterVersion);
+                        }
                         if (testBefore == null) {
                             // For now we cannnot handle such new test
                             try {
