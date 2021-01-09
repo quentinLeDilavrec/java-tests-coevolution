@@ -254,9 +254,9 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         // Validation phase, by compiling and running tests
         Path pathToIndividualExperiment = Paths.get("/tmp/applyResults", getRepoRawPath(), nextCommit.getId(),
                 currentCommit.getId(), "" + new Date().getTime());
-        // setup directory where validation will append
         Path oriPath = ((SpoonAST) currEvoAtCommit.getRootModule().getBeforeProj().getAst()).rootDir;
         Path afterOriPath = ((SpoonAST) currEvoAtCommit.getRootModule().getAfterProj().getAst()).rootDir;
+        // setup directory where validation will append
         FileUtils.deleteQuietly(pathToIndividualExperiment.toFile());
         try {
             FileUtils.copyDirectory(oriPath.toFile(), pathToIndividualExperiment.toFile());
@@ -267,8 +267,6 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         CoEvolutionsExtension currCoevolutions = new CoEvolutionsExtension(coevoSpec, currentRMEvolutions, before_proj,
                 after_proj);
 
-        Map<Set<Evolution>, Set<EImpact>> functionalImpacts = new HashMap<>();
-        Map<Range, EImpact> initialTestsStatus = new HashMap<>();
         JavaOutputProcessor outputProcessor = new JavaOutputProcessor();
         EvoStateMaintainerImpl evoState = new EvoStateMaintainerImpl(currEvoAtCommit.beforeVersion,
                 atomizedRefactorings);
@@ -276,9 +274,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         FunctionalImpactRunner consumer = new FunctionalImpactRunner(pathToIndividualExperiment.toFile());
         consumer.outputProcessor = outputProcessor;
         evoState.setValidityLauncher(consumer);
+        Map<Set<Evolution>, Set<EImpact>> functionalImpacts = new HashMap<>();
         for (EvolutionsAtProj k : icExtractor.interestingCases.keySet()) {
+            // TODO reset exp dir?
             consumer.setEvolutionsAtProj(k);
-
             // check the initial state
             for (Range initialTest : icExtractor.impactedTestsPerProj.get(k)) {
                 EImpact.FailureReport report = null;
@@ -291,7 +290,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 }
                 EImpact eimpact = new EImpact();
                 eimpact.tests.put(initialTest, new ImmutablePair<>(initialTest, report));
-                initialTestsStatus.put(initialTest, eimpact);
+                currCoevolutions.addInitialTestResult(initialTest, eimpact);
             }
 
             // check interesting cases by applying evolutions
@@ -309,9 +308,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     throw new RuntimeException(e);
                 }
             }
-            currCoevolutions.setInitialResults(initialTestsStatus);
-            currCoevolutions.addEImpacts(functionalImpacts);
         }
+        currCoevolutions.addEImpacts(functionalImpacts);
         return currCoevolutions;
     }
 
@@ -414,7 +412,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         public final Evolutions evolutions;
         public final Project<?> astBefore;
         public final Project<?> astAfter;
-        private Map<Range, EImpact> initialTestsStatus; // TODO put it in the db
+        private final  Map<Range, EImpact> initialTestsStatus = new HashMap<>(); // TODO put it in the db
         private final Set<EImpact> probableCoevoCauses = new HashSet<>(); // merges with prev commits would allow to
                                                                           // find even farther root causes
         private final Set<EImpact> probableCoEvoResolutions = new HashSet<>(); // merge won't help much but need to
@@ -540,8 +538,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             }
         }
 
-        public void setInitialResults(Map<Range, EImpact> initialTestsStatus) {
-            this.initialTestsStatus = initialTestsStatus;
+        public void addInitialTestResult(Range test, EImpact eimpact) {
+            this.initialTestsStatus.put(test, eimpact);
         }
 
         class CoEvolutionExtension extends CoEvolution {
