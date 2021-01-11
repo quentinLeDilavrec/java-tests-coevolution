@@ -117,7 +117,7 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
                 (AbstractVersionedTree) ((CtElement) this.testBefore.getOriginal())
                         .getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE));
         if (elementTestAfter != null) {
-            prepareCheck(elementTestAfter, testBefore, testAfter);
+            prepareCheck(elementTestAfter);
 
             try {
                 report = runValidationCheckers(outputProcessor.getOutputDirectory(), testClassQualName, testSimpName,
@@ -260,7 +260,7 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
                 + elementTestBefore.getSimpleName();
     }
 
-    public void prepareCheck(CtMethod elementTestAfter, Range testBefore, Range testAfter) {
+    public void prepareCheck(CtMethod elementTestAfter) {
         String testSig = elementTestAfter.getDeclaringType().getQualifiedName() + "#"
                 + elementTestAfter.getSimpleName();
         this.testClassQualName = elementTestAfter.getDeclaringType().getQualifiedName();
@@ -272,7 +272,7 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
         }
         // get the "new" Range corresponding the test
         if (isSameTestSig) {
-            this.testToExec = testBefore;
+            this.testToExec = this.testBefore;
         } else {
             String elePath = evolutionsAtProj.getAfterProj().getAst().rootDir.relativize(position.getFile().toPath())
                     .toString();
@@ -286,7 +286,7 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
                 throw new RuntimeException();
             if (testAfter != null && !testAfterB.equals(testAfter))
                 logger.info("not sure about wich method is the test after the evolutions are applied.");
-            this.testToExec = testAfter;
+            this.testToExec = this.testAfter;
             // TODO save that: testBefore --> testAfter
         }
     }
