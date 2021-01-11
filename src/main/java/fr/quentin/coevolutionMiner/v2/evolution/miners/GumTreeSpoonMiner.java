@@ -411,10 +411,12 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                         AbstractVersionedTree target = ((AtomicAction<AbstractVersionedTree>) component).getTarget();
                         if (target.getInsertVersion() == afterVersion) {
                             ImmutablePair<Range, String> rangeAft = toRange(astAfter, target, desc, afterVersion);
-                            after.add(rangeAft);
+                            if (rangeAft != null)
+                                after.add(rangeAft);
                         } else {
                             ImmutablePair<Range, String> rangeBef = toRange(astBefore, target, desc, beforeVersion);
-                            before.add(rangeBef);
+                            if (rangeBef != null)
+                                before.add(rangeBef);
                         }
                     } else {
                         addComposedEvolutionAux((Action & ComposedAction<AbstractVersionedTree>) component, astBefore,
@@ -848,6 +850,11 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 commitsToVersions.put(commit, res);
             }
             return res;
+        }
+
+        @Override
+        public String toString() {
+            return commit.toString();
         }
 
         // // negTopo | posTopo
