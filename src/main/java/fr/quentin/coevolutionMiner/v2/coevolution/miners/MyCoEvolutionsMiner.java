@@ -702,14 +702,16 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
         
 
-        // also put the cases without using the static analysis of dependencies (to avoid missing co-evolutions, for now because we ignore to much evo from the code)
+        // also put the cases without using the static analysis of dependencies (to avoid missing co-evolutions, for now because we can ignore to much evo from the code)
         public void computeRelax() {
             computeExact();
             for (EvolutionsAtProj k : this.interestingCases.keySet()) {
                 Set<InterestingCase> tmpIntereSet = new HashSet<>();
                 for (InterestingCase c : this.interestingCases.get(k)) {
                     InterestingCase curr = new InterestingCase();
-                    curr.evosForThisTest = new HashSet<>(k.toSet());
+                    curr.evosForThisTest = new HashSet<>(k.toSet()); // k only contain evos from gts
+                    curr.evosForThisTest.addAll(evoPerProj.get(k)); //  evoPerProj only contains impacting evos
+                    // need RefactoringMiner evos ?
                     curr.testBefore = c.testBefore;
                     curr.testAfter = c.testAfter;
                     curr.evolutionsAtProj = c.evolutionsAtProj;
