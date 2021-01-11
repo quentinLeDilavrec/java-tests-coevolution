@@ -284,9 +284,14 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
                     position.getSourceEnd());
             if (testAfterB == null)
                 throw new RuntimeException();
-            if (testAfter != null && !testAfterB.equals(testAfter))
-                logger.info("not sure about wich method is the test after the evolutions are applied.");
-            this.testToExec = this.testAfter;
+            if (testAfter != null ){
+                if (!testAfterB.equals(testAfter)) {
+                    logger.info("not sure about wich method is the test after the evolutions are applied.");
+                }
+                this.testToExec = this.testAfter;
+            } else {
+                this.testToExec = testAfterB;
+            }
             // TODO save that: testBefore --> testAfter
         }
     }
