@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
+import java.util.logging.Logger;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
@@ -67,6 +68,82 @@ import spoon.reflect.declaration.CtExecutable;
 import spoon.reflect.declaration.CtMethod;
 
 public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
+    public static Logger logger = Logger.getLogger(Neo4jCoEvolutionsStorage.class.getName());
+
+    class ChunckedUploadCoEvos extends Utils.ChunckedUpload<Map<String, Object>> {
+        private final Specifier spec;
+
+        public ChunckedUploadCoEvos(Specifier spec, List<Map<String, Object>> processed) {
+            super(logger, driver, 256, 10, processed);
+            this.spec = spec;
+        }
+
+        @Override
+        protected String getCypher() {
+            return Utils.memoizedReadResource("coevolutions_cypher.cql");
+        }
+
+        @Override
+        public Value execute(Collection<Map<String, Object>> chunk) {
+            return parameters("coevoSimp", chunk, "tool", spec.miner);
+        }
+
+        @Override
+        protected String whatIsUploaded() {
+            return "coevolutions of " + spec.srcSpec.repository;
+        }
+
+    }
+
+    class ChunckedUploadEImpacts extends Utils.ChunckedUpload<Map<String, Object>> {
+        private final Specifier spec;
+
+        public ChunckedUploadEImpacts(Specifier spec, List<Map<String, Object>> processed) {
+            super(logger, driver, 256, 10, processed);
+            this.spec = spec;
+        }
+
+        @Override
+        protected String getCypher() {
+            return Utils.memoizedReadResource("eimpact_cypher.cql");
+        }
+
+        @Override
+        public Value execute(Collection<Map<String, Object>> chunk) {
+            return parameters("eImpacts", chunk, "tool", spec.miner);
+        }
+
+        @Override
+        protected String whatIsUploaded() {
+            return "eimpact of " + spec.srcSpec.repository;
+        }
+
+    }
+
+    class ChunckedUploadInitTests extends Utils.ChunckedUpload<Map<String, Object>> {
+        private final Specifier spec;
+
+        public ChunckedUploadInitTests(Specifier spec, List<Map<String, Object>> processed) {
+            super(logger, driver, 256, 10, processed);
+            this.spec = spec;
+        }
+
+        @Override
+        protected String getCypher() {
+            return Utils.memoizedReadResource("initTest_cypher.cql");
+        }
+
+        @Override
+        public Value execute(Collection<Map<String, Object>> chunk) {
+            return parameters("initTests", chunk, "tool", spec.miner);
+        }
+
+        @Override
+        protected String whatIsUploaded() {
+            return "initial tests of " + spec.srcSpec.repository;
+        }
+
+    }
 
     @Override
     public void put(CoEvolutions value) {
@@ -74,64 +151,30 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         for (ImmutablePair<Range, FailureReport> initTest : value.getInitialTests()) {
             initTests.add(basifyInitTests(initTest));
         }
-        try (Session session = driver.session()) {
-            String done = session.writeTransaction(new TransactionWork<String>() {
-                @Override
-                public String execute(Transaction tx) {
-                    Result result = tx.run(Utils.memoizedReadResource("initTest_cypher.cql"), parameters("initTests", initTests, "tool", value.spec.miner));
-                    result.consume();
-                    return "done initTest on " + value.spec.srcSpec.repository;
-                }
-            });
-            System.out.println(done);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        new ChunckedUploadInitTests(value.spec, initTests);
+        
         Set<CoEvolution> coevos = value.getCoEvolutions();
         List<Map<String, Object>> coevoSimp = new ArrayList<>();
         for (CoEvolution coevolution : coevos) {
             coevoSimp.add(basifyCoevo(coevolution, true, value.spec.srcSpec.repository));
         }
-        try (Session session = driver.session()) {
-            String done = session.writeTransaction(new TransactionWork<String>() {
-                @Override
-                public String execute(Transaction tx) {
-                    Result result = tx.run(getCypher(), parameters("coevoSimp", coevoSimp, "tool", value.spec.miner));
-                    result.consume();
-                    return "done coevolution on " + value.spec.srcSpec.repository;
-                }
-            });
-            System.out.println(done);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        new ChunckedUploadCoEvos(value.spec, coevoSimp);
+
         List<Map<String, Object>> eImpacts = new ArrayList<>();
         for (EImpact eImpact : value.getEImpacts()) {
-            if (eImpact.getEvolutions().size()>0) {
+            if (eImpact.getEvolutions().size() > 0) {
                 eImpacts.add(basifyEImpacts(eImpact));
             }
         }
-        try (Session session = driver.session()) {
-            String done = session.writeTransaction(new TransactionWork<String>() {
-                @Override
-                public String execute(Transaction tx) {
-                    Result result = tx.run(Utils.memoizedReadResource("eimpact_cypher.cql"), parameters("eImpacts", eImpacts, "tool", value.spec.miner));
-                    result.consume();
-                    return "done eImpacts on " + value.spec.srcSpec.repository;
-                }
-            });
-            System.out.println(done);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        new ChunckedUploadEImpacts(value.spec, eImpacts);
     }
 
     private Map<String, Object> basifyInitTests(ImmutablePair<Range, FailureReport> initialTest) {
         Map<String, Object> r = initialTest.left.toMap();
         FailureReport fr = initialTest.right;
-        r.put("what", fr==null ? null : fr.what);
-        r.put("where", fr==null ? null : fr.where);
-        r.put("when", fr==null ? null : fr.when);
+        r.put("what", fr == null ? null : fr.what);
+        r.put("where", fr == null ? null : fr.where);
+        r.put("when", fr == null ? null : fr.when);
         return r;
     }
 
@@ -143,12 +186,12 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
             Map<String, Object> test = t.getValue().left.toMap();
             tests.add(test);
             FailureReport fr = t.getValue().right;
-            test.put("what", fr==null ? null : fr.what);
-            test.put("where", fr==null ? null : fr.where);
-            test.put("when", fr==null ? null : fr.when);
+            test.put("what", fr == null ? null : fr.what);
+            test.put("where", fr == null ? null : fr.where);
+            test.put("when", fr == null ? null : fr.when);
             List<Map<String, Object>> before = new ArrayList<>();
             test.put("before", before);
-            if (t.getKey()!=t.getValue().left) {
+            if (t.getKey() != t.getValue().left) {
                 before.add(t.getKey().toMap());
             }
         }
@@ -164,7 +207,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
             evolutions_url.add((String) (((Map<String, Object>) tmp.get("content")).get("url")));
         }
         Map<String, Object> content = new HashMap<>();
-        evolutions_url.sort((a,b)->a.compareTo(b));
+        evolutions_url.sort((a, b) -> a.compareTo(b));
         content.put("evolutions", evolutions_url);
         r.put("content", content);
 
@@ -195,9 +238,9 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         }
         Map<String, Object> content = new HashMap<>();
         content.put("validated", validated);
-        causes_url.sort((a,b)->a.compareTo(b));
+        causes_url.sort((a, b) -> a.compareTo(b));
         content.put("causes", causes_url);
-        resolutions_url.sort((a,b)->a.compareTo(b));
+        resolutions_url.sort((a, b) -> a.compareTo(b));
         content.put("resolutions", resolutions_url);
         coevo.put("content", content);
         coevo.put("pointed", pointed);
@@ -371,7 +414,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                     before.add(descRange);
             }
             try {
-                r.addAll(evolutions.getEvolution(evoType,projAfter, before, projAfter, Collections.emptyList()));
+                r.addAll(evolutions.getEvolution(evoType, projAfter, before, projAfter, Collections.emptyList()));
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -391,10 +434,6 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
 
     public static String getMinerCypher() {
         return Utils.memoizedReadResource("coevolution_miner.cql");
-    }
-
-    private static String getCypher() {
-        return Utils.memoizedReadResource("coevolutions_cypher.cql");
     }
 
     @Override

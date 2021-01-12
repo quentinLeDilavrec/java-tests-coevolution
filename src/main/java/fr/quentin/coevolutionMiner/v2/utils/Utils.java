@@ -5,14 +5,27 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.logging.Logger;
+
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.Result;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.Transaction;
+import org.neo4j.driver.TransactionConfig;
+import org.neo4j.driver.TransactionWork;
+import org.neo4j.driver.Value;
+import org.neo4j.driver.exceptions.TransientException;
 
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon.SpoonAST;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
+import fr.quentin.coevolutionMiner.v2.evolution.storages.Neo4jEvolutionsStorage;
 import fr.quentin.impactMiner.Evolution;
 import fr.quentin.impactMiner.ImpactAnalysis;
 import fr.quentin.impactMiner.ImpactElement;
@@ -23,6 +36,56 @@ import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtType;
 
 public class Utils {
+
+	public static abstract class ChunckedUpload<U> {
+	    protected abstract String whatIsUploaded();
+	    
+	    protected abstract String getCypher();
+	    
+	    protected abstract Value execute(Collection<U> chunk);
+	
+	    public ChunckedUpload(Logger logger, Driver driver, int STEP, int TIMEOUT, List<U> processed) {
+			this.driver = driver;
+			config = TransactionConfig.builder().withTimeout(Duration.ofMinutes(TIMEOUT)).build();
+	        int index = 0;
+	        int step = STEP;
+	        while (index < processed.size()) {
+	            long start = System.nanoTime();
+	            String done = put(processed.subList(index, Math.min(index + step, processed.size())));
+	            if (done != null) {
+	                logger.info(done + ": " + Math.min(index + step, processed.size()) + "/" + processed.size());
+	                index += step;
+	                if (((System.nanoTime() - start) / 1000000 / 60 < (TIMEOUT / 2))) {
+	                    step = step * 2;
+	                }
+	            } else {
+	                logger.info("took too long to upload " + whatIsUploaded()
+	                        + " with a chunk of size " + step);
+	                step = step / 2;
+	            }
+	        }
+	    }
+	
+	    private final Driver driver;
+		private final TransactionConfig config;
+	    private String put(Collection<U> chunk) {
+	        try (Session session = driver.session()) {
+	            String done = session.writeTransaction(new TransactionWork<String>() {
+	                @Override
+	                public String execute(Transaction tx) {
+						tx.run(getCypher(), ChunckedUpload.this.execute(chunk)).consume();
+						return whatIsUploaded();
+	                }
+	            }, config);
+	            return done;
+	        } catch (TransientException e) {
+	            e.printStackTrace();
+	        } catch (Exception e) {
+	            e.printStackTrace();
+	        }
+	        return null;
+	    }
+	}
 
 	public static CtElement matchExactChild(CtElement parent, int start, int end) {
 		return fr.quentin.impactMiner.Utils.matchExact(parent, start, end);

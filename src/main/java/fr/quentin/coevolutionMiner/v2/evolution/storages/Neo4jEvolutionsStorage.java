@@ -1,6 +1,5 @@
 package fr.quentin.coevolutionMiner.v2.evolution.storages;
 
-import org.apache.felix.resolver.util.ArrayMap;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
@@ -10,6 +9,7 @@ import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.TransactionConfig;
 import org.neo4j.driver.TransactionWork;
+import org.neo4j.driver.Value;
 import org.neo4j.driver.exceptions.TransientException;
 
 import fr.quentin.coevolutionMiner.utils.MyProperties;
@@ -30,6 +30,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,50 +44,37 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 public class Neo4jEvolutionsStorage implements EvolutionsStorage {
-    static Logger logger = Logger.getLogger(Neo4jEvolutionsStorage.class.getName());
-    static final int STEP = 512;
-    static final int TIMEOUT = 10;
+    public static Logger logger = Logger.getLogger(Neo4jEvolutionsStorage.class.getName());
 
     @Override
     public void put(Specifier evos_spec, Evolutions evolutions) {
-        List<Map<String, Object>> tmp = evolutions.asListofMaps();
-        int index = 0;
-        int step = STEP;
-        boolean[] success = new boolean[] { false };
-        while (index < tmp.size()) {
-            final int findex = index;
-            final int fstep = step;
-            success[0] = false;
+        List<Map<String, Object>> processed = evolutions.asListofMaps();
+        new ChunckedUploadEvos(evos_spec, processed);
+    }
 
-            long start = System.nanoTime();
-            try (Session session = driver.session()) {
-                String done = session.writeTransaction(new TransactionWork<String>() {
-                    @Override
-                    public String execute(Transaction tx) {
-                        Result result = tx.run(getCypher(), parameters("json", tmp.subList(findex, Math.min(findex + fstep, tmp.size())),
-                                "tool", evos_spec.miner.getSimpleName() + 3));
-                        result.consume();
-                        success[0] = true;
-                        return "uploaded evolutions chunk of " + evolutions.spec.sources.repository + ": " + Math.min(findex + fstep, tmp.size()) + "/" + tmp.size();
-                    }
-                }, TransactionConfig.builder().withTimeout(Duration.ofMinutes(TIMEOUT)).build());
-                logger.info(done);
-            } catch (TransientException e) {
-                e.printStackTrace();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            if (success[0]) {
-                index += step;
-                if (((System.nanoTime() - start) / 1000000 / 60 < (TIMEOUT/2))) {
-                    step = step * 2;
-                }
-            } else {
-                logger.info(
-                    "took too long to upload evolutions of " + evolutions.spec.sources.repository + " with a chunk of size " + step);
-                step = step / 2;
-            }
+    class ChunckedUploadEvos extends Utils.ChunckedUpload<Map<String, Object>> {
+        private final Specifier spec;
+
+        public ChunckedUploadEvos(Specifier spec, List<Map<String, Object>> processed) {
+            super(logger, driver, 512, 10, processed);
+            this.spec = spec;
         }
+
+        @Override
+        protected String getCypher() {
+            return Utils.memoizedReadResource("evolutions_cypher.sql");
+        }
+
+        @Override
+        public Value execute(Collection<Map<String, Object>> chunk) {
+            return parameters("json", chunk, "tool", spec.miner.getSimpleName() + 3);
+        }
+
+        @Override
+        protected String whatIsUploaded() {
+            return "evolutions of " + spec.sources.repository;
+        }
+
     }
 
     private void putCommits(Specifier evos_spec, Evolutions value) {
