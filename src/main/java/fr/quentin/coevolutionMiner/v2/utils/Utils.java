@@ -38,15 +38,21 @@ import spoon.reflect.declaration.CtType;
 public class Utils {
 
 	public static abstract class ChunckedUpload<U> {
-	    protected abstract String whatIsUploaded();
+	    private int TIMEOUT;
+
+		protected abstract String whatIsUploaded();
 	    
 	    protected abstract String getCypher();
 	    
-	    protected abstract Value execute(Collection<U> chunk);
+	    protected abstract Value format(Collection<U> chunk);
 	
-	    public ChunckedUpload(Logger logger, Driver driver, int STEP, int TIMEOUT, List<U> processed) {
+	    public ChunckedUpload(Driver driver, int TIMEOUT) {
 			this.driver = driver;
+			this.TIMEOUT = TIMEOUT;
 			config = TransactionConfig.builder().withTimeout(Duration.ofMinutes(TIMEOUT)).build();
+		}
+		
+		protected void execute(Logger logger, int STEP, List<U> processed) {
 	        int index = 0;
 	        int step = STEP;
 	        while (index < processed.size()) {
@@ -64,7 +70,7 @@ public class Utils {
 	                step = step / 2;
 	            }
 	        }
-	    }
+		}
 	
 	    private final Driver driver;
 		private final TransactionConfig config;
@@ -73,7 +79,7 @@ public class Utils {
 	            String done = session.writeTransaction(new TransactionWork<String>() {
 	                @Override
 	                public String execute(Transaction tx) {
-						tx.run(getCypher(), ChunckedUpload.this.execute(chunk)).consume();
+						tx.run(getCypher(), ChunckedUpload.this.format(chunk)).consume();
 						return whatIsUploaded();
 	                }
 	            }, config);

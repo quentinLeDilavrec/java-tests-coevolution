@@ -56,8 +56,9 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
         private final Specifier spec;
 
         public ChunckedUploadEvos(Specifier spec, List<Map<String, Object>> processed) {
-            super(logger, driver, 512, 10, processed);
+            super(driver, 10);
             this.spec = spec;
+            execute(logger, 512, processed);
         }
 
         @Override
@@ -66,7 +67,7 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
         }
 
         @Override
-        public Value execute(Collection<Map<String, Object>> chunk) {
+        public Value format(Collection<Map<String, Object>> chunk) {
             return parameters("json", chunk, "tool", spec.miner.getSimpleName() + 3);
         }
 
@@ -127,10 +128,6 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
         this(MyProperties.getPropValues().getProperty("neo4jAddress"),
                 MyProperties.getPropValues().getProperty("neo4jId"),
                 MyProperties.getPropValues().getProperty("neo4jPwd"));
-    }
-
-    private static String getCypher() {
-        return Utils.memoizedReadResource("evolutions_cypher.sql");
     }
 
     protected String getCommitCypher() {

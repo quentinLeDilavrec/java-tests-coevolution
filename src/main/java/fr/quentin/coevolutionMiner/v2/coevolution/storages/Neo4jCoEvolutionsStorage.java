@@ -74,8 +74,9 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         private final Specifier spec;
 
         public ChunckedUploadCoEvos(Specifier spec, List<Map<String, Object>> processed) {
-            super(logger, driver, 256, 10, processed);
+            super(driver, 10);
             this.spec = spec;
+            execute(logger, 256, processed);
         }
 
         @Override
@@ -84,7 +85,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         }
 
         @Override
-        public Value execute(Collection<Map<String, Object>> chunk) {
+        public Value format(Collection<Map<String, Object>> chunk) {
             return parameters("coevoSimp", chunk, "tool", spec.miner);
         }
 
@@ -99,8 +100,9 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         private final Specifier spec;
 
         public ChunckedUploadEImpacts(Specifier spec, List<Map<String, Object>> processed) {
-            super(logger, driver, 256, 10, processed);
+            super(driver, 10);
             this.spec = spec;
+            execute(logger, 256, processed);
         }
 
         @Override
@@ -109,7 +111,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         }
 
         @Override
-        public Value execute(Collection<Map<String, Object>> chunk) {
+        public Value format(Collection<Map<String, Object>> chunk) {
             return parameters("eImpacts", chunk, "tool", spec.miner);
         }
 
@@ -124,8 +126,9 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         private final Specifier spec;
 
         public ChunckedUploadInitTests(Specifier spec, List<Map<String, Object>> processed) {
-            super(logger, driver, 256, 10, processed);
+            super(driver, 10);
             this.spec = spec;
+            execute(logger, 256, processed);
         }
 
         @Override
@@ -134,7 +137,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         }
 
         @Override
-        public Value execute(Collection<Map<String, Object>> chunk) {
+        public Value format(Collection<Map<String, Object>> chunk) {
             return parameters("initTests", chunk, "tool", spec.miner);
         }
 
@@ -152,7 +155,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
             initTests.add(basifyInitTests(initTest));
         }
         new ChunckedUploadInitTests(value.spec, initTests);
-        
+
         Set<CoEvolution> coevos = value.getCoEvolutions();
         List<Map<String, Object>> coevoSimp = new ArrayList<>();
         for (CoEvolution coevolution : coevos) {
