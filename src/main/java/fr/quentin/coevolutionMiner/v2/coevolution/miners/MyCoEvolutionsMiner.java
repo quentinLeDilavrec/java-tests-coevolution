@@ -278,6 +278,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         evoState.setValidityLauncher(consumer);
         Map<Set<Evolution>, Set<EImpact>> functionalImpacts = new LinkedHashMap<>();
         for (EvolutionsAtProj k : icExtractor.interestingCases.keySet()) {
+            logger.info(evoState.getValidable().toString());
             // TRY reset exp dir?
             FileUtils.deleteQuietly(pathToIndividualExperiment.toFile());
             try {
@@ -318,6 +319,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 }
             }
         }
+        logger.info(evoState.getValidable().toString());
         currCoevolutions.addEImpacts(functionalImpacts);
         return currCoevolutions;
     }
