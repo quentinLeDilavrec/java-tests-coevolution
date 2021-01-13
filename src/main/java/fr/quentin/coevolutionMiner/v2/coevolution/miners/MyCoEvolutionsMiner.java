@@ -278,14 +278,6 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         evoState.setValidityLauncher(consumer);
         Map<Set<Evolution>, Set<EImpact>> functionalImpacts = new LinkedHashMap<>();
         for (EvolutionsAtProj k : icExtractor.interestingCases.keySet()) {
-            logger.info(evoState.getValidable().toString());
-            // // TRY reset exp dir?
-            // FileUtils.deleteQuietly(pathToIndividualExperiment.toFile());
-            // try {
-            //     FileUtils.copyDirectory(oriPath.toFile(), pathToIndividualExperiment.toFile());
-            // } catch (Exception e) {
-            //     throw new RuntimeException(e);
-            // }
             consumer.setEvolutionsAtProj(k);
             // check the initial state
             for (Range initialTest : icExtractor.impactedTestsPerProj.get(k)) {
@@ -304,6 +296,14 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
             // check interesting cases by applying evolutions
             for (InterestingCase c : icExtractor.interestingCases.get(k)) {
+                logger.info(evoState.getValidable().toString());
+                // // TRY reset exp dir?
+                // FileUtils.deleteQuietly(pathToIndividualExperiment.toFile());
+                // try {
+                //     FileUtils.copyDirectory(oriPath.toFile(), pathToIndividualExperiment.toFile());
+                // } catch (Exception e) {
+                //     throw new RuntimeException(e);
+                // }
                 try (ApplierHelper<Evolution> ah = new ApplierHelper<>(k.getScanner(), k.getMdiff(), k.getDiff(), evoState)) {
                     consumer.prepareApply(ah, c.testBefore, c.testAfter);
                     ah.setLeafsActionsLimit(5);
@@ -316,9 +316,9 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
+                logger.info(evoState.getValidable().toString());
             }
         }
-        logger.info(evoState.getValidable().toString());
         currCoevolutions.addEImpacts(functionalImpacts);
         return currCoevolutions;
     }
