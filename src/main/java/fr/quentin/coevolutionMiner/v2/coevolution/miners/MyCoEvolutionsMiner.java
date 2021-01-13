@@ -278,7 +278,14 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         evoState.setValidityLauncher(consumer);
         Map<Set<Evolution>, Set<EImpact>> functionalImpacts = new LinkedHashMap<>();
         for (EvolutionsAtProj k : icExtractor.interestingCases.keySet()) {
-            // TODO reset exp dir?
+            // TRY reset exp dir?
+            FileUtils.deleteQuietly(pathToIndividualExperiment.toFile());
+            try {
+                FileUtils.copyDirectory(oriPath.toFile(), pathToIndividualExperiment.toFile());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
             consumer.setEvolutionsAtProj(k);
             // check the initial state
             for (Range initialTest : icExtractor.impactedTestsPerProj.get(k)) {
