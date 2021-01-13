@@ -276,7 +276,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         FunctionalImpactRunner consumer = new FunctionalImpactRunner(pathToIndividualExperiment.toFile());
         consumer.outputProcessor = outputProcessor;
         evoState.setValidityLauncher(consumer);
-        Map<Set<Evolution>, Set<EImpact>> functionalImpacts = new HashMap<>();
+        Map<Set<Evolution>, Set<EImpact>> functionalImpacts = new LinkedHashMap<>();
         for (EvolutionsAtProj k : icExtractor.interestingCases.keySet()) {
             // TODO reset exp dir?
             consumer.setEvolutionsAtProj(k);
@@ -451,6 +451,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
 
         public void addEImpacts(Map<Set<Evolution>, Set<EImpact>> eImpacts) {
+            logger.info("post-processing " + eImpacts.size() + " sets of evolutions");
             for (Entry<Set<Evolution>, Set<EImpact>> aaa : eImpacts.entrySet()) {
                 for (EImpact ei : aaa.getValue()) {
                     for (Entry<Range, ImmutablePair<Range, EImpact.FailureReport>> bbb : ei.tests.entrySet()) {
@@ -582,7 +583,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     }
     private static 
     class InterestingCasesExtractor {
-        Map<EvolutionsAtProj, Set<InterestingCase>> interestingCases = new HashMap<>();
+        Map<EvolutionsAtProj, Set<InterestingCase>> interestingCases = new LinkedHashMap<>();
         Map<EvolutionsAtProj, Set<Evolution>> evoPerProj = new HashMap<>();
         Map<EvolutionsAtProj, Set<Range>> impactedTestsPerProj = new HashMap<>();
         public EvolutionsAtCommit currEvoAtCommit;
@@ -701,7 +702,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     impactedTestsPerProj.get(evolutionsAtProj).add(testBefore);
                 }
                 if (intInterestingCases.size() > 0) {
-                    interestingCases.putIfAbsent(evolutionsAtProj, new HashSet<>());
+                    interestingCases.putIfAbsent(evolutionsAtProj, new LinkedHashSet<>());
                     interestingCases.get(evolutionsAtProj).addAll(intInterestingCases.values());
                 }
             }
