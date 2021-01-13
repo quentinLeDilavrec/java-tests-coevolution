@@ -27,6 +27,10 @@ public class EvoStateMaintainerImpl extends EvoStateMaintainer<Evolution> {
         super(initialState, evoToEvo);
     }
 
+    public Set<Evolution> getValidable() {
+        return this.validable;
+    }
+
     private ImmutableTriple<?, ?, SOURCE_TYPE> getSourceTypeNRootDirectory(CtElement element) {
         if (element instanceof CtReference) {
             return null;
