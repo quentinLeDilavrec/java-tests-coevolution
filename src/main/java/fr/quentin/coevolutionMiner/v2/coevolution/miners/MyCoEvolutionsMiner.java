@@ -286,7 +286,6 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             // } catch (Exception e) {
             //     throw new RuntimeException(e);
             // }
-
             consumer.setEvolutionsAtProj(k);
             // check the initial state
             for (Range initialTest : icExtractor.impactedTestsPerProj.get(k)) {
