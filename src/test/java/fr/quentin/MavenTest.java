@@ -23,6 +23,7 @@ public class MavenTest {
 
     public static InvocationResult executeTests(Path path, String filter) throws Exception {
         InvocationRequest request = new DefaultInvocationRequest();
+        request.setBatchMode(true);
         request.setBaseDirectory(path.toFile());
         request.setGoals(Arrays.asList("test"));
         request.setMavenOpts("-Dtest=" + filter);

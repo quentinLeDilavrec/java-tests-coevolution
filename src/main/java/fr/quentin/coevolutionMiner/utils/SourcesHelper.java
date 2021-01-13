@@ -482,6 +482,7 @@ public class SourcesHelper implements AutoCloseable {
 	public static InvocationResult executeTests(File baseDir, String filter, InvocationOutputHandler outputHandler)
 			throws Exception {
 		InvocationRequest request = new DefaultInvocationRequest();
+		request.setBatchMode(true);
 		request.setBaseDirectory(baseDir);
 		request.setGoals(Arrays.asList("test"));
 		request.setMavenOpts("-Dtest=" + filter);
@@ -497,6 +498,7 @@ public class SourcesHelper implements AutoCloseable {
 
 	public static InvocationResult compileAllTests(File baseDir, InvocationOutputHandler outputHandler) throws Exception {
 		InvocationRequest request = new DefaultInvocationRequest();
+		request.setBatchMode(true);
 		request.setBaseDirectory(baseDir);
 		request.setGoals(Arrays.asList("test-compile"));
 		request.setOutputHandler(outputHandler);
@@ -511,6 +513,7 @@ public class SourcesHelper implements AutoCloseable {
 
 	public static InvocationResult compileApp(File baseDir, InvocationOutputHandler outputHandler) throws Exception {
 		InvocationRequest request = new DefaultInvocationRequest();
+		request.setBatchMode(true);
 		request.setBaseDirectory(baseDir);
 		request.setGoals(Arrays.asList("compile"));
 		request.setOutputHandler(outputHandler);
