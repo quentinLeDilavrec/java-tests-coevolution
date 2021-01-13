@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -60,7 +61,7 @@ public class MixedMiner implements EvolutionsMiner {
 
         @Override
         public Set<Evolution> toSet() {
-            Set<Evolution> r = new HashSet<>();
+            Set<Evolution> r = new LinkedHashSet<>();
             r.addAll(rmEvos.toSet());
             r.addAll(gtsEvos.toSet());
             return Collections.unmodifiableSet(r);
@@ -71,7 +72,7 @@ public class MixedMiner implements EvolutionsMiner {
             Map<Commit, Evolutions> r = new HashMap<>();
             Map<Commit, Evolutions> perBeforeCommitRM = rmEvos.perBeforeCommit();
             Map<Commit, Evolutions> perBeforeCommitGTS = gtsEvos.perBeforeCommit();
-            Set<Commit> keys = new HashSet<>();
+            Set<Commit> keys = new LinkedHashSet<>();
             keys.addAll(perBeforeCommitRM.keySet());
             keys.addAll(perBeforeCommitGTS.keySet());
             for (Commit commit : keys) {

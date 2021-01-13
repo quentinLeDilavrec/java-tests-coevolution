@@ -8,6 +8,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -151,8 +153,8 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
     }
 
     public class EvolutionsAtCommit extends EvolutionsImpl {
-        Map<SpecificifierAtProj, EvolutionsAtProj> modules = new HashMap<>();
-        Map<Project.Specifier<?>, Project.Specifier<?>> projSpecMapping = new HashMap<>();
+        Map<SpecificifierAtProj, EvolutionsAtProj> modules = new LinkedHashMap<>();
+        Map<Project.Specifier<?>, Project.Specifier<?>> projSpecMapping = new LinkedHashMap<>();
         private EvolutionsAtProj rootModule;
         public final VersionCommit beforeVersion;
         public final VersionCommit afterVersion;
@@ -238,7 +240,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 // AstComparator comp = new AstComparator();
                 String relPath = beforeProj.spec.relPath.toString();
                 assert relPath.equals(afterProj.spec.relPath.toString()) : relPath;
-                Map<String, MutablePair<Project<?>, Project<?>>> modulesPairs = new HashMap<>();
+                Map<String, MutablePair<Project<?>, Project<?>>> modulesPairs = new LinkedHashMap<>();
                 for (Project<?> p : beforeProj.getModules()) {
                     modulesPairs.putIfAbsent(p.spec.relPath.toString(), new MutablePair<>());
                     modulesPairs.get(p.spec.relPath.toString()).setLeft(p);
@@ -756,13 +758,13 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
 
         @Override
         public Map<Commit, Evolutions> perBeforeCommit() {
-            Map<String, Set<Evolution>> tmp = new HashMap<>();
+            Map<String, Set<Evolution>> tmp = new LinkedHashMap<>();
             for (Evolution evolution : this) {
                 String cidb = evolution.getCommitBefore().getId();
-                tmp.putIfAbsent(cidb, new HashSet<>());
+                tmp.putIfAbsent(cidb, new LinkedHashSet<>());
                 tmp.get(cidb).add(evolution);
             }
-            Map<Commit, Evolutions> r = new HashMap<>();
+            Map<Commit, Evolutions> r = new LinkedHashMap<>();
             for (Set<Evolution> evolutionsSubSet : tmp.values()) {
                 if (evolutionsSubSet.size() == 0) {
                     continue;

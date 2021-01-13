@@ -9,6 +9,8 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -96,9 +98,9 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     static Logger logger = Logger.getLogger(MyCoEvolutionsMiner.class.getName());
 
     private final class CoEvolutionsManyCommit extends CoEvolutions {
-        private final Set<CoEvolution> coevolutions = new HashSet<>();
-        private final Set<EImpact> eImpacts = new HashSet<>();
-        private final Set<ImmutablePair<Range, EImpact.FailureReport>> initialTests = new HashSet<>();
+        private final Set<CoEvolution> coevolutions = new LinkedHashSet<>();
+        private final Set<EImpact> eImpacts = new LinkedHashSet<>();
+        private final Set<ImmutablePair<Range, EImpact.FailureReport>> initialTests = new LinkedHashSet<>();
 
         CoEvolutionsManyCommit(Specifier spec) {
             super(spec);
@@ -301,7 +303,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     ah.applyEvolutions(c.evosForThisTest);
                     for (EImpact imp : consumer.resultingImpacts) {
                         Set<Evolution> e = imp.evolutions.keySet();
-                        functionalImpacts.putIfAbsent(e, new HashSet<>());
+                        functionalImpacts.putIfAbsent(e, new LinkedHashSet<>());
                         functionalImpacts.get(e).add(imp);
                     }
                 } catch (Exception e) {
@@ -349,11 +351,11 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     private Map<Evolution, Set<Evolution>> decompose(Evolutions from, Evolutions by) {
         assert from != null;
         assert by != null;
-        HashSet<Evolutions.Evolution> notUsed = new HashSet<>(by.toSet());
-        Map<Evolution, Set<Evolution>> result = new HashMap<>();
+        // HashSet<Evolutions.Evolution> notUsed = new HashSet<>(by.toSet());
+        Map<Evolution, Set<Evolution>> result = new LinkedHashMap<>();
 
         for (Evolution evolution : Iterators2.createChainIterable(Arrays.asList(from, by))) {
-            Set<Evolution> acc = new HashSet<>();
+            Set<Evolution> acc = new LinkedHashSet<>();
             for (DescRange descRange : evolution.getBefore()) {
                 CtElement ele = (CtElement) descRange.getTarget().getOriginal();
                 if (ele == null) {
@@ -408,17 +410,17 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     }
 
     public static class CoEvolutionsExtension extends CoEvolutions {
-        private final Set<CoEvolution> coevolutions = new HashSet<>();
+        private final Set<CoEvolution> coevolutions = new LinkedHashSet<>();
         public final Evolutions evolutions;
         public final Project<?> astBefore;
         public final Project<?> astAfter;
         private final  Map<Range, EImpact> initialTestsStatus = new HashMap<>(); // TODO put it in the db
-        private final Set<EImpact> probableCoevoCauses = new HashSet<>(); // merges with prev commits would allow to
+        private final Set<EImpact> probableCoevoCauses = new LinkedHashSet<>(); // merges with prev commits would allow to
                                                                           // find even farther root causes
-        private final Set<EImpact> probableCoEvoResolutions = new HashSet<>(); // merge won't help much but need to
+        private final Set<EImpact> probableCoEvoResolutions = new LinkedHashSet<>(); // merge won't help much but need to
                                                                                // confirm
-        private final Set<EImpact> partialResolutions = new HashSet<>(); // merge with other commits
-        private final Set<EImpact> failfail = new HashSet<>(); // X X
+        private final Set<EImpact> partialResolutions = new LinkedHashSet<>(); // merge with other commits
+        private final Set<EImpact> failfail = new LinkedHashSet<>(); // X X
         private final Map<Evolution, Map<Range, EImpact>> probableResolutionsIndex = new HashMap<>();
         private final Map<Evolution, Map<Range, EImpact>> probablyNothing = new HashMap<>();
 
@@ -441,7 +443,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         @Override
         public Set<ImmutablePair<Range, EImpact.FailureReport>> getInitialTests() {
-            Set<ImmutablePair<Range, EImpact.FailureReport>> r = new HashSet<>();
+            Set<ImmutablePair<Range, EImpact.FailureReport>> r = new LinkedHashSet<>();
             for (Entry<Range, EImpact> p : initialTestsStatus.entrySet()) {
                 r.add(p.getValue().tests.get(p.getKey()));
             }
@@ -490,6 +492,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 }
             }
             // compute inclusion of causes in reso then make the coevo
+            // more efficient than probableCoEvoResolutions.iterator().next().evolutions.keySet().containsAll(eimpCauses.evolutions.keySet())
+            // TODO extract it to unit test it
             for (EImpact eimpCauses : probableCoevoCauses) {
                 Set<ImmutablePair<Range, EImpact>> possibleReso = null;
                 for (Entry<Evolution, Fraction> causeEvos : eimpCauses.evolutions.entrySet()) {
@@ -498,7 +502,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         break;
                     }
                     if (possibleReso == null) {
-                        possibleReso = new HashSet<>();
+                        possibleReso = new LinkedHashSet<>();
                         for (Entry<Range, ImmutablePair<Range, EImpact.FailureReport>> testEntry : eimpCauses.tests
                                 .entrySet()) {
                             EImpact aaa = resos.get(testEntry.getKey());
@@ -508,7 +512,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                             possibleReso.add(new ImmutablePair<Range, EImpact>(testEntry.getKey(), aaa));
                         }
                     } else {
-                        Set<ImmutablePair<Range, EImpact>> tmp = new HashSet<>();
+                        Set<ImmutablePair<Range, EImpact>> tmp = new LinkedHashSet<>();
                         for (Entry<Range, ImmutablePair<Range, EImpact.FailureReport>> testEntry : eimpCauses.tests
                                 .entrySet()) {
                             tmp.add(new ImmutablePair<Range, EImpact>(testEntry.getKey(),
@@ -526,13 +530,15 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 // remaining possibleReso are real reso
                 for (ImmutablePair<Range, EImpact> eimpResoEntry : possibleReso) {
                     EImpact eimpReso = eimpResoEntry.getValue();
-                    Set<Evolution> resolutions = new HashSet<>(eimpReso.evolutions.keySet());
+                    Set<Evolution> resolutions = new LinkedHashSet<>(eimpReso.evolutions.keySet());
                     resolutions.removeAll(eimpCauses.evolutions.keySet());
                     if (resolutions.size() == 0)
                         continue;
-                    CoEvolutionExtension res = new CoEvolutionExtension(new HashSet<>(eimpCauses.evolutions.keySet()),
-                            resolutions, Collections.singleton(eimpResoEntry.getKey()),
-                            Collections.singleton(eimpResoEntry.getValue().tests.get(eimpResoEntry.getKey()).getKey()));
+                    Range testBefore = eimpResoEntry.getKey();
+                    Range testAfter = eimpResoEntry.getValue().tests.get(testBefore).getKey();
+                    CoEvolutionExtension res = new CoEvolutionExtension(new LinkedHashSet<>(eimpCauses.evolutions.keySet()),
+                            resolutions, Collections.singleton(testBefore),
+                            Collections.singleton(testAfter));
                     coevolutions.add(res);
                 }
             }
@@ -688,7 +694,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         evosForThisTest.addAll(atomizedRefactorings.get(src)); // TODO eval of imp. on precision
                     }
 
-                    evoPerProj.putIfAbsent(evolutionsAtProj, new HashSet<>());
+                    evoPerProj.putIfAbsent(evolutionsAtProj, new LinkedHashSet<>());
                     evoPerProj.get(evolutionsAtProj).addAll(evosForThisTest);
 
                     impactedTestsPerProj.putIfAbsent(evolutionsAtProj, new HashSet<>());
@@ -709,7 +715,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 Set<InterestingCase> tmpIntereSet = new HashSet<>();
                 for (InterestingCase c : this.interestingCases.get(k)) {
                     InterestingCase curr = new InterestingCase();
-                    curr.evosForThisTest = new HashSet<>(k.toSet()); // k only contain evos from gts
+                    curr.evosForThisTest = new LinkedHashSet<>(k.toSet()); // k only contain evos from gts
                     curr.evosForThisTest.addAll(evoPerProj.get(k)); //  evoPerProj only contains impacting evos
                     // need RefactoringMiner evos ?
                     curr.testBefore = c.testBefore;

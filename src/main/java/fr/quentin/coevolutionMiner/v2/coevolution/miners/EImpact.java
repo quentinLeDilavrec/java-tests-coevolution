@@ -2,6 +2,7 @@ package fr.quentin.coevolutionMiner.v2.coevolution.miners;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.apache.commons.lang3.math.Fraction;
@@ -26,7 +27,7 @@ public class EImpact {
 	}
 
 	final Map<Range, ImmutablePair<Range, EImpact.FailureReport>> tests = new HashMap<>();
-    final Map<Evolution, Fraction> evolutions = new HashMap<>();
+    final Map<Evolution, Fraction> evolutions = new LinkedHashMap<>();
     public Map<Evolution, Fraction> getEvolutions() {
         return Collections.unmodifiableMap(evolutions);
     }

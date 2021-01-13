@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,7 +29,7 @@ public class EvolutionsImpl extends Evolutions {
         super(spec, sources);
     }
 
-    protected final Set<Evolution> evolutions = new HashSet<>();
+    protected final Set<Evolution> evolutions = new LinkedHashSet<>();
     private final Map<ImmutablePair<String, List<ImmutablePair<Range, String>>>, Evolution> evoByBeforeList = new HashMap<>();
 
     protected final Evolution addEvolution(final String type, final List<ImmutablePair<Range, String>> before,
