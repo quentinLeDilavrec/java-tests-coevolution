@@ -80,7 +80,11 @@ public class ImpactRMinerHandler implements ImpactRoute {
 			launcher.getFactory().getEnvironment().setLevel("INFO");
 
 			// Compile with maven to get deps
-			SourcesHelper.prepare(path);
+		    StringBuilder prepareResult = new StringBuilder();
+		    SourcesHelper.prepare(path, x -> {
+		        prepareResult.append(x + "\n");
+		    });
+			logger.finer(prepareResult.toString());
 
 			try {
 				miner.detectBetweenCommits(helper.getRepo(), commitIdBefore, commitIdAfter, new RefactoringHandler() {

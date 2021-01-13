@@ -65,7 +65,11 @@ class AppTest {
             launcher.getFactory().getEnvironment().setLevel("INFO");
 
             // Compile with maven to get deps
-            SourcesHelper.prepare(path);
+		    StringBuilder prepareResult = new StringBuilder();
+		    SourcesHelper.prepare(path, x -> {
+		        prepareResult.append(x + "\n");
+		    });
+			System.out.println(prepareResult.toString());
 
             // Build Spoon model
             launcher.buildModel();
@@ -149,7 +153,11 @@ class AppTest {
             launcher.getFactory().getEnvironment().setLevel("INFO");
 
             // Compile with maven to get deps
-            SourcesHelper.prepare(path);
+		    StringBuilder prepareResult = new StringBuilder();
+		    SourcesHelper.prepare(path, x -> {
+		        prepareResult.append(x + "\n");
+		    });
+			System.out.println(prepareResult.toString());
 
             // Build Spoon model
             launcher.buildModel();
@@ -220,7 +228,11 @@ class AppTest {
             launcher.getFactory().getEnvironment().setLevel("INFO");
 
             // Compile with maven to get deps
-            SourcesHelper.prepare(path);
+		    StringBuilder prepareResult = new StringBuilder();
+		    SourcesHelper.prepare(path, x -> {
+		        prepareResult.append(x + "\n");
+		    });
+			System.out.println(prepareResult.toString());
 
             // Build Spoon model
             launcher.buildModel();

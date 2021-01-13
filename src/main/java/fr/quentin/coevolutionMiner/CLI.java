@@ -709,6 +709,7 @@ public class CLI {
 
                 // Compile with maven to get deps
                 InvocationRequest request = new DefaultInvocationRequest();
+                request.setBatchMode(true);
                 request.setBaseDirectory(f);
                 request.setGoals(Collections.singletonList("compile"));
                 Invoker invoker = new DefaultInvoker();
@@ -754,8 +755,12 @@ public class CLI {
             launcher.getFactory().getEnvironment().setLevel("INFO");
 
             // Compile with maven to get deps
-            SourcesHelper.prepare(path);
-
+		    StringBuilder prepareResult = new StringBuilder();
+            SourcesHelper.prepare(path, x -> {
+		        prepareResult.append(x + "\n");
+            });
+            logger.finer(prepareResult.toString());
+            
             // Build Spoon model
             try {
                 launcher.buildModel();

@@ -278,25 +278,22 @@ public class SourcesHelper implements AutoCloseable {
 		}
 	}
 
-	public static InvocationResult prepare(Path path) throws Exception {
-		return prepare(path, (File) null);	
+	public static InvocationResult prepare(Path path, InvocationOutputHandler outputHandler) throws Exception {
+		return prepare(path, (File) null, outputHandler);	
 	}
 
-	public static InvocationResult prepare(Path path, File MvnHome ) throws Exception {
+	public static InvocationResult prepare(Path path, File MvnHome, InvocationOutputHandler outputHandler) throws Exception {
 		InvocationRequest request = new DefaultInvocationRequest();
+		request.setOutputHandler(outputHandler);
+		request.setErrorHandler(outputHandler);
 		request.setBaseDirectory(path.toFile());
 		request.setGoals(Arrays.asList("compile", "clean"));
 		request.setBatchMode(true);
 		request.setReactorFailureBehavior(InvocationRequest.ReactorFailureBehavior.FailAtEnd);
-		// request.setErrorHandler(new PrintStreamHandler(System.err, false));
-		// request.setOutputHandler(new PrintStreamHandler(System.out, false));
 		request.setTimeoutInSeconds(60 * 10);
 		request.setShowErrors(true);
 		// request.setThreads("3");
 		Invoker invoker = new DefaultInvoker();
-		// invoker.setOutputHandler(new PrintStreamHandler(System.out, false));
-		// invoker.setErrorHandler(new PrintStreamHandler(System.err, false));
-		// invoker.getLogger().setThreshold(4);
 		invoker.setMavenHome(MvnHome);
 		try {
 			return invoker.execute(request);
@@ -305,55 +302,20 @@ public class SourcesHelper implements AutoCloseable {
 		}
 	}
 
-	// public static class MavenResult {
-
-	// private int build;
-	// private int exitCode;
-	// private CommandLineException executionException;
-
-	// public int getBuildStatus() {
-	// return build;
-	// }
-
-	// void setBuild(int build) {
-	// this.build = build;
-	// }
-
-	// public int getExitCode() {
-	// return exitCode;
-	// }
-
-	// void setExitCode(int exitCode) {
-	// this.exitCode = exitCode;
-	// }
-
-	// public CommandLineException getExecutionException() {
-	// return executionException;
-	// }
-
-	// void setExecutionException(CommandLineException executionException) {
-	// this.executionException = executionException;
-	// }
-
-	// // public MavenResult(int build, int exitCode, CommandLineException
-	// // executionException) {
-	// // this.build = build;
-	// // this.exitCode = exitCode;
-	// // this.executionException = executionException;
-	// // }
-
-	// }
-
-	public static InvocationResult prepare(Path path, String project) throws Exception {
+	public static InvocationResult prepare(Path path, String project, InvocationOutputHandler outputHandler) throws Exception {
 		InvocationRequest request = new DefaultInvocationRequest();
+		request.setOutputHandler(outputHandler);
+		request.setErrorHandler(outputHandler);
 		request.setGoals(Arrays.asList("compile", "clean"));
 		request.setBaseDirectory(path.toFile());
 		request.setProjects(Arrays.asList(project));
 		return prepareAux(request);
 	}
 
-	public static InvocationResult prepareAll(Path path, String project) throws Exception {
+	public static InvocationResult prepareAll(Path path, String project, InvocationOutputHandler outputHandler) throws Exception {
 		InvocationRequest request = new DefaultInvocationRequest();
+		request.setOutputHandler(outputHandler);
+		request.setErrorHandler(outputHandler);
 		request.setGoals(Arrays.asList("test-compile", "clean"));
 		request.setBaseDirectory(path.toFile());
 		request.setProjects(Arrays.asList(project));
@@ -364,35 +326,11 @@ public class SourcesHelper implements AutoCloseable {
 		request.setAlsoMake(true);
 		request.setBatchMode(true);
 		request.setReactorFailureBehavior(InvocationRequest.ReactorFailureBehavior.FailAtEnd);
-		// request.setErrorHandler(new PrintStreamHandler(System.err, false));
-		// request.setOutputHandler(new PrintStreamHandler(System.out, false));
 		request.setTimeoutInSeconds(60 * 10);
 		request.setShowErrors(true);
-		// request.setThreads("3");
 		Invoker invoker = new DefaultInvoker();
-		// invoker.setOutputHandler(new PrintStreamHandler(System.out, false));
-		// invoker.setErrorHandler(new PrintStreamHandler(System.err, false));
-		// invoker.getLogger().setThreshold(4);
 		invoker.setMavenHome(Paths.get(MVN_HOME).toFile());
 		try {
-			// final MavenResult r = new MavenResult();
-			// InvocationResult res = invoker.setOutputHandler(new InvocationOutputHandler()
-			// {
-
-			// @Override
-			// public void consumeLine(String line) throws IOException {
-			// if (line.equals("[INFO] BUILD SUCCESS")) {
-			// r.build = 1;
-			// } else if (line.equals("[INFO] BUILD FAILURE")) {
-			// r.build = 0;
-			// }
-			// System.out.println(line);
-			// }
-
-			// }).execute(request);
-			// r.executionException = res.getExecutionException();
-			// r.exitCode = res.getExitCode();
-			// return r;
 			return invoker.execute(request);
 		} catch (MavenInvocationException e) {
 			throw new Exception("Error while compiling project with maven", e);
@@ -413,70 +351,6 @@ public class SourcesHelper implements AutoCloseable {
 		AugmentedAST<MavenLauncher> aug = new AugmentedAST<>(launcher);
 		ImpactAnalysis l = new ImpactAnalysis(aug);
 		return null;
-		// logger.info("Number of executable refs mapped to positions " + evolutions.size());
-		// List<ImpactChain> imptst1 = l.getImpactedTests(evolutions);
-		// logger.info("Number of Impacted tests X number of evolutions " + imptst1.size());
-		// logger.info("Assembling Impacts");
-		// Impacts x = new Impacts(imptst1);
-		// logger.info("Serializing Impacts");
-		// logger.info(Integer.toString(x.getRoots().size()));
-		// logger.info(new GsonBuilder().setPrettyPrinting().create().toJson(x.toJson()));
-		// return x.toJson(new ToJson() {
-		// 	public JsonElement apply(Object x) {
-		// 		if (x instanceof JsonSerializable) {
-		// 			JsonSerializable y = (JsonSerializable) x;
-		// 			return y.toJson(this);
-		// 		} else if (x instanceof CtMethod) {
-		// 			CtMethod<?> y = (CtMethod<?>) x;
-		// 			JsonObject o = new JsonObject();
-		// 			o.addProperty("declType", y.getDeclaringType().getQualifiedName());
-		// 			o.addProperty("signature", y.getSignature());
-		// 			o.addProperty("name", y.getSimpleName());
-		// 			JsonObject o2 = new JsonObject();
-		// 			o2.addProperty("isTest", ImpactAnalysis.isTest(y));
-		// 			o2.addProperty("file", root.relativize(y.getPosition().getFile().toPath()).toString());
-		// 			o2.addProperty("start", y.getPosition().getSourceStart());
-		// 			o2.addProperty("end", y.getPosition().getSourceEnd());
-		// 			o.add("position", o2);
-		// 			return o;
-		// 		} else if (x instanceof CtConstructor) {
-		// 			CtConstructor<?> y = (CtConstructor<?>) x;
-		// 			JsonObject o = new JsonObject();
-		// 			o.addProperty("declType", y.getDeclaringType().getQualifiedName());
-		// 			o.addProperty("signature", y.getSignature());
-		// 			o.addProperty("name", y.getSimpleName());
-		// 			JsonObject o2 = new JsonObject();
-		// 			o2.addProperty("file", root.relativize(y.getPosition().getFile().toPath()).toString());
-		// 			o2.addProperty("start", y.getPosition().getSourceStart());
-		// 			o2.addProperty("end", y.getPosition().getSourceEnd());
-		// 			o.add("position", o2);
-		// 			return o;
-		// 		} else if (x instanceof CtExecutable) {
-		// 			CtExecutable<?> y = (CtExecutable<?>) x;
-		// 			return new JsonPrimitive("anonymous block" + y.getSignature());
-		// 		} else if (x instanceof CtInvocation) {
-		// 			CtInvocation<?> y = (CtInvocation<?>) x;
-		// 			JsonObject o = new JsonObject();
-		// 			o.add("sig", apply(y.getExecutable().getDeclaration()));
-		// 			JsonObject oPos = new JsonObject();
-		// 			oPos.addProperty("isTest", ImpactAnalysis.isTest(y.getParent(CtMethod.class)));
-		// 			oPos.addProperty("file", root.relativize(y.getPosition().getFile().toPath()).toString());
-		// 			oPos.addProperty("start", y.getPosition().getSourceStart());
-		// 			oPos.addProperty("end", y.getPosition().getSourceEnd());
-		// 			oPos.add("method", apply(y.getParent(CtMethod.class)));
-		// 			o.add("position", oPos);
-		// 			return o;
-		// 		} else if (x instanceof Collection) {
-		// 			JsonArray a = new JsonArray();
-		// 			for (Object b : (Collection<?>) x) {
-		// 				a.add(apply(b));
-		// 			}
-		// 			return a;
-		// 		} else {
-		// 			return new JsonPrimitive(x.getClass().toString());
-		// 		}
-		// 	}
-		// });
 	}
 
 	public static InvocationResult executeTests(File baseDir, String filter, InvocationOutputHandler outputHandler)
@@ -487,6 +361,7 @@ public class SourcesHelper implements AutoCloseable {
 		request.setGoals(Arrays.asList("test"));
 		request.setMavenOpts("-Dtest=" + filter);
 		request.setOutputHandler(outputHandler);
+		request.setErrorHandler(outputHandler);
 		Invoker invoker = new DefaultInvoker();
 		invoker.setMavenHome(Paths.get(MVN_HOME).toFile());
 		try {
@@ -502,6 +377,7 @@ public class SourcesHelper implements AutoCloseable {
 		request.setBaseDirectory(baseDir);
 		request.setGoals(Arrays.asList("test-compile"));
 		request.setOutputHandler(outputHandler);
+		request.setErrorHandler(outputHandler);
 		Invoker invoker = new DefaultInvoker();
 		invoker.setMavenHome(Paths.get(MVN_HOME).toFile());
 		try {
@@ -517,6 +393,7 @@ public class SourcesHelper implements AutoCloseable {
 		request.setBaseDirectory(baseDir);
 		request.setGoals(Arrays.asList("compile"));
 		request.setOutputHandler(outputHandler);
+		request.setErrorHandler(outputHandler);
 		Invoker invoker = new DefaultInvoker();
 		invoker.setMavenHome(Paths.get(MVN_HOME).toFile());
 		try {

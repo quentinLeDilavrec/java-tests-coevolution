@@ -119,9 +119,16 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         try (SourcesHelper helper = src.open();) {
             Path root = helper.materialize(spec.commitId);
             // Compile with maven
-            CommandLineException compilerException0 = SourcesHelper.prepare(root,Paths.get(MyProperties.getPropValues().getProperty("mavenHome")).toFile()).getExecutionException();
-            if (compilerException0 != null) {
-                compilerException0.printStackTrace();
+
+		    StringBuilder prepareResult = new StringBuilder();
+            InvocationResult prepared = SourcesHelper.prepare(root,
+                Paths.get(MyProperties.getPropValues().getProperty("mavenHome")).toFile() , x -> {
+		        prepareResult.append(x + "\n");
+            });
+            logger.finer(prepareResult.toString());
+            CommandLineException compilerException = prepared.getExecutionException();
+            if (compilerException != null) {
+                logger.throwing("SourcesHelper", "prepare", compilerException);
             }
             return extractedPrecise(src, root, root, null);
         } catch (SpoonException e) {
@@ -148,11 +155,15 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         // List<String> modules = launcher.getPomFile().getModel().getModules();
         // System.out.println(modules.get(0));
 
-        InvocationResult prepared = SourcesHelper.prepare(path, ".");
+        StringBuilder prepareResult = new StringBuilder();
+        InvocationResult prepared = SourcesHelper.prepare(path, "." ,x -> {
+            prepareResult.append(x + "\n");
+        });
+        logger.finer(prepareResult.toString());
 
         CommandLineException compilerException = prepared.getExecutionException();
         if (compilerException != null) {
-            compilerException.printStackTrace();
+            logger.throwing("SourcesHelper", "prepare", compilerException);
         }
 
         try {
@@ -198,10 +209,15 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             launcherCode.getEnvironment().setCommentEnabled(false);
             launcherCode.getFactory().getEnvironment().setCommentEnabled(false);
 
-            InvocationResult preparedCode = SourcesHelper.prepare(path, ".");
+		    StringBuilder prepareCodeResult = new StringBuilder();
+            InvocationResult preparedCode = SourcesHelper.prepare(path, "." ,x -> {
+		        prepareCodeResult.append(x + "\n");
+            });
+            logger.finer(prepareCodeResult.toString());
+            
             CommandLineException compilerExceptionCode = preparedCode.getExecutionException();
             if (compilerExceptionCode != null) {
-                compilerExceptionCode.printStackTrace();
+                logger.throwing("SourcesHelper", "prepare", compilerExceptionCode);
             }
             // ALL_SOURCE
             MavenLauncher launcherAll = spoonPom != null
@@ -225,10 +241,14 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                 r.getAst().getGlobalStats().testsAST = 1;
             }
 
-            InvocationResult preparedAll = SourcesHelper.prepareAll(path, ".");
+		    StringBuilder prepareAllResult = new StringBuilder();
+            InvocationResult preparedAll = SourcesHelper.prepareAll(path, "." ,x -> {
+		        prepareAllResult.append(x + "\n");
+            });
+		    logger.finer(prepareAllResult.toString());
             CommandLineException compilerExceptionAll = preparedAll.getExecutionException();
             if (compilerExceptionAll != null) {
-                compilerExceptionAll.printStackTrace();
+                logger.throwing("SourcesHelper", "prepareAll", compilerExceptionAll);
             }
 
             if (r == null) {
