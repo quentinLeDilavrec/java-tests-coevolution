@@ -520,6 +520,9 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                                 .entrySet()) {
                             EImpact aaa = resos.get(testEntry.getKey());
                             if (aaa == null) {
+                                aaa = resos.get(testEntry.getValue().left);
+                            }
+                            if (aaa == null) {
                                 continue;
                             }
                             possibleReso.add(new ImmutablePair<Range, EImpact>(testEntry.getKey(), aaa));
