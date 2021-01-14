@@ -310,6 +310,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     ah.applyEvolutions(c.evosForThisTest);
                     for (EImpact imp : consumer.resultingImpacts) {
                         Set<Evolution> e = imp.evolutions.keySet();
+                        logger.info(e.toString()+";"+(imp.tests.get(c.testBefore).right==null?"P":"F"));
                         functionalImpacts.putIfAbsent(e, new LinkedHashSet<>());
                         functionalImpacts.get(e).add(imp);
                     }
@@ -460,6 +461,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         public void addEImpacts(Map<Set<Evolution>, Set<EImpact>> eImpacts) {
             logger.info("post-processing " + eImpacts.size() + " sets of evolutions");
+            logger.info("precisely:  " + eImpacts.keySet());
             for (Entry<Set<Evolution>, Set<EImpact>> aaa : eImpacts.entrySet()) {
                 for (EImpact ei : aaa.getValue()) {
                     for (Entry<Range, ImmutablePair<Range, EImpact.FailureReport>> bbb : ei.tests.entrySet()) {
