@@ -3,6 +3,7 @@ package fr.quentin.coevolutionMiner.v2.coevolution.miners;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -66,7 +67,7 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
     private EvolutionsAtProj evolutionsAtProj;
     public Set<Path> initiallyPresent;
     private Factory middleFactory;
-    public Set<EImpact> resultingImpacts = new HashSet<>();
+    public Set<EImpact> resultingImpacts = new LinkedHashSet<>();
 
     private OutputDestinationHandlerImpl outDestHandler;
 
