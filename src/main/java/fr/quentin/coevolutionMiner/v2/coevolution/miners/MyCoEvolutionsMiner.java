@@ -273,6 +273,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         EvoStateMaintainerImpl evoState = new EvoStateMaintainerImpl(currEvoAtCommit.beforeVersion,
                 atomizedRefactorings);
 
+        logger.info(atomizedRefactorings.keySet().stream().map(x->""+x.toString()+":"+x.getOriginal().toString()).collect(Collectors.toList()).toString());
+
         FunctionalImpactRunner consumer = new FunctionalImpactRunner(pathToIndividualExperiment.toFile());
         consumer.outputProcessor = outputProcessor;
         evoState.setValidityLauncher(consumer);
