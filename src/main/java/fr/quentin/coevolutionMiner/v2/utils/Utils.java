@@ -186,7 +186,12 @@ public class Utils {
     }
 
 	public static String formatedType(Object original) { // TODO put in utils
-	    String name = original.getClass().getSimpleName();
+		String name;
+		try {
+			name = original.getClass().getSimpleName();
+		} catch (NoClassDefFoundError e) {
+			return "";
+		}
 	    name = name.endsWith("Impl") ? name.substring(0, name.length() - "Impl".length()) : name;
 	    name = name.startsWith("Ct") ? name.substring("Ct".length()) : name;
 	    name = name.endsWith("Wrapper") ? name.substring(0, name.length() - "Wrapper".length()) : name;
