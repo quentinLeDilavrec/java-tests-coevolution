@@ -30,6 +30,7 @@ import fr.quentin.impactMiner.Evolution;
 import fr.quentin.impactMiner.ImpactAnalysis;
 import fr.quentin.impactMiner.ImpactElement;
 import fr.quentin.impactMiner.Position;
+import gumtree.spoon.builder.CtWrapper;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtExecutable;
 import spoon.reflect.declaration.CtMethod;
@@ -186,6 +187,9 @@ public class Utils {
     }
 
 	public static String formatedType(Object original) { // TODO put in utils
+		if (original instanceof CtWrapper) {
+			original = ((CtWrapper)original).getValue();
+		}
 		String name;
 		try {
 			name = original.getClass().getSimpleName();
