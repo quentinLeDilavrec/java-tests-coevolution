@@ -319,7 +319,12 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     ah.applyEvolutions(c.evosForThisTest);
                     for (EImpact imp : consumer.resultingImpacts) {
                         Set<Evolution> e = imp.evolutions.keySet();
-                        logger.info(e.toString() + ";" + (imp.tests.get(c.testBefore).right == null ? "P" : "F"));
+                        try {
+                            logger.info(e.toString() + ";" + (imp.tests.get(c.testBefore).right == null ? "P" : "F"));
+                        } catch (Exception ee) {
+                            logger.info(c.testBefore.toString());
+                            logger.info(imp.tests.toString());
+                        }
                         functionalImpacts.putIfAbsent(e, new LinkedHashSet<>());
                         functionalImpacts.get(e).add(imp);
                     }
@@ -533,15 +538,15 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 if (possibleReso == null || possibleReso.isEmpty()) {
                     continue;
                 }
-                Map<Range, Map<Range, FailureReport>> causeRevIndex = new LinkedHashMap<>();
-                for (Entry<Range, ImmutablePair<Range, FailureReport>> entry : eimpCauses.tests.entrySet()) {
-                    causeRevIndex.putIfAbsent(entry.getValue().left, new LinkedHashMap<>());
-                    FailureReport old = causeRevIndex.get(entry.getValue().left).put(entry.getKey(),
-                            entry.getValue().right);
-                    if (old!=null) {
-                        logger.warning("unclear impact status");
-                    }
-                }
+                // Map<Range, Map<Range, FailureReport>> causeRevIndex = new LinkedHashMap<>();
+                // for (Entry<Range, ImmutablePair<Range, FailureReport>> entry : eimpCauses.tests.entrySet()) {
+                //     causeRevIndex.putIfAbsent(entry.getValue().left, new LinkedHashMap<>());
+                //     FailureReport old = causeRevIndex.get(entry.getValue().left).put(entry.getKey(),
+                //             entry.getValue().right);
+                //     if (old!=null) {
+                //         logger.warning("unclear impact status");
+                //     }
+                // }
                 // remaining possibleReso are real reso
                 for (EImpact eimpReso : possibleReso) {
                     Set<Evolution> resolutions = new LinkedHashSet<>(eimpReso.evolutions.keySet());
@@ -560,7 +565,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                             res = new CoEvolutionExtension(new LinkedHashSet<>(eimpCauses.evolutions.keySet()),
                                     resolutions, Collections.singleton(testBefore),
                                     Collections.singleton(testBefore));
-                        } else if (testAfterR == testBefore) {
+                        } else if (testAfterR == testBefore) { // TODO can we really undershoot here?
                             res = new CoEvolutionExtension(new LinkedHashSet<>(eimpCauses.evolutions.keySet()),
                                     resolutions, Collections.singleton(testBefore),
                                     Collections.singleton(testAfterC));
