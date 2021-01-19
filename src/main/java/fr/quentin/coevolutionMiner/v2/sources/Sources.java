@@ -221,6 +221,12 @@ public abstract class Sources {
             r.put("commitId",getId());
             return r;
         }
+
+        @Override
+        public String toString() {
+            return getRepository().getUrl() + "/" + id.substring(0, Math.min(id.length(), 16));
+        }
+        
     }
 
     public abstract List<Commit> getCommitsBetween(String commitIdBefore, String commitIdAfter) throws Exception;
