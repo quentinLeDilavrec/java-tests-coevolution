@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
@@ -196,7 +197,10 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
         try {
             for (CtType type : mFacto.getModel().getAllTypes()) {
                 if (!type.isShadow()) {
-                    outputProcessor.createJavaFile(type);
+                    if (Objects.equals(true, type.getPosition().getCompilationUnit().getMetadata("changed"))) {
+                        outputProcessor.createJavaFile(type);
+                        type.getPosition().getCompilationUnit().putMetadata("changed", null);
+                    }
                     Path exactPath = odh.getOutputPath(type.getPackage().getDeclaringModule(), type.getPackage(), type);
                     diff.remove(exactPath);
                 }
