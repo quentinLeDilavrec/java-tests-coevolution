@@ -178,8 +178,8 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         // TODO compute stats
         Set<Project<?>> modules = new HashSet<>();
         Commit commit = src.getCommit(spec.commitId);
-        Path efwrsgw = root.relativize(path);
-        ProjectSpoon r = new ProjectSpoon(new Specifier(spec.sources, efwrsgw, spec.commitId, spec.miner), modules,
+        Path relPath = root.relativize(path);
+        ProjectSpoon r = new ProjectSpoon(new Specifier<>(spec.sources, relPath, spec.commitId, spec.miner), modules,
                 commit, path, launcher, compilerException);
         computeCounts(launcher, r);
         computeLOC(path, r);
@@ -235,7 +235,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                     logger.log(Level.FINE, pb.toString());
                 }
 
-                r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules, commit,
+                r = new ProjectSpoon(new Specifier<>(spec.sources, relPath, spec.commitId, spec.miner), modules, commit,
                         root, launcherCode, compilerExceptionCode);
                 r.getAst().getGlobalStats().codeAST = 1;
                 r.getAst().getGlobalStats().testsAST = 1;
@@ -261,7 +261,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                         // System.err.println(pb.toString());
                     }
                     // throw new RuntimeException(e);
-                    r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules,
+                    r = new ProjectSpoon(new Specifier<>(spec.sources, relPath, spec.commitId, spec.miner), modules,
                             commit, root, launcherAll, compilerExceptionAll);
                     computeCounts(launcherAll, r);
                     r.getAst().getGlobalStats().codeAST = 0;
@@ -270,7 +270,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             }
 
             if (r == null) {
-                r = new ProjectSpoon(new Specifier(spec.sources, relPath, spec.commitId, spec.miner), modules, commit,
+                r = new ProjectSpoon(new Specifier<>(spec.sources, relPath, spec.commitId, spec.miner), modules, commit,
                         root, launcherAll, compilerExceptionCode);
                 computeCounts(launcherAll, r);
                 r.getAst().getGlobalStats().codeAST = 0;
@@ -289,7 +289,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             return r;
 
         } catch (Exception e) {
-            r = new ProjectSpoon(new Specifier(spec.sources, spec.commitId, spec.miner), commit, root, e);
+            r = new ProjectSpoon(new Specifier<>(spec.sources, spec.commitId, spec.miner), commit, root, e);
             computeLOC(path, r);
             return r;
         }
