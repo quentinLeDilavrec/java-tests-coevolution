@@ -99,6 +99,7 @@ public class MyImpactsMiner implements ImpactsMiner {
         ImpactsExtension result = new ImpactsExtension(new Impacts.Specifier(project.spec, spec.evoSpec, spec.miner),
                 project, rootDir, l);
 
+        logger.info("computing Impacts of" + project.spec.relPath.toString());
         result.computeImpacts(isOnBefore, ast, evo);
 
         for (Project<?> childProj : project.getModules()) {
