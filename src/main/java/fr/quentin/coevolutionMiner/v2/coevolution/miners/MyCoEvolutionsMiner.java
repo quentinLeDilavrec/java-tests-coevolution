@@ -250,8 +250,16 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         Impacts currentImpacts = impactHandler.handle(impactHandler.buildSpec(before_ast_id, currEvoMixedSpec));
         Impacts afterImpacts = impactHandler.handle(impactHandler.buildSpec(after_ast_id, currEvoMixedSpec));
 
+        CoEvolutions.Specifier coevoSpec = CoEvolutionHandler.buildSpec(sourcesProvider.spec, currEvoMixedSpec);
+        CoEvolutionsExtension currCoevolutions = new CoEvolutionsExtension(coevoSpec, currentRMEvolutions, before_proj,
+                after_proj);
+
         EvolutionsAtCommit currEvoAtCommit = ((GumTreeSpoonMiner.EvolutionsMany) currentGTSEvolutions)
                 .getPerCommit(currentCommit.getId(), nextCommit.getId());
+        if(currEvoAtCommit==null) {
+            logger.warning("no evolution here for this pair of commits: " + currentCommit.getId() + ", " + nextCommit.getId());
+            return currCoevolutions;
+        }
 
         InterestingCasesExtractor icExtractor = new InterestingCasesExtractor(currEvoAtCommit, currentImpacts,
                 afterImpacts, atomizedRefactorings);
@@ -264,7 +272,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         if(rootModule==null) logger.warning("rootModule is null");
         if(rootModule.getBeforeProj()==null) logger.warning("beforeProj is null");
         if(rootModule.getAfterProj()==null) logger.warning("afterProj is null");
-        Path oriPath = ((SpoonAST) rootModule.getBeforeProj().getAst()).rootDir; //EXC nullptr for https://github.com/VerbalExpressions/JavaVerbalExpressions.git and https://github.com/RusticiSoftware/TinCanJava.git
+        Path oriPath = ((SpoonAST) rootModule.getBeforeProj().getAst()).rootDir;
         Path afterOriPath = ((SpoonAST) rootModule.getAfterProj().getAst()).rootDir;
         // setup directory where validation will append
         FileUtils.deleteQuietly(pathToIndividualExperiment.toFile());
@@ -273,9 +281,6 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        CoEvolutions.Specifier coevoSpec = CoEvolutionHandler.buildSpec(sourcesProvider.spec, currEvoMixedSpec);
-        CoEvolutionsExtension currCoevolutions = new CoEvolutionsExtension(coevoSpec, currentRMEvolutions, before_proj,
-                after_proj);
 
         JavaOutputProcessor outputProcessor = new JavaOutputProcessor();
         EvoStateMaintainerImpl evoState = new EvoStateMaintainerImpl(currEvoAtCommit.beforeVersion,
