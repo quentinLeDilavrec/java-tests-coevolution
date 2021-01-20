@@ -165,9 +165,9 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             List<Sources.Commit> commits;
             try {
                 commits = sourcesProvider.getCommitsBetween(initialCommitId, spec.evoSpec.commitIdAfter);
-                System.out.println(
+                logger.info(
                         commits.size() > 2 ? "caution computation of coevolutions only between consecutive commits"
-                                : commits.size());
+                                : "# of commits to analyze: " + commits.size());
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
