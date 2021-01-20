@@ -260,8 +260,12 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         // Validation phase, by compiling and running tests
         Path pathToIndividualExperiment = Paths.get("/tmp/applyResults", getRepoRawPath(), nextCommit.getId(),
                 currentCommit.getId(), "" + new Date().getTime());
-        Path oriPath = ((SpoonAST) currEvoAtCommit.getRootModule().getBeforeProj().getAst()).rootDir;
-        Path afterOriPath = ((SpoonAST) currEvoAtCommit.getRootModule().getAfterProj().getAst()).rootDir;
+        EvolutionsAtProj rootModule = currEvoAtCommit.getRootModule();
+        if(rootModule==null) logger.warning("rootModule is null");
+        if(rootModule.getBeforeProj()==null) logger.warning("beforeProj is null");
+        if(rootModule.getAfterProj()==null) logger.warning("afterProj is null");
+        Path oriPath = ((SpoonAST) rootModule.getBeforeProj().getAst()).rootDir; //EXC nullptr for https://github.com/VerbalExpressions/JavaVerbalExpressions.git and https://github.com/RusticiSoftware/TinCanJava.git
+        Path afterOriPath = ((SpoonAST) rootModule.getAfterProj().getAst()).rootDir;
         // setup directory where validation will append
         FileUtils.deleteQuietly(pathToIndividualExperiment.toFile());
         try {
