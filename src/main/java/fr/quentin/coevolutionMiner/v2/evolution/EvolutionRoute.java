@@ -5,11 +5,13 @@ import java.util.Map;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
+import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import spark.Request;
@@ -81,9 +83,14 @@ public class EvolutionRoute implements Route {
                     throw new RuntimeException(e);
                 }
             }
-            // TODO use body.cases to filter wanted evolutions
-            r = evoHandler.handle(evoHandler.buildSpec(srcSpec, body.commitIdBefore, body.commitIdAfter, minerId))
-                    .toJson();
+            Evolutions evolutions = evoHandler.handle(evoHandler.buildSpec(srcSpec, body.commitIdBefore, body.commitIdAfter, minerId));
+            JsonArray result = new JsonArray();
+            for (Evolution evolution : evolutions) {
+                // TODO use body.cases to filter wanted evolutions
+                Map<String, Object> tmp = evolution.asMap();
+                result.add(gson.toJsonTree(tmp));
+            }
+            r = result;
         } else if (body.repo != null && body.tagBefore != null && body.tagAfter != null) {
             JsonObject tmp = new JsonObject();
             tmp.addProperty("error", "tag evolution handler not implemented yet");
