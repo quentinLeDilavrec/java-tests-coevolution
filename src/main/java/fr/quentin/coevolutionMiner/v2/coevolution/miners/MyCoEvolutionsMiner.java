@@ -707,10 +707,12 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         }
                     }
                     if (testBefore != null && !(testBefore.getOriginal() instanceof CtMethod)) {
-                        throw new RuntimeException("original of testBefore should be a CtMethod but was" + testBefore.getOriginal().getClass().toString());
+                        logger.warning("original of testBefore should be a CtMethod but was " + testBefore.getOriginal().getClass().toString());
+                        continue;
                     }
                     if (testAfter != null && !(testAfter.getOriginal() instanceof CtMethod)){
-                        throw new RuntimeException("original of testAfter should be a CtMethod but was" + testAfter.getOriginal().getClass().toString());
+                        logger.warning("original of testAfter should be a CtMethod but was " + testAfter.getOriginal().getClass().toString());
+                        continue;
                     }
                     Set<Evolutions.Evolution.DescRange> evosInGame = (Set) impactedTest.getValue();
 
