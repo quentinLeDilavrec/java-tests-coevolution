@@ -14,6 +14,7 @@ import spark.Response;
 import spark.Route;
 
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.MixedMiner;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
@@ -95,7 +96,7 @@ public class ImpactRoute implements Route {
             }
             // TODO use body.cases to filter wanted evolutions
             r = impactsHandler.handle(impactsHandler.buildSpec(astHandler.buildSpec(srcSpec, body.commitIdBefore),
-                    evoHandler.buildSpec(srcSpec, body.commitIdBefore, body.commitIdAfter), minerId)).toJson();
+                    evoHandler.buildSpec(srcSpec, body.commitIdBefore, body.commitIdAfter, MixedMiner.class), minerId)).toJson();
         } else if (body.repo != null && body.tagBefore != null && body.tagAfter != null) {
             JsonObject tmp = new JsonObject();
             tmp.addProperty("error", "tag impact handler not implemented yet");

@@ -14,6 +14,7 @@ import spark.Response;
 import spark.Route;
 
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.MixedMiner;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
@@ -99,7 +100,7 @@ public class CoEvolutionRoute implements Route {
             // TODO use body.cases to filter wanted evolutions
             r = coevoHandler
                     .handle(coevoHandler
-                            .buildSpec(srcSpec, evoHandler.buildSpec(srcSpec, body.commitIdBefore, body.commitIdAfter), minerId))
+                            .buildSpec(srcSpec, evoHandler.buildSpec(srcSpec, body.commitIdBefore, body.commitIdAfter, MixedMiner.class), minerId))
                     .toJson();
         } else if (body.repo != null && body.tagBefore != null && body.tagAfter != null) {
             JsonObject tmp = new JsonObject();
