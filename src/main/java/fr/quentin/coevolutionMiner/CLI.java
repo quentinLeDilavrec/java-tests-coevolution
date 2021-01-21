@@ -326,6 +326,7 @@ public class CLI {
                 List<String> s = Arrays.asList(line.split(" "));
                 if (s.size() > 2) {
                     executor.submit(() -> {
+                        Thread.currentThread().setName("batch " + s.get(0));
                         try {
                             if (splitedOut) {
                                 ThreadPrintStream.redirectThreadLogs(ThreadPrintStream.DEFAULT);
@@ -347,6 +348,7 @@ public class CLI {
                                     commit_index++;
                                     commitIdAfter = s.get(commit_index);
                                     commitIdBefore = s.get(commit_index + 1);
+                                    Thread.currentThread().setName("batch " + s.get(0) + " --from " + commitIdBefore + " --to " + commitIdAfter);
                                     if (splitedOut) {
                                         ThreadPrintStream.redirectThreadLogs(
                                                 Paths.get(SourcesHelper.RESOURCES_PATH, "LogsB", rawPath, commitIdBefore));
