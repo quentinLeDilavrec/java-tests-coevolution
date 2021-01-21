@@ -326,9 +326,12 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     });
                 }
 
-                // TODO handle moved/renamed projects
                 for (Entry<String, MutablePair<Project<?>, Project<?>>> entry : modulesPairs.entrySet()) {
                     MutablePair<Project<?>, Project<?>> value = entry.getValue();
+                    if (value.left==null || value.right==null) {
+                        // TODO handle moved/renamed projects better
+                        continue;
+                    }
                     SpecificifierAtProj projSpec = new SpecificifierAtProj(spec.sources, value.left.spec,
                             value.right.spec, spec.miner);
                     EvolutionsAtProj child = new EvolutionsAtProj(projSpec);
