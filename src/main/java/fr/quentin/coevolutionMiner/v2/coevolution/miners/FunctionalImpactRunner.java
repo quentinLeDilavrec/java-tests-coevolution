@@ -135,7 +135,7 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
         static Logger logger = Logger.getLogger(Execution.class.getName());
 
 		private static String executeTest(File baseDir, String declaringClass, String name) throws Exception {
-		    StringBuilder r = new StringBuilder();
+            StringBuffer r = new StringBuffer();
 		    FunctionalImpactRunner.logger.fine("Launching test: " + declaringClass + "#" + name);
 		    InvocationResult res = SourcesHelper.executeTests(baseDir, declaringClass + "#" + name, x -> {
 		        r.append(x + "\n");
@@ -153,7 +153,7 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
 		}
 
 		private static String compileAllTests(File baseDir) throws Exception {
-		    StringBuilder r = new StringBuilder();
+            StringBuffer r = new StringBuffer();
 		    FunctionalImpactRunner.logger.fine("Compiling all tests ");
 		    InvocationResult res = SourcesHelper.compileAllTests(baseDir, x -> {
 		        r.append(x + "\n");
@@ -171,10 +171,10 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
 		}
 
 		private static String compileApp(File baseDir) throws Exception {
-		    StringBuilder r = new StringBuilder();
+            StringBuffer r = new StringBuffer();
 		    FunctionalImpactRunner.logger.fine("Compiling App");
 		    InvocationResult res = SourcesHelper.compileApp(baseDir, x -> {
-		        r.append(x + "\n");
+                r.append(x + "\n");
 		    });
 		    logger.finer(r.toString());
 		    CommandLineException executionException = res.getExecutionException();
