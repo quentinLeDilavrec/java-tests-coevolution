@@ -348,6 +348,9 @@ public class CLI {
                                     commit_index++;
                                     commitIdAfter = s.get(commit_index);
                                     commitIdBefore = s.get(commit_index + 1);
+                                    if (commitIdBefore.equals(commitIdAfter)) {
+                                        continue;
+                                    }
                                     Thread.currentThread().setName("batch " + s.get(0) + " --from " + commitIdBefore + " --to " + commitIdAfter);
                                     if (splitedOut) {
                                         ThreadPrintStream.redirectThreadLogs(
@@ -490,6 +493,9 @@ public class CLI {
                                 commit_index++;
                                 commitIdAfter = s.get(commit_index);
                                 commitIdBefore = s.get(commit_index + 1);
+                                if (commitIdBefore.equals(commitIdAfter)) {
+                                    continue;
+                                }
 
                                 try { // https://github.com/chrisbanes/Android-PullToRefresh/commit/1f7a7e1daf89167b11166180d96bac54a9306c80
                                       // evos = spoon compile + count tests/methods/class
@@ -613,6 +619,9 @@ public class CLI {
                                 commit_index++;
                                 commitIdAfter = s.get(commit_index);
                                 commitIdBefore = s.get(commit_index + 1);
+                                if (commitIdBefore.equals(commitIdAfter)) {
+                                    continue;
+                                }
 
                                 try { // https://github.com/chrisbanes/Android-PullToRefresh/commit/1f7a7e1daf89167b11166180d96bac54a9306c80
                                       // evos = spoon compile + count tests/methods/class
