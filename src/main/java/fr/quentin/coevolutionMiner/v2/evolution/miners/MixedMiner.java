@@ -78,8 +78,14 @@ public class MixedMiner implements EvolutionsMiner {
             for (Commit commit : keys) {
                 Evolutions currRM = perBeforeCommitRM.get(commit);
                 Evolutions currGTS = perBeforeCommitGTS.get(commit);
-                r.put(commit, new EvolutionsExtension(new Evolutions.Specifier(spec.sources, currGTS.spec.commitIdAfter,
-                        currGTS.spec.commitIdAfter, MixedMiner.class), sources, currRM, currGTS));
+                if (currRM != null && currGTS != null) {
+                    r.put(commit, new EvolutionsExtension(new Evolutions.Specifier(spec.sources, currGTS.spec.commitIdAfter,
+                            currGTS.spec.commitIdAfter, MixedMiner.class), sources, currRM, currGTS));
+                } else if (currRM != null) {
+                    r.put(commit, currRM);
+                } else if (currGTS != null) {
+                    r.put(commit, currGTS);
+                }
             }
             return Collections.unmodifiableMap(r);
         }
