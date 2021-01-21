@@ -23,6 +23,7 @@ import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionRoute;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.MixedMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactRoute;
@@ -144,6 +145,8 @@ public class Server {
 				put("/GumtreeSpoon", evoG);
 				EvolutionRoute evoR = new EvolutionRoute(srcH, astH, evoH, RefactoringMiner.class);
 				put("/RefactoringMiner", evoR);
+				EvolutionRoute evoM = new EvolutionRoute(srcH, astH, evoH, MixedMiner.class);
+				put("/Mixed", evoM);
 				put("/default", evoR);
 			});
 
