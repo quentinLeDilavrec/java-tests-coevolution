@@ -529,7 +529,7 @@ public class CLI {
                 logger.info("(laucher start) CLI status " + Long.toString(executor.getTaskCount()) + " "
                         + Integer.toString(executor.getActiveCount()) + " "
                         + Long.toString(executor.getCompletedTaskCount()));
-                List<String> s = Arrays.asList(line.split(" "));
+                List<String> s = Arrays.asList(line.right.split(" "));
                 if (s.size() > 2) {
                     executor.submit(() -> {
                         logger.info("(submit start) CLI status " + Long.toString(executor.getTaskCount()) + " "
