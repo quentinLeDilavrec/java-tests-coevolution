@@ -35,7 +35,8 @@ public class JgitMiner implements SourcesMiner {
             }
 
             @Override
-            public List<Sources.Commit> getCommitsBetween(String commitIdBefore, String commitIdAfter) {
+            public List<Sources.Commit> getCommitsBetween(String commitIdBefore, String commitIdAfter)
+                    throws Exception {
                 try (SourcesHelper helper = open();) {
                     Map<String, Sources.Commit> result = new HashMap<>();
                     ImmutableTriple<RevCommit, Iterable<RevCommit>, RevCommit> tmp0 = helper
@@ -84,8 +85,6 @@ public class JgitMiner implements SourcesMiner {
                         }
                     }
                     return rlist;
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
                 }
             }
         };
