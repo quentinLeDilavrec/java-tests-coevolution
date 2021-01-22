@@ -1,17 +1,23 @@
 package fr.quentin.coevolutionMiner;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -20,6 +26,7 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import com.github.gumtreediff.actions.model.Insert;
 import com.google.gson.Gson;
@@ -33,6 +40,8 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.log4j.lf5.util.StreamUtils;
 import org.apache.maven.shared.invoker.DefaultInvocationRequest;
 import org.apache.maven.shared.invoker.DefaultInvoker;
 import org.apache.maven.shared.invoker.InvocationRequest;
@@ -73,6 +82,41 @@ import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
 public class CLI {
     static Logger logger = Logger.getLogger(CLI.class.getName());
 
+    static Stream<ImmutablePair<Integer,String>> indexedLines(BufferedReader br) {
+        Iterator<ImmutablePair<Integer,String>> iter = new Iterator<ImmutablePair<Integer,String>>() {
+            String nextLine = null;
+            int index = 0;
+
+            @Override
+            public boolean hasNext() {
+                if (nextLine != null) {
+                    return true;
+                } else {
+                    try {
+                        nextLine = br.readLine();
+                        index++;
+                        return (nextLine != null);
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
+                    }
+                }
+            }
+
+            @Override
+            public ImmutablePair<Integer,String> next() {
+                if (nextLine != null || hasNext()) {
+                    String line = nextLine;
+                    nextLine = null;
+                    return new ImmutablePair<Integer,String>(index, line);
+                } else {
+                    throw new NoSuchElementException();
+                }
+            }
+        };
+        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(
+                iter, Spliterator.ORDERED | Spliterator.NONNULL), false);
+    }
+
     public static void main(String[] args) throws IOException {
         CommandLineParser parser = new DefaultParser();
 
@@ -93,29 +137,33 @@ public class CLI {
             CommandLine line = parser.parse(options, Arrays.copyOfRange(args, 1, args.length));
             if (Objects.equals(args[0], "batch")) {
                 if (line.getOptionValue("file") != null) {
-                    batch(Files.lines(Paths.get(line.getOptionValue("file")))
-                            .skip(Integer.parseInt(line.getOptionValue("start", "0")))
-                            .limit(Integer.parseInt(line.getOptionValue("limit", "1"))),
-                            Integer.parseInt(line.getOptionValue("thread", "1")),
-                            Integer.parseInt(line.getOptionValue("commitsMax", "1")));
+                    try (Stream<ImmutablePair<Integer, String>> lines = indexedLines(Files.newBufferedReader(Paths.get(line.getOptionValue("file"))));) {
+                        batch(lines
+                                .skip(Integer.parseInt(line.getOptionValue("start", "0")))
+                                .limit(Integer.parseInt(line.getOptionValue("limit", "1"))),
+                                Integer.parseInt(line.getOptionValue("thread", "1")),
+                                Integer.parseInt(line.getOptionValue("commitsMax", "1")));
+                    }
                 }
             } else if (Objects.equals(args[0], "simpleBatch")) {
                 if (line.getOptionValue("file") != null) {
-                    simpleBatch(
-                            Files.lines(Paths.get(line.getOptionValue("file")))
+                    try (Stream<ImmutablePair<Integer, String>> lines = indexedLines(Files.newBufferedReader(Paths.get(line.getOptionValue("file"))));) {
+                        simpleBatch(lines
                                     .skip(Integer.parseInt(line.getOptionValue("start", "0")))
                                     .limit(Integer.parseInt(line.getOptionValue("limit", "1"))),
                             Integer.parseInt(line.getOptionValue("thread", "1")),
                             Integer.parseInt(line.getOptionValue("commitsMax", "1")));
+                    }
                 }
             } else if (Objects.equals(args[0], "batchPreEval")) {
                 if (line.getOptionValue("file") != null) {
-                    batchPreEval(
-                            Files.lines(Paths.get(line.getOptionValue("file")))
+                    try (Stream<ImmutablePair<Integer, String>> lines = indexedLines(Files.newBufferedReader(Paths.get(line.getOptionValue("file"))));) {
+                        batchPreEval(lines
                                     .skip(Integer.parseInt(line.getOptionValue("start", "0")))
                                     .limit(Integer.parseInt(line.getOptionValue("limit", "1"))),
                             Integer.parseInt(line.getOptionValue("thread", "1")),
                             Integer.parseInt(line.getOptionValue("commitsMax", "1")));
+                    }
                 }
             } else if (Objects.equals(args[0], "ast")) {
                 if (line.hasOption("repo")) {
@@ -143,7 +191,8 @@ public class CLI {
 
     static boolean splitedOut = true;
 
-    public static void batchPreEval(Stream<String> lines, int pool_size, int max_commits_impacts) {
+    public static void batchPreEval(Stream<ImmutablePair<Integer, String>> stream, int pool_size,
+            int max_commits_impacts) {
         PrintStream saved_out = System.out;
         if (splitedOut) {
             ThreadPrintStream.replaceSystemOut();
@@ -177,11 +226,11 @@ public class CLI {
                 }
 
             });
-            lines.forEach(line -> {
+            stream.forEach(line -> {
                 logger.info("(laucher start) CLI status " + Long.toString(executor.getTaskCount()) + " "
                         + Integer.toString(executor.getActiveCount()) + " "
                         + Long.toString(executor.getCompletedTaskCount()));
-                List<String> releases = Arrays.asList(line.split(" "));
+                List<String> releases = Arrays.asList(line.right.split(" "));
                 if (releases.size() > 2) {
                     executor.submit(() -> {
                         try {
@@ -286,7 +335,7 @@ public class CLI {
         }
     }
 
-    public static void batch(Stream<String> lines, int pool_size, int max_commits_impacts) {
+    public static void batch(Stream<ImmutablePair<Integer, String>> stream, int pool_size, int max_commits_impacts) {
         PrintStream saved_out = System.out;
         if (splitedOut) {
             ThreadPrintStream.replaceSystemOut();
@@ -320,14 +369,14 @@ public class CLI {
                 }
 
             });
-            lines.forEach(line -> {
+            stream.sequential().forEach(line -> {
                 logger.info("(laucher start) CLI status " + Long.toString(executor.getTaskCount()) + " "
                         + Integer.toString(executor.getActiveCount()) + " "
                         + Long.toString(executor.getCompletedTaskCount()));
-                List<String> s = Arrays.asList(line.split(" "));
+                List<String> s = Arrays.asList(line.right.split(" "));
                 if (s.size() > 2) {
                     executor.submit(() -> {
-                        Thread.currentThread().setName("batch " + s.get(0));
+                        Thread.currentThread().setName("coevoAna " + line.left);
                         try {
                             if (splitedOut) {
                                 ThreadPrintStream.redirectThreadLogs(ThreadPrintStream.DEFAULT);
@@ -352,7 +401,7 @@ public class CLI {
                                     if (commitIdBefore.equals(commitIdAfter)) {
                                         continue;
                                     }
-                                    Thread.currentThread().setName("batch " + s.get(0) + " --from " + commitIdBefore + " --to " + commitIdAfter);
+                                    Thread.currentThread().setName("coEana " + line.left + " " + (commit_index - 1));
                                     if (splitedOut) {
                                         ThreadPrintStream.redirectThreadLogs(
                                                 Paths.get(SourcesHelper.RESOURCES_PATH, "LogsB", rawPath, commitIdBefore));
@@ -361,7 +410,7 @@ public class CLI {
                                         // evos = spoon compile + count tests/methods/class
                                         Sources src = srcH.handle(srcSpec, "JGit");
                                         try {
-                                        src.getCommitsBetween(commitIdBefore, commitIdAfter);
+                                            src.getCommitsBetween(commitIdBefore, commitIdAfter);
                                         } catch (MissingObjectException e) {
                                             continue;
                                         }
@@ -466,7 +515,8 @@ public class CLI {
         }
     }
 
-    public static void simpleBatch(Stream<String> lines, int pool_size, int max_commits_impacts) {
+    public static void simpleBatch(Stream<ImmutablePair<Integer, String>> stream, int pool_size,
+            int max_commits_impacts) {
         ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(pool_size);
 
         try (SourcesHandler srcH = new SourcesHandler();
@@ -475,7 +525,7 @@ public class CLI {
                 ImpactHandler impactH = new ImpactHandler(srcH, astH, evoH);
                 CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH)) {
             System.out.println("Starting");
-            lines.forEach(line -> {
+            stream.forEach(line -> {
                 logger.info("(laucher start) CLI status " + Long.toString(executor.getTaskCount()) + " "
                         + Integer.toString(executor.getActiveCount()) + " "
                         + Long.toString(executor.getCompletedTaskCount()));
