@@ -109,6 +109,9 @@ public class Utils {
 
 	public static CtElement matchApproxChild(SpoonAST ast, String path, int start, int end) {
 		CtType<?> type = ast.getTop(path);
+		if (type == null) {
+			throw new RuntimeException("missing topLevel in " + ast.rootDir.toString() + " for path " + path.toString());
+		}
 		return fr.quentin.impactMiner.Utils.matchApprox(type, start, end);
 	}
 
