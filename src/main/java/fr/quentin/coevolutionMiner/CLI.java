@@ -370,7 +370,8 @@ public class CLI {
 
             });
             stream.sequential().forEach(line -> {
-                logger.info("(laucher start) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                logger.info("(laucher start) CLI status " + line.left + " "
+                        + Long.toString(executor.getTaskCount()) + " "
                         + Integer.toString(executor.getActiveCount()) + " "
                         + Long.toString(executor.getCompletedTaskCount()));
                 List<String> s = Arrays.asList(line.right.split(" "));
@@ -384,7 +385,8 @@ public class CLI {
                             
                             Sources.Specifier srcSpec = srcH.buildSpec(s.get(0), Integer.parseInt(s.get(1)));
                             String rawPath = SourcesHelper.parseAddress(srcSpec.repository);
-                            logger2.info("(submit start) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                            logger2.info("(submit start) CLI status " + line.left + " "
+                                    + Long.toString(executor.getTaskCount()) + " "
                                     + Integer.toString(executor.getActiveCount()) + " "
                                     + Long.toString(executor.getCompletedTaskCount()));
                             Evolutions evos = null;
@@ -466,34 +468,37 @@ public class CLI {
                                         e.printStackTrace();
                                     }
                                 }
-                             } catch (Throwable e) {
-                                e.printStackTrace();
-                                logger.info("failed statistics " + s.get(0));
-                                break;
-                            } finally {
-                                    System.out.flush();
+                                } catch (Throwable e) {
+                                    e.printStackTrace();
+                                    logger.info("failed statistics " + s.get(0));
+                                    break;
+                                } finally {
+                                        System.out.flush();
 
-                                    // Close System.out for this thread which will
-                                    // flush and close this thread's text file.
-                                    System.out.close();
-                                    System.err.close();
+                                        // Close System.out for this thread which will
+                                        // flush and close this thread's text file.
+                                        System.out.close();
+                                        System.err.close();
                                 }
                             }
-
-                            logger.info("(submit end) CLI status " + Long.toString(executor.getTaskCount()) + " "
-                                    + Integer.toString(executor.getActiveCount()) + " "
-                                    + Long.toString(executor.getCompletedTaskCount()));
                             return 0;
                     } catch (Throwable e) {
                             String tmp = e.getMessage();
                             e.printStackTrace();
                             return 1;
-                        }
+                    } finally {
+                        Thread.currentThread().setName("coEana " + line.left + " done");
+                        logger.info("(submit end) CLI status " + line.left + " "
+                                    + Long.toString(executor.getTaskCount()) + " "
+                                    + Integer.toString(executor.getActiveCount()) + " "
+                                    + Long.toString(executor.getCompletedTaskCount()));
+                    }
                     });
                 } else {
                     System.out.println("no commits for " + s.get(0));
                 }
-                logger.info("(launch end) CLI status " + Long.toString(executor.getTaskCount()) + " "
+                logger.info("(launch end) CLI status " + line.left + " "
+                        + Long.toString(executor.getTaskCount()) + " "
                         + Integer.toString(executor.getActiveCount()) + " "
                         + Long.toString(executor.getCompletedTaskCount()));
             });
