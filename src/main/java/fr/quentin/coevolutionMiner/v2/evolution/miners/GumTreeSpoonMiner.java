@@ -817,7 +817,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             for (Commit x : this.commit.getChildrens()) {
                 VersionCommit y = commitsToVersions.get(x);
                 if (y == null) {
-                    return false;
+                    continue;
                 } else if (o == y) {
                     return true;
                 } else if (y.isDescendant(o)) {
@@ -831,7 +831,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             for (Commit x : this.commit.getParents()) {
                 VersionCommit y = commitsToVersions.get(x);
                 if (y == null) {
-                    return false;
+                    continue;
                 } else if (o == y) {
                     return true;
                 } else if (y.isAncestor(o)) {
