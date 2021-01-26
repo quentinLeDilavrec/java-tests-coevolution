@@ -209,7 +209,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             launcherCode.getEnvironment().setCommentEnabled(false);
             launcherCode.getFactory().getEnvironment().setCommentEnabled(false);
 
-		    StringBuilder prepareCodeResult = new StringBuilder();
+		    StringBuffer prepareCodeResult = new StringBuffer();
             InvocationResult preparedCode = SourcesHelper.prepare(path, "." ,x -> {
 		        prepareCodeResult.append(x + "\n");
             });
