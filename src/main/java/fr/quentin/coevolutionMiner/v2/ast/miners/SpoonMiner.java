@@ -10,6 +10,7 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -407,6 +408,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         try (JsonReader reader = new JsonReader(new InputStreamReader(process.getInputStream()))) {
             fr.quentin.coevolutionMiner.v2.ast.Stats g = proj.getAst().getGlobalStats();
             g.loC = 0;
+            logger.info("first token in json" + Objects.toString(reader.peek()));
             reader.beginArray();
             while (reader.hasNext()) {
                 Line line = gson.fromJson(reader, Line.class);
