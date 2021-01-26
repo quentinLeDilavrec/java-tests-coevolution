@@ -400,18 +400,14 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
      */
     public static void computeLOC2(Path path, Project<?> proj) throws IOException, InterruptedException {
         ProcessBuilder processBuilder = new ProcessBuilder();
-        String[] command = new String[] { "../scc", "-f json", "-c", path.toAbsolutePath().toString() };
+        String[] command = new String[] { "../scc", "-f", "json", "-c", path.toAbsolutePath().toString() };
         processBuilder.command(command);
         logger.info("executing subprocess: " + Arrays.asList(command).stream().reduce("", (a, b) -> a + " " + b));
         Process process = processBuilder.start();
         Gson gson = new Gson();
         try (JsonReader reader = new JsonReader(new InputStreamReader(process.getInputStream()))) {
-            reader.setLenient(true);
             fr.quentin.coevolutionMiner.v2.ast.Stats g = proj.getAst().getGlobalStats();
             g.loC = 0;
-            if (reader.hasNext()) {
-                logger.info("first token in json " + Objects.toString(reader.peek()) + "" + Objects.toString(gson.fromJson(reader, String.class)));
-            }
             reader.beginArray();
             while (reader.hasNext()) {
                 Line line = gson.fromJson(reader, Line.class);
