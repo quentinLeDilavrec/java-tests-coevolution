@@ -406,6 +406,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         Process process = processBuilder.start();
         Gson gson = new Gson();
         try (JsonReader reader = new JsonReader(new InputStreamReader(process.getInputStream()))) {
+            reader.setLenient(true);
             fr.quentin.coevolutionMiner.v2.ast.Stats g = proj.getAst().getGlobalStats();
             g.loC = 0;
             logger.info("first token in json" + Objects.toString(reader.peek()));
