@@ -409,7 +409,9 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             reader.setLenient(true);
             fr.quentin.coevolutionMiner.v2.ast.Stats g = proj.getAst().getGlobalStats();
             g.loC = 0;
-            logger.info("first token in json" + Objects.toString(reader.peek()));
+            if (reader.hasNext()) {
+                logger.info("first token in json " + Objects.toString(reader.peek()) + "" + Objects.toString(gson.fromJson(reader, String.class)));
+            }
             reader.beginArray();
             while (reader.hasNext()) {
                 Line line = gson.fromJson(reader, Line.class);
