@@ -87,7 +87,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                 FileSnapshot.Range range = super.getRange(path, start, end, original);
                 CtElement tmp = range.getOriginal();
                 if (tmp == null) {
-                    tmp = Utils.matchApproxChild((ProjectSpoon.SpoonAST)ast, path, start, end);
+                    tmp = Utils.matchApproxChild((ProjectSpoon.SpoonAST)ast, augmented.rootFolder.relativize(rootDir.resolve(path)).toString(), start, end);
                 }
                 // TODO also match imports and package decl, through the compilation unit
                 if (tmp == null) {
