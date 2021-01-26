@@ -281,7 +281,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                 r.getAst().getGlobalStats().testsAST = 0;
             }
 
-            computeLOC(path, r);
+            computeLOC2(path, r);
             r.getAst().getGlobalStats().codeCompile = preparedCode.getExitCode();
             r.getAst().getGlobalStats().testsCompile = preparedAll.getExitCode();
 
@@ -294,7 +294,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
 
         } catch (Exception e) {
             r = new ProjectSpoon(new Specifier<>(spec.sources, spec.commitId, spec.miner), commit, root, e);
-            computeLOC(path, r);
+            computeLOC2(path, r);
             return r;
         }
     }
