@@ -13,6 +13,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.google.gson.Gson;
+import com.google.gson.annotations.SerializedName;
+import com.google.gson.stream.JsonReader;
+
 import org.apache.maven.shared.invoker.InvocationResult;
 import org.apache.maven.shared.utils.cli.CommandLineException;
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
@@ -182,7 +186,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         ProjectSpoon r = new ProjectSpoon(new Specifier<>(spec.sources, relPath, spec.commitId, spec.miner), modules,
                 commit, path, launcher, compilerException);
         computeCounts(launcher, r);
-        computeLOC(path, r);
+        computeLOC2(path, r);
         r.getAst().getGlobalStats().codeCompile = prepared.getExitCode();
 
         List<SpoonPom> x = launcher.getPomFile().getModules();
@@ -372,4 +376,48 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         System.out.printf("cloc ended with exitCode %d\n", exitCode);
     }
 
+    class Line {
+        @SerializedName("Name")
+        String name;
+        @SerializedName("Code")
+        Integer loc;
+
+        @Override
+        public String toString() {
+            return "Line [loc=" + loc + ", name=" + name + "]";
+        }
+        
+    }
+
+    /**
+     * Uses scc, need scc excutable in parent dir
+     * @param path code must be present as files (no git checkout is done by this
+     *             method)
+     * @param proj
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    public static void computeLOC2(Path path, Project<?> proj) throws IOException, InterruptedException {
+        ProcessBuilder processBuilder = new ProcessBuilder();
+        String[] command = new String[] { "../scc", "-f json", "-c", path.toAbsolutePath().toString() };
+        processBuilder.command(command);
+        logger.info("executing subprocess: " + Arrays.asList(command).stream().reduce("", (a, b) -> a + " " + b));
+        Process process = processBuilder.start();
+        Gson gson = new Gson();
+        try (JsonReader reader = new JsonReader(new InputStreamReader(process.getInputStream()))) {
+            fr.quentin.coevolutionMiner.v2.ast.Stats g = proj.getAst().getGlobalStats();
+            g.loC = 0;
+            reader.beginArray();
+            while (reader.hasNext()) {
+                Line line = gson.fromJson(reader, Line.class);
+                if (line.name.equals("Java")) {
+                    g.javaLoC = line.loc;
+                } else {
+                    g.loC += line.loc;
+                }
+            }
+        }
+        int exitCode = process.waitFor();
+        System.out.printf("scc ended with exitCode %d\n", exitCode);
+    }
 }
