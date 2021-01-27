@@ -110,7 +110,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
     }
 
     private static Logger logger = Logger.getLogger(SpoonMiner.class.getName());
-    
+
     {
         logger.setLevel(Level.FINER);
     }
@@ -413,7 +413,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         ProcessBuilder processBuilder = new ProcessBuilder();
         String[] command = new String[] { "../scc", "-f", "json", "-c", path.toAbsolutePath().toString() };
         processBuilder.command(command);
-        logger.info("executing subprocess: " + Arrays.asList(command).stream().reduce("", (a, b) -> a + " " + b));
+        logger.info("from " + processBuilder.directory().toString() + " executing subprocess: " + Arrays.asList(command).stream().reduce("", (a, b) -> a + " " + b));
         Process process = null;
         int i = 0;
         IOException ee = null;
@@ -428,7 +428,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             }
             Thread.sleep(5000);;
         }
-        if (process == null) {
+        if (i>=10) {
             throw ee;
         }
         Gson gson = new Gson();
