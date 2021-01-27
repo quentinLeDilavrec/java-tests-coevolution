@@ -334,7 +334,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
      * @throws IOException
      * @throws InterruptedException
      */
-    public static void computeLOC(Path path, Project<?> proj) throws IOException, InterruptedException {
+    public static synchronized void computeLOC(Path path, Project<?> proj) throws IOException, InterruptedException {
         ProcessBuilder processBuilder = new ProcessBuilder();
         String[] command = new String[] { "cloc", path.toAbsolutePath().toString(), "--md", "--quiet" };
         processBuilder.command(command);
@@ -398,7 +398,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
      * @throws IOException
      * @throws InterruptedException
      */
-    public static void computeLOC2(Path path, Project<?> proj) throws IOException, InterruptedException {
+    public static synchronized void computeLOC2(Path path, Project<?> proj) throws IOException, InterruptedException {
         ProcessBuilder processBuilder = new ProcessBuilder();
         String[] command = new String[] { "../scc", "-f", "json", "-c", path.toAbsolutePath().toString() };
         processBuilder.command(command);
