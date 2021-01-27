@@ -136,6 +136,12 @@ public class ThreadPrintStream extends PrintStream {
 
   public static void redirectThreadLogs(PrintStream stream) throws IOException {
     // // Install the PrintStream to be used as System.out for this thread.
+    if (!(System.out instanceof ThreadPrintStream)) {
+      replaceSystemOut();
+    }
+    if (!(System.err instanceof ThreadPrintStream)) {
+      replaceSystemErr();
+    }
     ((ThreadPrintStream) System.out).setThreadOut(stream);
     ((ThreadPrintStream) System.err).setThreadOut(stream);
   }
