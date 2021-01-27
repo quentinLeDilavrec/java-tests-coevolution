@@ -380,10 +380,6 @@ public class CLI {
                     executor.submit(() -> {
                         Thread.currentThread().setName("coevoAna " + line.left);
                         try {
-                            if (splitedOut) {
-                                ThreadPrintStream.redirectThreadLogs(ThreadPrintStream.DEFAULT);
-                            }
-
                             Sources.Specifier srcSpec = srcH.buildSpec(s.get(0), Integer.parseInt(s.get(1)));
                             String rawPath = SourcesHelper.parseAddress(srcSpec.repository);
                             logger2.info("(submit start) CLI status " + line.left + " "
@@ -480,14 +476,11 @@ public class CLI {
                                     break;
                                 } finally {
                                     System.out.flush();
-
-                                    // Close System.out for this thread which will
-                                    // flush and close this thread's text file.
+                                    System.err.flush();
                                     System.out.close();
                                     System.err.close();
                                 }
                             }
-                            logger.info("finished whole analysis of " + s.get(0));
                             return 0;
                         } catch (Throwable e) {
                             logger.log(Level.WARNING, e, () -> "failed whole analysis of " + s.get(0));
