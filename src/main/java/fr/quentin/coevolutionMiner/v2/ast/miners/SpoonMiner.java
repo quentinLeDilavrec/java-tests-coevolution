@@ -411,9 +411,9 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
      */
     public static synchronized void computeLOC2(Path path, Project<?> proj) throws IOException, InterruptedException {
         ProcessBuilder processBuilder = new ProcessBuilder();
-        String[] command = new String[] { "../scc", "-f", "json", "-c", path.toAbsolutePath().toString() };
+        String[] command = new String[] { "scc", "-f", "json", "-c", path.toAbsolutePath().toString() };
         processBuilder.command(command);
-        logger.info("from " + processBuilder.directory().toString() + " executing subprocess: " + Arrays.asList(command).stream().reduce("", (a, b) -> a + " " + b));
+        logger.info(" executing subprocess: " + Arrays.asList(command).stream().reduce("", (a, b) -> a + " " + b));
         Process process = null;
         int i = 0;
         IOException ee = null;
