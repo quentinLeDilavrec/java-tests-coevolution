@@ -403,7 +403,23 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         String[] command = new String[] { "../scc", "-f", "json", "-c", path.toAbsolutePath().toString() };
         processBuilder.command(command);
         logger.info("executing subprocess: " + Arrays.asList(command).stream().reduce("", (a, b) -> a + " " + b));
-        Process process = processBuilder.start();
+        Process process = null;
+        int i = 0;
+        IOException ee = null;
+        while (i<10) {
+            try {
+                process = processBuilder.start();
+                break;
+            } catch (IOException e) {
+                i++;
+                ee = e;
+                logger.warning("fail "+ i);
+            }
+            Thread.sleep(5000);;
+        }
+        if (process == null) {
+            throw ee;
+        }
         Gson gson = new Gson();
         try (JsonReader reader = new JsonReader(new InputStreamReader(process.getInputStream()))) {
             fr.quentin.coevolutionMiner.v2.ast.Stats g = proj.getAst().getGlobalStats();
