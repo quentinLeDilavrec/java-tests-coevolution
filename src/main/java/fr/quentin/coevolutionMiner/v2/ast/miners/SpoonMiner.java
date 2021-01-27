@@ -425,6 +425,30 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                 i++;
                 ee = e;
                 logger.warning("fail "+ i);
+                try {
+                    logger.info("try other dir");
+                    Process process2 = new ProcessBuilder().command(new String[] { "scc", "-f", "json", "-c", "/home/qledilav/bin" }).start();
+                    int exitCode = process2.waitFor();
+                    logger.info("ret code of try other dir "+ exitCode);
+                } catch (IOException eee) {
+                    logger.info("fail try other dir");
+                }
+                try {
+                    logger.info("try abs exe");
+                    Process process2 = new ProcessBuilder().command(new String[] { "/home/qledilav/bin/scc", "-f", "json", "-c", path.toAbsolutePath().toString() }).start();
+                    int exitCode = process2.waitFor();
+                    logger.info("ret code of try abs exe "+ exitCode);
+                } catch (IOException eee) {
+                    logger.info("fail try abs exe");
+                }
+                try {
+                    logger.info("try both");
+                    Process process2 = new ProcessBuilder().command(new String[] { "/home/qledilav/bin/scc", "-f", "json", "-c", "/home/qledilav/bin" }).start();
+                    int exitCode = process2.waitFor();
+                    logger.info("ret code of try both "+ exitCode);
+                } catch (IOException eee) {
+                    logger.info("fail try both");
+                }
             }
             Thread.sleep(5000);;
         }
