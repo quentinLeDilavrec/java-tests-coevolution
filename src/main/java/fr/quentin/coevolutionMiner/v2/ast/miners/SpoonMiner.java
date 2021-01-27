@@ -110,6 +110,10 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
     }
 
     private static Logger logger = Logger.getLogger(SpoonMiner.class.getName());
+    
+    {
+        logger.setLevel(Level.FINER);
+    }
 
     private Specifier spec;
     private SourcesHandler srcHandler;
@@ -120,6 +124,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
     }
 
     public ProjectSpoon compute() {
+        logger.entering("SpoonMiner", "compute");
         Sources src = srcHandler.handle(spec.sources, "JGit");
         try (SourcesHelper helper = src.open();) {
             Path root = helper.materialize(spec.commitId);
@@ -140,6 +145,8 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             throw new RuntimeException(e);
         } catch (Exception e) {
             throw new RuntimeException(e);
+        } finally {
+            logger.exiting("SpoonMiner", "compute");
         }
     }
 
@@ -200,6 +207,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
 
     private SpoonMiner.ProjectSpoon extractedPrecise(Sources src, Path path, Path root, SpoonPom spoonPom)
             throws IOException, InterruptedException, Exception {
+        logger.entering("SpoonMiner", "extractedPrecise", new Object[]{src, path ,root, spoonPom});
         Commit commit = src.getCommit(spec.commitId);
         ProjectSpoon r = null;
         try {
@@ -234,6 +242,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             launcherAll.getFactory().getEnvironment().setCommentEnabled(false);
 
             try {
+                logger.info("try build ast code");
                 launcherCode.buildModel();
             } catch (Exception e) {
                 for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcherCode.getModelBuilder()).getProblems()) {
@@ -258,6 +267,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
 
             if (r == null) {
                 try {
+                    logger.info("try build ast all");
                     launcherAll.buildModel();
                 } catch (Exception e) {
                     for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcherAll.getModelBuilder())
@@ -282,7 +292,6 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                 r.getAst().getGlobalStats().testsAST = 0;
             }
 
-            computeLOC2(path, r);
             r.getAst().getGlobalStats().codeCompile = preparedCode.getExitCode();
             r.getAst().getGlobalStats().testsCompile = preparedAll.getExitCode();
 
@@ -295,8 +304,10 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
 
         } catch (Exception e) {
             r = new ProjectSpoon(new Specifier<>(spec.sources, spec.commitId, spec.miner), commit, root, e);
-            computeLOC2(path, r);
             return r;
+        } finally {
+            computeLOC2(path, r);
+            logger.exiting("SpoonMiner", "extractedPrecise", r);
         }
     }
 
