@@ -354,6 +354,9 @@ public class Project<T> implements Iterable<Project> {
                         try {
                             return original.getPath().toString();
                         } catch (Exception e) {
+                            if (!original.isParentInitialized()) {
+                                return null;
+                            }
                             try {
                                 return original.getParent().getPath().toString() + "#"
                                         + ((CtReference) original).getRoleInParent().toString();
