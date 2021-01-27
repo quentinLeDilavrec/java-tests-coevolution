@@ -17,6 +17,9 @@ import java.nio.file.Paths;
 public class ThreadPrintStream extends PrintStream {
 
   public static final PrintStream DEFAULT = System.err;
+
+  public PrintStream original;
+
   /**
    * Changes System.out to a ThreadPrintStream which will send output to a
    * separate file for each thread.
@@ -32,11 +35,12 @@ public class ThreadPrintStream extends PrintStream {
 
     // Use the original System.out as the current thread's System.out
     threadOut.setThreadOut(console);
+    threadOut.original = console;
   }
 
   public static void replaceSystemErr() {
 
-    // Save the existing System.out
+    // Save the existing System.err
     PrintStream console = System.err;
 
     // Create a ThreadPrintStream and install it as System.out
@@ -45,18 +49,18 @@ public class ThreadPrintStream extends PrintStream {
 
     // Use the original System.out as the current thread's System.out
     threadErr.setThreadOut(console);
+    threadErr.original = console;
   }
 
   /** Thread specific storage to hold a PrintStream for each thread */
   // private ThreadLocal<PrintStream> out = ThreadLocal.withInitial(()->DEFAULT);
 
-    // anonymous inner class  for overriding childValue method. 
-    private InheritableThreadLocal<PrintStream> out = new InheritableThreadLocal<PrintStream>() { 
-      public PrintStream childValue(PrintStream parentValue) 
-      { 
-          return parentValue; 
-      } 
-  }; 
+  // anonymous inner class  for overriding childValue method. 
+  private InheritableThreadLocal<PrintStream> out = new InheritableThreadLocal<PrintStream>() {
+    public PrintStream childValue(PrintStream parentValue) {
+      return parentValue;
+    }
+  };
 
   private ThreadPrintStream() {
     super(new ByteArrayOutputStream(0));
@@ -98,6 +102,7 @@ public class ThreadPrintStream extends PrintStream {
   @Override
   public void close() {
     getThreadOut().close();
+    setThreadOut(original);
   }
 
   public static void redirectThreadLogs() throws IOException {
@@ -116,7 +121,7 @@ public class ThreadPrintStream extends PrintStream {
       String[] list = file.list();
       int length = list.length;
       String string2 = Integer.toString(length);
-      logPath = Paths.get(string, string2 +".log");
+      logPath = Paths.get(string, string2 + ".log");
     } catch (NullPointerException e) {
       throw new RuntimeException(e);
     }
