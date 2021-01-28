@@ -141,9 +141,15 @@ public class ThreadPrintStream extends PrintStream {
       throw new RuntimeException("Wrong sysout"+ Thread.currentThread().getName());
       // replaceSystemOut();
     }
+    if (((ThreadPrintStream) System.out).getThreadOut()!=((ThreadPrintStream) System.out).original){
+      ((ThreadPrintStream) System.out).close();
+    }
     if (!(System.err instanceof ThreadPrintStream)) {
       throw new RuntimeException("Wrong syserr"+ Thread.currentThread().getName());
       // replaceSystemErr();
+    }
+    if (((ThreadPrintStream) System.err).getThreadOut()!=((ThreadPrintStream) System.err).original){
+      ((ThreadPrintStream) System.err).close();
     }
     ((ThreadPrintStream) System.out).setThreadOut(stream);
     ((ThreadPrintStream) System.err).setThreadOut(stream);
