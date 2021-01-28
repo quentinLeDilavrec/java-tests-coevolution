@@ -127,6 +127,7 @@ public class CLI {
         options.addOption("l", "limit", true, "limit lines processed");
         options.addOption("s", "start", true, "starting line 0-indexed");
         options.addOption("c", "commitsMax", true, "number of commits to compute impacts");
+        options.addOption(null, "splitOut", false, "split outputs");
         options.addOption("f", "file", true,
                 "a file that contain per line <repo> <stars> <list of important commitId time ordered and starting with the most recent>");
 
@@ -135,6 +136,9 @@ public class CLI {
                 throw new UnsupportedOperationException("use batch, compare or ast");
             }
             CommandLine line = parser.parse(options, Arrays.copyOfRange(args, 1, args.length));
+            if (line.hasOption("splitOut")) {
+                splitedOut = true;
+            }
             if (Objects.equals(args[0], "batch")) {
                 if (line.getOptionValue("file") != null) {
                     try (Stream<ImmutablePair<Integer, String>> lines = indexedLines(
@@ -191,7 +195,7 @@ public class CLI {
         System.exit(0);
     }
 
-    static boolean splitedOut = true;
+    static boolean splitedOut = false;
 
     public static void batchPreEval(Stream<ImmutablePair<Integer, String>> stream, int pool_size,
             int max_commits_impacts) {
