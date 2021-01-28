@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UncheckedIOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -68,6 +69,7 @@ import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
+import fr.quentin.coevolutionMiner.v2.sources.Sources.Specifier;
 import gumtree.spoon.AstComparator;
 import gumtree.spoon.diff.Diff;
 import gumtree.spoon.diff.operations.Operation;
@@ -264,9 +266,9 @@ public class CLI {
                                     Sources src = srcH.handle(srcSpec, "JGit");
                                     src.getCommitsBetween(commitIdBefore, commitIdAfter);
                                     project = astH.handle(astH.buildSpec(srcSpec, commitIdBefore));
-                                    printThings(releases, commitIdBefore, project);
+                                    printThings(srcSpec.repository, commitIdBefore, project);
                                     for (Project<?> x : project.getModules()) {
-                                        printThings(releases, commitIdBefore, x);
+                                        printThings(srcSpec.repository, commitIdBefore, x);
                                     }
                                 } catch (Throwable e) {
                                     e.printStackTrace();
@@ -321,14 +323,13 @@ public class CLI {
         }
     }
 
-    public static void printThings(List<String> releases, String commitIdBefore, Project<?> project) {
+    public static void printThings(String url, String commitIdBefore, Project<?> project) {
         Project<?>.AST ast = project.getAst();
         if (ast instanceof SpoonAST && ((SpoonAST) ast).launcher == null) {
-            logger.info("Spoon failed to analyize " + releases.get(0));
+            logger.info("Spoon failed to analyize " + url);
         } else if (ast instanceof SpoonAST) {
             CtModel model = ((SpoonAST) ast).launcher.getModel();
-            logger.info(
-                    "done statistics " + releases.get(0) + "/commit/" + commitIdBefore + "/" + ast.rootDir.toString());
+            logger.info("done statistics " + url + "/commit/" + commitIdBefore + "/" + ast.rootDir.toString());
             logger.info("modules in pom: " + ((SpoonAST) ast).launcher.getPomFile().getModel().getModules().stream()
                     .reduce("", (a, b) -> a + "," + b));
             logger.info("modules parsed: "
@@ -337,20 +338,42 @@ public class CLI {
         }
     }
 
-    public static void batch(Stream<ImmutablePair<Integer, String>> stream, int pool_size, int max_commits_impacts) {
-        PrintStream saved_out = System.out;
-        if (splitedOut) {
-            ThreadPrintStream.replaceSystemOut();
-            ThreadPrintStream.replaceSystemErr();
+    abstract static class BatchExecutor implements AutoCloseable {
+
+        protected SourcesHandler srcH = new SourcesHandler();
+
+        protected Logger logger2;
+        ThreadPoolExecutor executor;
+
+        @Override
+        public final void close() throws Exception {
+            System.out.println("Shutdown");
+            executor.shutdown();
+            try {
+                System.out.println("almost");
+                while (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+                }
+                System.out.println("done");
+                executor.shutdownNow();
+            } catch (InterruptedException e) {
+                executor.shutdownNow();
+            } catch (Throwable e) {
+                executor.shutdownNow();
+            }
+            overridableClose();
+            srcH.close();
         }
-        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(pool_size);
-        try (SourcesHandler srcH = new SourcesHandler();
-                ProjectHandler astH = new ProjectHandler(srcH);
-                EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
-                ImpactHandler impactH = new ImpactHandler(srcH, astH, evoH);
-                CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH);) {
-            System.out.println("Starting");
-            Logger logger2 = Logger.getLogger(CLI.class.getName() + "#batch");
+
+        protected void overridableClose() throws Exception {
+        }
+
+        public BatchExecutor(int pool_size) {
+            PrintStream saved_out = System.out;
+            if (splitedOut) {
+                ThreadPrintStream.replaceSystemOut();
+                ThreadPrintStream.replaceSystemErr();
+            }
+            logger2 = Logger.getLogger(CLI.class.getName() + "#batch");
 
             logger2.addHandler(new Handler() {
 
@@ -371,154 +394,206 @@ public class CLI {
                 }
 
             });
-            stream.forEach(line -> {
-                logger2.info("(launcher start) CLI status " + line.left + " " + Long.toString(executor.getTaskCount())
-                        + " " + Integer.toString(executor.getActiveCount()) + " "
-                        + Long.toString(executor.getCompletedTaskCount()));
-                List<String> s = Arrays.asList(line.right.split(" "));
-                ((ThreadPrintStream)System.out).println("azerty azerty aaa");
-                if (s.size() > 2) {
-                    executor.submit(() -> {
-                        ((ThreadPrintStream)System.out).println("azerty bbb");
-                        Thread.currentThread().setName("coevoAna " + line.left);
-                        try {
-                            Sources.Specifier srcSpec = srcH.buildSpec(s.get(0), Integer.parseInt(s.get(1)));
-                            String rawPath = SourcesHelper.parseAddress(srcSpec.repository);
-                            logger2.info("(submit start) CLI status " + line.left + " "
-                                    + Long.toString(executor.getTaskCount()) + " "
-                                    + Integer.toString(executor.getActiveCount()) + " "
-                                    + Long.toString(executor.getCompletedTaskCount()));
-                            Evolutions evos = null;
-                            String commitIdAfter = null;
-                            String commitIdBefore = null;
-                            int commit_index = 1;
-                            int impact_computed = 0;
-                            while (commit_index < s.size() - 2 && impact_computed < max_commits_impacts) {
-                                ((ThreadPrintStream)System.out).println("azerty ccc");
-                                try {
-                                    while (commit_index < s.size() - 2) {
-                                        ((ThreadPrintStream)System.out).println("azerty ddd");
-                                        commit_index++;
-                                        commitIdAfter = s.get(commit_index);
-                                        commitIdBefore = s.get(commit_index + 1);
-                                        if (commitIdBefore.equals(commitIdAfter)) {
-                                            continue;
-                                        }
-                                        Thread.currentThread()
-                                                .setName("coEana " + line.left + " " + (commit_index - 1));
-                                        if (splitedOut) {
-                                            ThreadPrintStream.redirectThreadLogs(Paths.get(SourcesHelper.RESOURCES_PATH,
-                                                    "LogsB", rawPath, commitIdBefore));
-                                        }
-                                        try { // https://github.com/chrisbanes/Android-PullToRefresh/commit/1f7a7e1daf89167b11166180d96bac54a9306c80
-                                              // evos = spoon compile + count tests/methods/class
-                                            Sources src = srcH.handle(srcSpec, "JGit");
-                                            try {
-                                                src.getCommitsBetween(commitIdBefore, commitIdAfter);
-                                            } catch (MissingObjectException e) {
-                                                continue;
-                                            }
-                                            Project<CtElement> project = astH
-                                                    .handle(astH.buildSpec(srcSpec, commitIdBefore));
-                                            printThings(s, commitIdBefore, project);
-                                            for (Project<?> x : project.getModules()) {
-                                                printThings(s, commitIdBefore, x);
-                                            }
-                                        } catch (Exception e) {
-                                            e.printStackTrace();
-                                            logger.log(Level.WARNING, e, () -> "failed statistics " + s.get(0));
-                                            break;
-                                        }
-                                        try {
-                                            evos = evoH.handle(evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter));
-                                            logger.info("done evolution analysis " + s.get(0));
-                                        } catch (Exception e) {
-                                            logger.log(Level.WARNING, e, () -> "failed evolution analysis " + s.get(0));
-                                            e.printStackTrace();
-                                            break;
-                                        } finally {
-                                            logger.info("finished an evolution analysis " + s.get(0));
-                                        }
-                                        if (evos != null && evos.toSet().size() > 0) {
-                                            break;
-                                        }
-                                    }
-                                    if (s.size() < 3) {
-                                        logger.info("no commits for " + s.get(0));
-                                    } else if (evos == null) {
-                                        logger.info("evolution not working " + s.get(0));
-                                        // } else if (evos.toSet().size() <= 0) {
-                                        //     logger.info("no evolutions found for " + s.get(0));
-                                    } else {
-                                        impact_computed += 1;
-                                        logger.info(Integer.toString(evos.toSet().size()) + " evolutions found for "
-                                                + s.get(0) + " from " + commitIdBefore + " to " + commitIdAfter);
-                                        try {
-                                            // Impacts impacts = impactH.handle(impactH.buildSpec(astH.buildSpec(srcSpec,
-                                            // commitIdBefore),
-                                            // EvolutionHandler.buildSpec(srcSpec, commitIdBefore, commitIdAfter)));
-                                            // System.out
-                                            // .println(Integer.toString(impacts.getPerRootCause().size()) + " impacts found
-                                            // for "
-                                            // + s.get(0) + " from " + commitIdBefore + " to " + commitIdAfter);
-                                            CoEvolutions coevo = coevoH
-                                                    .handle(CoEvolutionHandler.buildSpec(srcSpec, EvolutionHandler
-                                                            .buildSpec(srcSpec, commitIdBefore, commitIdAfter)));
-                                            System.out.println(Integer.toString(coevo.getCoEvolutions().size())
-                                                    + " coevolutions found for " + s.get(0) + " from " + commitIdBefore
-                                                    + " to " + commitIdAfter);
-                                        } catch (Throwable e) {
-                                            logger.log(Level.WARNING, e,
-                                                    () -> "failed coevolution analysis " + s.get(0));
-                                        }
-                                    }
-                                } catch (Throwable e) {
-                                    final String cA = commitIdAfter;
-                                    final String cB = commitIdBefore;
-                                    logger.log(Level.WARNING, e, () -> "failed to analyze the interval [" + cB + ","
-                                            + cA + "] of " + s.get(0));
-                                    break;
-                                } finally {
-                                    ((ThreadPrintStream)System.out).flush();
-                                    ((ThreadPrintStream)System.err).flush();
-                                    ((ThreadPrintStream)System.out).close();
-                                    ((ThreadPrintStream)System.err).close();
-                                    logger.info(((ThreadPrintStream)System.out).toString());
-                                    logger.info(((ThreadPrintStream)System.err).toString());
-                                }
-                            }
-                            return 0;
-                        } catch (Throwable e) {
-                            logger.log(Level.WARNING, e, () -> "failed whole analysis of " + s.get(0));
-                            return 1;
-                        } finally {
-                            Thread.currentThread().setName("coEana " + line.left + " done");
-                            logger2.info("(submit end) CLI status " + line.left + " "
-                                    + Long.toString(executor.getTaskCount()) + " "
-                                    + Integer.toString(executor.getActiveCount()) + " "
-                                    + Long.toString(executor.getCompletedTaskCount()));
-                        }
-                    });
-                } else {
-                    System.out.println("no commits for " + s.get(0));
-                }
-                logger2.info("(launch end) CLI status " + line.left + " " + Long.toString(executor.getTaskCount()) + " "
-                        + Integer.toString(executor.getActiveCount()) + " "
-                        + Long.toString(executor.getCompletedTaskCount()));
-            });
-            System.out.println("Shutdown");
-            executor.shutdown();
-            try {
-                System.out.println("almost");
-                while (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
-                }
-                System.out.println("done");
-                executor.shutdownNow();
-            } catch (InterruptedException e) {
-                executor.shutdownNow();
-            } catch (Throwable e) {
-                executor.shutdownNow();
+            executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(pool_size);
+        }
+
+        public final void process(Stream<ImmutablePair<Integer, String>> stream) {
+            stream.forEach(this::process);
+        }
+
+        public final void process(ImmutablePair<Integer, String> entry) {
+            logger2.info("(launcher start) CLI status " + entry.left + " " + Long.toString(executor.getTaskCount())
+                    + " " + Integer.toString(executor.getActiveCount()) + " "
+                    + Long.toString(executor.getCompletedTaskCount()));
+            List<String> s = Arrays.asList(entry.right.split(" "));
+            ((ThreadPrintStream) System.out).println("azerty aaa");
+            if (s.size() > 2) {
+                executor.submit(() -> {
+                    try {
+                        logger2.info(
+                                "(submit start) CLI status " + entry.left + " " + Long.toString(executor.getTaskCount())
+                                        + " " + Integer.toString(executor.getActiveCount()) + " "
+                                        + Long.toString(executor.getCompletedTaskCount()));
+                        ((ThreadPrintStream) System.out).println("azerty bbb");
+                        Thread.currentThread().setName("coevoAna " + entry.left);
+                        return process(s, entry.left);
+                    } catch (Throwable e) {
+                        logger.log(Level.WARNING, e, () -> "failed whole analysis of " + s.get(0));
+                        return 1;
+                    } finally {
+                        Thread.currentThread().setName("coEana " + entry.left + " done");
+                        logger2.info(
+                                "(submit end) CLI status " + entry.left + " " + Long.toString(executor.getTaskCount())
+                                        + " " + Integer.toString(executor.getActiveCount()) + " "
+                                        + Long.toString(executor.getCompletedTaskCount()));
+                    }
+                });
+            } else {
+                System.out.println("no commits for " + s.get(0));
             }
+            logger2.info("(launch end) CLI status " + entry.left + " " + Long.toString(executor.getTaskCount()) + " "
+                    + Integer.toString(executor.getActiveCount()) + " "
+                    + Long.toString(executor.getCompletedTaskCount()));
+        }
+
+        abstract public int process(List<String> line, int lineNumber) throws Exception;
+
+    }
+
+    static class BatchExecutor1 extends BatchExecutor {
+        private int max_commits_impacts;
+
+        protected ProjectHandler astH = new ProjectHandler(srcH);
+        protected EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
+        protected ImpactHandler impactH = new ImpactHandler(srcH, astH, evoH);
+        protected CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH);
+
+        public BatchExecutor1(int pool_size, int max_commits_impacts) {
+            super(pool_size);
+            this.max_commits_impacts = max_commits_impacts;
+        }
+
+        @Override
+        protected void overridableClose() throws Exception {
+            coevoH.close();
+            impactH.close();
+            evoH.close();
+            astH.close();
+            super.overridableClose();
+        }
+
+        class ReleaseExecutor {
+
+            private Specifier srcSpec;
+            private int lineNumber;
+            private String rawPath;
+
+            public ReleaseExecutor(Specifier srcSpec, int lineNumber) throws URISyntaxException {
+                this.srcSpec = srcSpec;
+                this.lineNumber = lineNumber;
+                this.rawPath = SourcesHelper.parseAddress(srcSpec.repository);
+            }
+
+            public void process(List<String> waypoints) throws Exception {
+                String commitIdAfter = null;
+                String commitIdBefore = null;
+                int coevoAnaTried = 0;
+                for (int index = 0; index < waypoints.size() - 1; index++) {
+                    try {
+                        if (coevoAnaTried > max_commits_impacts) {
+                            break;
+                        }
+                        commitIdAfter = waypoints.get(index);
+                        commitIdBefore = waypoints.get(index + 1);
+                        if (commitIdBefore.equals(commitIdAfter)) {
+                            continue;
+                        }
+                        Thread.currentThread().setName("coEana " + lineNumber + " " + (index - 1));
+                        if (splitedOut) {
+                            ThreadPrintStream.redirectThreadLogs(
+                                    Paths.get(SourcesHelper.RESOURCES_PATH, "Logs", rawPath, commitIdBefore));
+                        }
+
+                        // try to build the ast and to some stats
+                        try {
+                            Sources src = srcH.handle(srcSpec, "JGit");
+                            try {
+                                src.getCommitsBetween(commitIdBefore, commitIdAfter);
+                            } catch (MissingObjectException e) {
+                                continue;
+                            }
+                            Project<CtElement> project = astH.handle(astH.buildSpec(srcSpec, commitIdBefore));
+                            printThings(srcSpec.repository, commitIdBefore, project);
+                            for (Project<?> x : project.getModules()) {
+                                printThings(srcSpec.repository, commitIdBefore, x);
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            logger.log(Level.WARNING, e, () -> "failed statistics " + srcSpec.repository);
+                            break;
+                        }
+
+                        // try to find evolutions
+                        try {
+                            Evolutions evos = evoH.handle(evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter));
+                            logger.info("done evolution analysis " + srcSpec.repository);
+                            if (evos != null && evos.toSet().size() > 0) {
+                                logger.info(Integer.toString(evos.toSet().size()) + " evolutions found for "
+                                        + srcSpec.repository + " from " + commitIdBefore + " to " + commitIdAfter);
+                                coevoAnaTried++;
+                                // try to find coevolutions
+                                processCoEvo(evos, commitIdAfter, commitIdBefore);
+                            }
+                        } catch (Exception e) {
+                            logger.log(Level.WARNING, e, () -> "failed evolution analysis " + srcSpec.repository);
+                            e.printStackTrace();
+                            break;
+                        }
+
+                    } catch (Throwable e) {
+                        final String cA = commitIdAfter;
+                        final String cB = commitIdBefore;
+                        logger.log(Level.WARNING, e, () -> "failed to analyze the interval [" + cB + "," + cA + "] of "
+                                + srcSpec.repository);
+                        // break;
+                    } finally {
+                        ((ThreadPrintStream) System.out).flush();
+                        ((ThreadPrintStream) System.err).flush();
+                        ((ThreadPrintStream) System.out).close();
+                        ((ThreadPrintStream) System.err).close();
+                        logger.info(((ThreadPrintStream) System.out).toString());
+                        logger.info(((ThreadPrintStream) System.err).toString());
+                    }
+                }
+            }
+
+            private void processCoEvo(Evolutions evos, String commitIdAfter, String commitIdBefore) {
+                try {
+                    CoEvolutions coevo = coevoH.handle(CoEvolutionHandler.buildSpec(srcSpec,
+                            EvolutionHandler.buildSpec(srcSpec, commitIdBefore, commitIdAfter)));
+                    logger.info(Integer.toString(coevo.getCoEvolutions().size()) + " coevolutions found for "
+                            + srcSpec.repository + " from " + commitIdBefore + " to " + commitIdAfter);
+                } catch (Throwable e) {
+                    logger.log(Level.WARNING, e, () -> "failed coevolution analysis " + srcSpec.repository);
+                }
+            }
+
+            private void processImpacts(Evolutions evos, String commitIdAfter, String commitIdBefore) {
+                try {
+                    Impacts impacts = impactH.handle(impactH.buildSpec(astH.buildSpec(srcSpec, commitIdBefore),
+                            EvolutionHandler.buildSpec(srcSpec, commitIdBefore, commitIdAfter)));
+                    logger.info(Integer.toString(impacts.getPerRootCause().size()) + " impacts found for "
+                            + srcSpec.repository + " from " + commitIdBefore + " to " + commitIdAfter);
+                } catch (Throwable e) {
+                    logger.log(Level.WARNING, e, () -> "failed impact analysis " + srcSpec.repository);
+                }
+            }
+        }
+
+        @Override
+        public int process(List<String> s, int lineNumber) throws Exception {
+            if (s.size() < 1) {
+                logger.warning("there is no project to analyze o this line");
+                return 1;
+            } else if (s.size() < 2) {
+                logger.warning("you should give the aproximate number of stars of this project");
+                return 2;
+            } else if (s.size() < 4) {
+                logger.warning("need at least 2 release/commits to analyze " + s.get(0) + " but got " + s.size());
+                return 3;
+            }
+            Sources.Specifier srcSpec = srcH.buildSpec(s.get(0), Integer.parseInt(s.get(1)));
+            ReleaseExecutor executor = new ReleaseExecutor(srcSpec, lineNumber);
+            List<String> waypoints = s.subList(2, s.size());
+            executor.process(waypoints);
+            return 0;
+        }
+
+    }
+
+    public static void batch(Stream<ImmutablePair<Integer, String>> stream, int pool_size, int max_commits_impacts) {
+        try (BatchExecutor executor = new BatchExecutor1(pool_size, max_commits_impacts);) {
+            executor.process(stream);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -566,9 +641,9 @@ public class CLI {
                                     Sources src = srcH.handle(srcSpec, "JGit");
                                     src.getCommitsBetween(commitIdBefore, commitIdAfter);
                                     Project<CtElement> project = astH.handle(astH.buildSpec(srcSpec, commitIdBefore));
-                                    printThings(s, commitIdBefore, project);
+                                    printThings(s.get(0), commitIdBefore, project);
                                     for (Project<?> x : project.getModules()) {
-                                        printThings(s, commitIdBefore, x);
+                                        printThings(s.get(0), commitIdBefore, x);
                                     }
                                 } catch (Exception e) {
                                     e.printStackTrace();
@@ -692,9 +767,9 @@ public class CLI {
                                     Sources src = srcH.handle(srcSpec, "JGit");
                                     src.getCommitsBetween(commitIdBefore, commitIdAfter);
                                     Project<CtElement> project = astH.handle(astH.buildSpec(srcSpec, commitIdBefore));
-                                    printThings(s, commitIdBefore, project);
+                                    printThings(s.get(0), commitIdBefore, project);
                                     for (Project<?> x : project.getModules()) {
-                                        printThings(s, commitIdBefore, x);
+                                        printThings(s.get(0), commitIdBefore, x);
                                     }
                                 } catch (Throwable e) {
                                     e.printStackTrace();
