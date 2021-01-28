@@ -101,8 +101,9 @@ public class ThreadPrintStream extends PrintStream {
 
   @Override
   public void close() {
-    getThreadOut().close();
+    PrintStream o = this.out.get();
     setThreadOut(original);
+    o.close();
   }
 
   public static void redirectThreadLogs() throws IOException {
