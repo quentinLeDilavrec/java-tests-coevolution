@@ -289,7 +289,6 @@ public class CLI {
                     + Long.toString(executor.getTaskCount()) + " " + Integer.toString(executor.getActiveCount()) + " "
                     + Long.toString(executor.getCompletedTaskCount()));
             List<String> s = Arrays.asList(entry.right.split(" "));
-            ((ThreadPrintStream) System.out).println("azerty aaa");
             if (s.size() > 2) {
                 executor.submit(() -> {
                     try {
@@ -297,7 +296,6 @@ public class CLI {
                                 "(submit start) CLI status " + entry.left + " " + Long.toString(executor.getTaskCount())
                                         + " " + Integer.toString(executor.getActiveCount()) + " "
                                         + Long.toString(executor.getCompletedTaskCount()));
-                        ((ThreadPrintStream) System.out).println("azerty bbb");
                         Thread.currentThread().setName("coevoAna " + entry.left);
                         return process(s, entry.left);
                     } catch (Throwable e) {
@@ -420,12 +418,12 @@ public class CLI {
                                 + srcSpec.repository);
                         // break;
                     } finally {
-                        ((ThreadPrintStream) System.out).flush();
-                        ((ThreadPrintStream) System.err).flush();
-                        ((ThreadPrintStream) System.out).close();
-                        ((ThreadPrintStream) System.err).close();
-                        logger.info(((ThreadPrintStream) System.out).toString());
-                        logger.info(((ThreadPrintStream) System.err).toString());
+                        if (splitedOut) {
+                            ((ThreadPrintStream) System.out).flush();
+                            ((ThreadPrintStream) System.err).flush();
+                            ((ThreadPrintStream) System.out).close();
+                            ((ThreadPrintStream) System.err).close();
+                        }
                     }
                 }
             }
@@ -568,12 +566,12 @@ public class CLI {
                                 + srcSpec.repository, e);
                         // break;
                     } finally {
-                        ((ThreadPrintStream) System.out).flush();
-                        ((ThreadPrintStream) System.err).flush();
-                        ((ThreadPrintStream) System.out).close();
-                        ((ThreadPrintStream) System.err).close();
-                        logger.info(((ThreadPrintStream) System.out).toString());
-                        logger.info(((ThreadPrintStream) System.err).toString());
+                        if (splitedOut) {
+                            ((ThreadPrintStream) System.out).flush();
+                            ((ThreadPrintStream) System.err).flush();
+                            ((ThreadPrintStream) System.out).close();
+                            ((ThreadPrintStream) System.err).close();
+                        }
                     }
                 }
             }
