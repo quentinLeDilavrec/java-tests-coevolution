@@ -432,6 +432,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                     logger.info("ret code of try other dir "+ exitCode);
                 } catch (IOException eee) {
                     logger.info("fail try other dir");
+                    eee.printStackTrace();
                 }
                 try {
                     logger.info("try abs exe");
@@ -440,6 +441,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                     logger.info("ret code of try abs exe "+ exitCode);
                 } catch (IOException eee) {
                     logger.info("fail try abs exe");
+                    eee.printStackTrace();
                 }
                 try {
                     logger.info("try both");
@@ -448,6 +450,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                     logger.info("ret code of try both "+ exitCode);
                 } catch (IOException eee) {
                     logger.info("fail try both");
+                    eee.printStackTrace();
                 }
             }
             Thread.sleep(5000);;
