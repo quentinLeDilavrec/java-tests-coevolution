@@ -376,8 +376,10 @@ public class CLI {
                         + " " + Integer.toString(executor.getActiveCount()) + " "
                         + Long.toString(executor.getCompletedTaskCount()));
                 List<String> s = Arrays.asList(line.right.split(" "));
+                ((ThreadPrintStream)System.out).println("azerty azerty aaa");
                 if (s.size() > 2) {
                     executor.submit(() -> {
+                        ((ThreadPrintStream)System.out).println("azerty bbb");
                         Thread.currentThread().setName("coevoAna " + line.left);
                         try {
                             Sources.Specifier srcSpec = srcH.buildSpec(s.get(0), Integer.parseInt(s.get(1)));
@@ -392,8 +394,10 @@ public class CLI {
                             int commit_index = 1;
                             int impact_computed = 0;
                             while (commit_index < s.size() - 2 && impact_computed < max_commits_impacts) {
+                                ((ThreadPrintStream)System.out).println("azerty ccc");
                                 try {
                                     while (commit_index < s.size() - 2) {
+                                        ((ThreadPrintStream)System.out).println("azerty ddd");
                                         commit_index++;
                                         commitIdAfter = s.get(commit_index);
                                         commitIdBefore = s.get(commit_index + 1);
