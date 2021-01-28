@@ -471,14 +471,16 @@ public class CLI {
                                 } catch (Throwable e) {
                                     final String cA = commitIdAfter;
                                     final String cB = commitIdBefore;
-                                    logger.log(Level.WARNING, e, () -> "failed to analysis the interval [" + cB + ","
+                                    logger.log(Level.WARNING, e, () -> "failed to analyze the interval [" + cB + ","
                                             + cA + "] of " + s.get(0));
                                     break;
                                 } finally {
-                                    System.out.flush();
-                                    System.err.flush();
-                                    System.out.close();
-                                    System.err.close();
+                                    ((ThreadPrintStream)System.out).flush();
+                                    ((ThreadPrintStream)System.err).flush();
+                                    ((ThreadPrintStream)System.out).close();
+                                    ((ThreadPrintStream)System.err).close();
+                                    logger.info(((ThreadPrintStream)System.out).toString());
+                                    logger.info(((ThreadPrintStream)System.err).toString());
                                 }
                             }
                             return 0;
