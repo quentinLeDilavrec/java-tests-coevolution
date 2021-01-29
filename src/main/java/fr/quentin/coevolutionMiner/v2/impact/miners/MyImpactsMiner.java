@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -17,28 +18,20 @@ import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import java.util.logging.Level;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import com.google.gson.GsonBuilder;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
-import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon.SpoonAST;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts;
-import fr.quentin.coevolutionMiner.v2.impact.Impacts.Impact;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts.Impact.DescRange;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactsMiner;
-import fr.quentin.coevolutionMiner.v2.utils.DbUtils;
 import fr.quentin.coevolutionMiner.v2.utils.MySLL;
 import fr.quentin.coevolutionMiner.v2.utils.Utils;
 import fr.quentin.impactMiner.Explorer;
@@ -46,10 +39,8 @@ import fr.quentin.impactMiner.ImpactAnalysis;
 import fr.quentin.impactMiner.ImpactChain;
 import fr.quentin.impactMiner.ImpactElement;
 import fr.quentin.impactMiner.ImpactType;
-import fr.quentin.impactMiner.Impacts.Relations;
 import fr.quentin.impactMiner.Position;
 import fr.quentin.impactMiner.ImpactAnalysis.ImpactAnalysisException;
-import spoon.MavenLauncher;
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.cu.position.DeclarationSourcePosition;
 import spoon.reflect.declaration.CtElement;
@@ -262,7 +253,7 @@ public class MyImpactsMiner implements ImpactsMiner {
         private void simpleDissection(SpoonAST ast, Explorer imptst1) {
             for (ImpactChain ic : imptst1.getFinishedChains()) {
                 Set<ImpactChain> marched = new HashSet<>();
-                ConcurrentLinkedQueue<ImpactChain> toProcess = new ConcurrentLinkedQueue<>();
+                LinkedList<ImpactChain> toProcess = new LinkedList<>();
                 Set<Object> rootsDescsForTest = new HashSet<>();
                 toProcess.add(ic);
                 while (!toProcess.isEmpty()) {
@@ -324,7 +315,9 @@ public class MyImpactsMiner implements ImpactsMiner {
                                     Collections.singleton(new ImmutablePair<>(ie2range(ast, last), "effect")));
                             break;
                     }
-                    toProcess.add(prev);
+                    if (!marched.contains(prev)) {
+                        toProcess.add(prev);
+                    }
                 }
                 addImpactedTest(ie2range(ast, ic.getLast()), rootsDescsForTest);
             }
