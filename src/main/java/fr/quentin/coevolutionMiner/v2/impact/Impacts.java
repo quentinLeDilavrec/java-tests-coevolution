@@ -56,16 +56,11 @@ public abstract class Impacts {
         return gson.toJsonTree(getValueCompressed());
     }
 
-    public final Map<String, Object> asMap() { // TODO SoftReference? memoize result?
-        Map<String, Object> res = new HashMap<>();
-        List<Map<String, Object>> ranges_to_type = new ArrayList<>();
-        res.put("rangesToType", ranges_to_type);
-        List<Map<String, Object>> json = new ArrayList<>();
-        res.put("json", json);
-        res.put("tool", spec.miner+2);
+    public final List<Map<String, Object>> asListofMaps() { // TODO SoftReference? memoize result?
+        List<Map<String, Object>> res = new ArrayList<>();
         for (Impact impact : impacts.values()) {
             Map<String, Object> map = impact.toMap(this);
-            json.add(map);
+            res.add(map);
         }
         return res;
     }
@@ -202,12 +197,12 @@ public abstract class Impacts {
         }
     }
 
-    public Map<Range,Set<Object>> getImpactedTests() {
+    public Map<Range, Set<Object>> getImpactedTests() {
         return Collections.unmodifiableMap(impactedTests);
     }
 
     protected Map<Impact, Impact> impacts = new HashMap<>();
-    protected Map<Range,Set<Object>> impactedTests = new HashMap<>();
+    protected Map<Range, Set<Object>> impactedTests = new HashMap<>();
     protected Map<Object, Set<Impact>> perRoot = new HashMap<>();
 
     protected Impact addImpact(String type, Set<Pair<Range, String>> idCauses, Set<Pair<Range, String>> idEffects) {
@@ -390,24 +385,24 @@ public abstract class Impacts {
             return Impacts.this;
         }
 
-		public Map<String, Object> toMap(Impacts impacts) {
-		    Map<String, Object> content = impacts.makeImpactContent(impacts.ast.getAst().rootDir, this);
-		    content.put("type", getType());
-		    List<Object> causes = new ArrayList<>();
-		    for (DescRange aaa : getCauses()) {
-		        Map<String, Object> o = impacts.makeRange(aaa);
-		        causes.add(o);
+        public Map<String, Object> toMap(Impacts impacts) {
+            Map<String, Object> content = impacts.makeImpactContent(impacts.ast.getAst().rootDir, this);
+            content.put("type", getType());
+            List<Object> causes = new ArrayList<>();
+            for (DescRange aaa : getCauses()) {
+                Map<String, Object> o = impacts.makeRange(aaa);
+                causes.add(o);
             }
-            causes.sort((a,b)->a.hashCode()-b.hashCode());
-		    List<Object> effects = new ArrayList<>();
-		    for (DescRange aaa : getEffects()) {
-		        Map<String, Object> o = impacts.makeRange(aaa);
-		        effects.add(o);
-		    }
-            effects.sort((a,b)->a.hashCode()-b.hashCode());
-		    Map<String, Object> map = impacts.makeImpact(content, causes, effects);
-		    return map;
-		}
+            causes.sort((a, b) -> a.hashCode() - b.hashCode());
+            List<Object> effects = new ArrayList<>();
+            for (DescRange aaa : getEffects()) {
+                Map<String, Object> o = impacts.makeRange(aaa);
+                effects.add(o);
+            }
+            effects.sort((a, b) -> a.hashCode() - b.hashCode());
+            Map<String, Object> map = impacts.makeImpact(content, causes, effects);
+            return map;
+        }
     }
 
 }

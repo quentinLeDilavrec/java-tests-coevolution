@@ -7,20 +7,26 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Query;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.TransactionConfig;
 import org.neo4j.driver.TransactionWork;
+import org.neo4j.driver.Value;
 import org.neo4j.driver.exceptions.TransientException;
+import org.neo4j.driver.internal.DriverFactory;
 
 import fr.quentin.coevolutionMiner.utils.MyProperties;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
@@ -28,54 +34,44 @@ import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts.Specifier;
 import fr.quentin.coevolutionMiner.v2.utils.Utils;
+import spoon.support.util.internal.MapUtils;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactsStorage;
 
 public class Neo4jImpactsStorage implements ImpactsStorage {
-    static Logger logger = Logger.getLogger(Neo4jImpactsStorage.class.getName());
+    static Logger logger = LogManager.getLogger();
     static final int STEP = 512;
     static final int TIMEOUT = 10;
 
     @Override
     public void put(Impacts impacts) {
-        Map<String, Object> value = impacts.asMap();
-        List tmp = (List) value.get("json");
-        int index = 0;
-        int step = STEP;
-        boolean[] success = new boolean[] { false };
-        while (index < tmp.size()) {
-            final int findex = index;
-            final int fstep = step;
-            success[0] = false;
+        List<Map<String, Object>> processed = impacts.asListofMaps();
+        new ChunckedUploadEvos(impacts.spec, processed);
+    }
 
-            long start = System.nanoTime();
-            try (Session session = driver.session()) {
-                String done = session.writeTransaction(new TransactionWork<String>() {
-                    @Override
-                    public String execute(Transaction tx) {
-                        Result result = tx.run(getCypher(), parameters("json", tmp.subList(findex, Math.min(findex + fstep, tmp.size())),
-                                "tool", value.get("tool"), "rangesToType", value.get("rangesToType")));
-                        result.consume();
-                        success[0] = true;
-                        return "uploaded impacts chunk of " + impacts.spec.evoSpec.sources.repository + ": " + Math.min(findex + fstep, tmp.size()) + "/" + tmp.size();
-                    }
-                }, TransactionConfig.builder().withTimeout(Duration.ofMinutes(TIMEOUT)).build());
-                logger.info(done);
-            } catch (TransientException e) {
-                e.printStackTrace();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            if (success[0]) {
-                index += step;
-                if (((System.nanoTime() - start) / 1000000 / 60 < (TIMEOUT/2))) {
-                    step = step * 2;
-                }
-            } else {
-                logger.info(
-                    "took too long to upload impacts of " + impacts.spec.evoSpec.sources.repository + " with a chunk of size " + step);
-                step = step / 2;
-            }
+    class ChunckedUploadEvos extends Utils.ChunckedUpload<Map<String, Object>> {
+        private final Specifier spec;
+
+        public ChunckedUploadEvos(Specifier spec, List<Map<String, Object>> processed) {
+            super(driver, 10);
+            this.spec = spec;
+            execute(logger, 512, processed);
         }
+
+        @Override
+        protected String getCypher() {
+            return Utils.memoizedReadResource("impacts_cypher.sql");
+        }
+
+        @Override
+        public Value format(Collection<Map<String, Object>> chunk) {
+            return parameters("json", chunk, "tool", spec.miner + 2);
+        }
+
+        @Override
+        protected String whatIsUploaded() {
+            return "impacts of " + spec.evoSpec.sources.repository;
+        }
+
     }
 
     private final Driver driver;
