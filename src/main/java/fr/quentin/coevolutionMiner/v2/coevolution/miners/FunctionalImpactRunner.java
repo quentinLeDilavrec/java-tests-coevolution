@@ -8,7 +8,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.logging.Logger;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.VersionedTree;
@@ -60,7 +62,7 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
         }
     }
 
-    static Logger logger = Logger.getLogger(FunctionalImpactRunner.class.getName());
+    static Logger logger = LogManager.getLogger();
 
     public JavaOutputProcessor outputProcessor;
     public Range testBefore;
@@ -131,64 +133,66 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
             this.resultingImpacts.add(saveReport(t, report));
         }
     }
+
     static class Execution {
-        static Logger logger = Logger.getLogger(Execution.class.getName());
+        static Logger logger = LogManager.getLogger();
 
-		private static String executeTest(File baseDir, String declaringClass, String name) throws Exception {
+        private static String executeTest(File baseDir, String declaringClass, String name) throws Exception {
             StringBuffer r = new StringBuffer();
-		    FunctionalImpactRunner.logger.fine("Launching test: " + declaringClass + "#" + name);
-		    InvocationResult res = SourcesHelper.executeTests(baseDir, declaringClass + "#" + name, x -> {
-		        r.append(x + "\n");
-		    });
-		    logger.finer(r.toString());
-		    CommandLineException executionException = res.getExecutionException();
-		    if (executionException != null) {
-		        throw executionException;
-		    }
-		    if (res.getExitCode() == 0) {
-		        return null;
-		    } else {
-		        return r.toString();
-		    }
-		}
-
-		private static String compileAllTests(File baseDir) throws Exception {
-            StringBuffer r = new StringBuffer();
-		    FunctionalImpactRunner.logger.fine("Compiling all tests ");
-		    InvocationResult res = SourcesHelper.compileAllTests(baseDir, x -> {
-		        r.append(x + "\n");
-            });
-		    logger.finer(r.toString());
-		    CommandLineException executionException = res.getExecutionException();
-		    if (executionException != null) {
-		        throw executionException;
-		    }
-		    if (res.getExitCode() == 0) {
-		        return null;
-		    } else {
-		        return r.toString();
-		    }
-		}
-
-		private static String compileApp(File baseDir) throws Exception {
-            StringBuffer r = new StringBuffer();
-		    FunctionalImpactRunner.logger.fine("Compiling App");
-		    InvocationResult res = SourcesHelper.compileApp(baseDir, x -> {
+            FunctionalImpactRunner.logger.debug("Launching test: " + declaringClass + "#" + name);
+            InvocationResult res = SourcesHelper.executeTests(baseDir, declaringClass + "#" + name, x -> {
                 r.append(x + "\n");
-		    });
-		    logger.finer(r.toString());
-		    CommandLineException executionException = res.getExecutionException();
-		    if (executionException != null) {
-		        throw executionException;
-		    }
-		    if (res.getExitCode() == 0) {
-		        return null;
-		    } else {
-		        return r.toString();
-		    }
-		}
-    
+            });
+            logger.debug(r.toString());
+            CommandLineException executionException = res.getExecutionException();
+            if (executionException != null) {
+                throw executionException;
+            }
+            if (res.getExitCode() == 0) {
+                return null;
+            } else {
+                return r.toString();
+            }
+        }
+
+        private static String compileAllTests(File baseDir) throws Exception {
+            StringBuffer r = new StringBuffer();
+            FunctionalImpactRunner.logger.debug("Compiling all tests ");
+            InvocationResult res = SourcesHelper.compileAllTests(baseDir, x -> {
+                r.append(x + "\n");
+            });
+            logger.debug(r.toString());
+            CommandLineException executionException = res.getExecutionException();
+            if (executionException != null) {
+                throw executionException;
+            }
+            if (res.getExitCode() == 0) {
+                return null;
+            } else {
+                return r.toString();
+            }
+        }
+
+        private static String compileApp(File baseDir) throws Exception {
+            StringBuffer r = new StringBuffer();
+            FunctionalImpactRunner.logger.debug("Compiling App");
+            InvocationResult res = SourcesHelper.compileApp(baseDir, x -> {
+                r.append(x + "\n");
+            });
+            logger.debug(r.toString());
+            CommandLineException executionException = res.getExecutionException();
+            if (executionException != null) {
+                throw executionException;
+            }
+            if (res.getExitCode() == 0) {
+                return null;
+            } else {
+                return r.toString();
+            }
+        }
+
     }
+
     private static EImpact.FailureReport serializeChangedCode(JavaOutputProcessor outputProcessor,
             Set<Path> initialPaths, Factory mFacto) {
         Set<Path> diff = new HashSet<>(initialPaths);
@@ -292,7 +296,7 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
                     position.getSourceEnd());
             if (testAfterB == null)
                 throw new RuntimeException();
-            if (testAfter != null ){
+            if (testAfter != null) {
                 if (!testAfterB.equals(testAfter)) {
                     logger.info("not sure about wich method is the test after the evolutions are applied.");
                 }

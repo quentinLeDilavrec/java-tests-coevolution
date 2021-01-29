@@ -103,6 +103,12 @@ public class Project<T> implements Iterable<Project> {
             return true;
         }
 
+        @Override
+        public String toString() {
+            return "Specifier [sources=" + sources + ", commitId=" + commitId + ", miner=" + miner.getSimpleName()
+                    + ", relPath=" + relPath.toString() + "]";
+        }
+
     }
 
     protected Project<T>.AST ast;
@@ -384,6 +390,11 @@ public class Project<T> implements Iterable<Project> {
                     }
                     return null;
                 }
+
+                @Override
+                public String toString() {
+                    return "Range [snap=" + getFileSnapshot().toString() + " start=" + start + ", end=" + end + "]";
+                }
             }
 
             private <T> String litToString(CtLiteral<T> literal) {
@@ -446,6 +457,12 @@ public class Project<T> implements Iterable<Project> {
                 // return false;
                 return true;
             }
+
+            @Override
+            public String toString() {
+                return "FileSnapshot [path=" + getAst().toString() + ", path=" + path + "]";
+            }
+
         }
 
         public boolean isTest(FileSnapshot.Range target) {
@@ -463,11 +480,22 @@ public class Project<T> implements Iterable<Project> {
         public Stats getGlobalStats() {
             return globalStats;
         }
+
+        @Override
+        public String toString() {
+            return "AST [project=" + getProject().toString() + "]";
+        }
+
     }
 
     public Iterator<Project> iterator() {
         return Iterators2.<Project>createCompoundIterator(Project.this, (Project x) -> {
             return x.getModules().iterator();
         });
+    }
+
+    @Override
+    public String toString() {
+        return "Project [spec=" + spec.toString() + "]";
     }
 }

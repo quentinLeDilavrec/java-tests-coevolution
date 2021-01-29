@@ -13,7 +13,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.logging.Logger;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
@@ -45,7 +47,7 @@ import gr.uom.java.xmi.diff.CodeRange;
 import spoon.reflect.declaration.CtElement;
 
 public class RefactoringMiner implements EvolutionsMiner {
-    Logger LOGGER = Logger.getLogger("ImpactRM commitHandler");
+    Logger logger = LogManager.getLogger();
     private static final String systemFileSeparator = java.util.regex.Matcher.quoteReplacement(File.separator);
 
     private ProjectHandler astHandler;
@@ -100,7 +102,7 @@ public class RefactoringMiner implements EvolutionsMiner {
                                         commitId);
                                 mapOpByCommit.putIfAbsent(tmp1, new ArrayList<>());
                                 mapOpByCommit.get(tmp1).add(op);
-                                LOGGER.info("O- " + op + "\n");
+                                logger.info("O- " + op + "\n");
                             }
                         }
 
@@ -151,7 +153,8 @@ public class RefactoringMiner implements EvolutionsMiner {
         }
 
         private ImmutablePair<Range, String> toRange(Project proj, CodeRange range) {
-            Range tmp = proj.getRange(range.getFilePath().replaceAll("/", systemFileSeparator), range.getStartOffset(), range.getEndOffset() - 1);
+            Range tmp = proj.getRange(range.getFilePath().replaceAll("/", systemFileSeparator), range.getStartOffset(),
+                    range.getEndOffset() - 1);
             if (tmp == null) {
                 return null;
             }

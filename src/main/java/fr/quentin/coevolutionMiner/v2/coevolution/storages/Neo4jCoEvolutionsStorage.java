@@ -2,73 +2,51 @@ package fr.quentin.coevolutionMiner.v2.coevolution.storages;
 
 import static org.neo4j.driver.Values.parameters;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
-import java.util.logging.Logger;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.text.diff.StringsComparator;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
-import org.neo4j.driver.Result;
-import org.neo4j.driver.Session;
-import org.neo4j.driver.Transaction;
-import org.neo4j.driver.TransactionWork;
 import org.neo4j.driver.Value;
 import org.neo4j.driver.types.Node;
-import org.neo4j.driver.types.Relationship;
-import org.neo4j.driver.types.Type;
 import org.neo4j.driver.types.Path.Segment;
-import org.refactoringminer.api.Refactoring;
+import org.neo4j.driver.types.Relationship;
 
 import fr.quentin.coevolutionMiner.utils.MyProperties;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
-import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 // import fr.quentin.impactMiner.ImpactAnalysis;
 // import fr.quentin.impactMiner.ImpactChain;
 // import fr.quentin.impactMiner.ImpactElement;
 // import fr.quentin.impactMiner.Position;
 // import fr.quentin.impactMiner.Impacts.Relations;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
+import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.CoEvolution;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.Specifier;
+import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsStorage;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact;
-import fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact.FailureReport;
-import fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner.CoEvolutionsExtension;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
-import fr.quentin.coevolutionMiner.v2.impact.Impacts;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
-import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
-import fr.quentin.coevolutionMiner.v2.utils.Tuple;
 import fr.quentin.coevolutionMiner.v2.utils.Utils;
-import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsStorage;
-import spoon.reflect.declaration.CtElement;
-import spoon.reflect.declaration.CtExecutable;
-import spoon.reflect.declaration.CtMethod;
 
 public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
-    public static Logger logger = Logger.getLogger(Neo4jCoEvolutionsStorage.class.getName());
+    public static Logger logger = LogManager.getLogger();
 
     class ChunckedUploadCoEvos extends Utils.ChunckedUpload<Map<String, Object>> {
         private final Specifier spec;

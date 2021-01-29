@@ -14,7 +14,9 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Function;
 import java.util.Set;
-import java.util.logging.Logger;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -59,7 +61,7 @@ import spoon.reflect.visitor.filter.TypeFilter;
 // reson impact only computer on first commit 
 // and no implementation of forwarding ranges of code through commits (making sure they were not modified)
 public class MyImpactsMiner implements ImpactsMiner {
-    static Logger logger = Logger.getLogger(MyImpactsMiner.class.getName());
+    static Logger logger = LogManager.getLogger();
 
     private ProjectHandler astHandler;
     private EvolutionHandler evoHandler;
@@ -80,7 +82,7 @@ public class MyImpactsMiner implements ImpactsMiner {
             ImpactsExtension result = computeAux(isOnBefore, project);
             return result;
         } catch (Exception e) {
-            logger.log(Level.WARNING, e.getMessage(), e);
+            logger.warn(e.getMessage(), e);
             return new ImpactsExtension(new Impacts.Specifier(project.spec, spec.evoSpec, spec.miner), project,
                     project.getAst().rootDir, null);
         }
@@ -106,7 +108,7 @@ public class MyImpactsMiner implements ImpactsMiner {
             try {
                 result.addModule(computeAux(isOnBefore, (ProjectSpoon) childProj));
             } catch (Exception e) {
-                logger.log(Level.WARNING, e.getMessage(), e);
+                logger.warn(e.getMessage(), e);
             }
         }
 
@@ -238,7 +240,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                         // Position pos = new Position(targ.getFile().getPath(), targ.getStart(),
                         // targ.getEnd());
                         if (ori == null) {
-                            logger.warning("no original element found at " + targ);
+                            logger.warn("no original element found at " + targ);
                         } else {
                             tmp.add(new ImmutablePair<>(bef, ori));
                         }

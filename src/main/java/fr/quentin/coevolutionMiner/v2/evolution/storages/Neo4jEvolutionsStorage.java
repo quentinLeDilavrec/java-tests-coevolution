@@ -36,7 +36,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
-import java.util.logging.Logger;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
@@ -44,7 +46,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 public class Neo4jEvolutionsStorage implements EvolutionsStorage {
-    public static Logger logger = Logger.getLogger(Neo4jEvolutionsStorage.class.getName());
+    public static Logger logger = LogManager.getLogger();
 
     @Override
     public void put(Specifier evos_spec, Evolutions evolutions) {

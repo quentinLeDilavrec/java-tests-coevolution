@@ -15,7 +15,9 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.logging.Logger;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import java.util.stream.Collectors;
 
 import com.github.gumtreediff.actions.MyAction;
@@ -77,7 +79,7 @@ import spoon.reflect.path.CtPath;
 import spoon.reflect.reference.CtReference;
 
 public class GumTreeSpoonMiner implements EvolutionsMiner {
-    Logger LOGGER = Logger.getLogger("ImpactGT commitHandler");
+    Logger LOGGER = LogManager.getLogger();
 
     private ProjectHandler astHandler;
     private SourcesHandler srcHandler;
@@ -328,7 +330,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
 
                 for (Entry<String, MutablePair<Project<?>, Project<?>>> entry : modulesPairs.entrySet()) {
                     MutablePair<Project<?>, Project<?>> value = entry.getValue();
-                    if (value.left==null || value.right==null) {
+                    if (value.left == null || value.right == null) {
                         // TODO handle moved/renamed projects better
                         continue;
                     }
@@ -627,7 +629,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
 
                 @Override
                 public Evolution next() {
-                    if(hasNext()) {
+                    if (hasNext()) {
                         return it.next();
                     } else {
                         throw new NoSuchElementException();

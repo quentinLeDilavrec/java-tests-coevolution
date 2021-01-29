@@ -12,7 +12,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.logging.Logger;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
@@ -79,8 +81,9 @@ public class MixedMiner implements EvolutionsMiner {
                 Evolutions currRM = perBeforeCommitRM.get(commit);
                 Evolutions currGTS = perBeforeCommitGTS.get(commit);
                 if (currRM != null && currGTS != null) {
-                    r.put(commit, new EvolutionsExtension(new Evolutions.Specifier(spec.sources, currGTS.spec.commitIdAfter,
-                            currGTS.spec.commitIdAfter, MixedMiner.class), sources, currRM, currGTS));
+                    r.put(commit,
+                            new EvolutionsExtension(new Evolutions.Specifier(spec.sources, currGTS.spec.commitIdAfter,
+                                    currGTS.spec.commitIdAfter, MixedMiner.class), sources, currRM, currGTS));
                 } else if (currRM != null) {
                     r.put(commit, currRM);
                 } else if (currGTS != null) {
@@ -107,7 +110,7 @@ public class MixedMiner implements EvolutionsMiner {
         }
     }
 
-    Logger LOGGER = Logger.getLogger(MixedMiner.class.getName());
+    Logger logger = LogManager.getLogger();
     // public static List<Class<? extends EvolutionsMiner>> slaves = Collections
     // .unmodifiableList(Arrays.asList(RefactoringMiner.class,
     // GumTreeSpoonMiner.class));

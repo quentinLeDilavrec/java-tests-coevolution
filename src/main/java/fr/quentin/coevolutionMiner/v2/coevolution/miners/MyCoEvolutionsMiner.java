@@ -17,7 +17,9 @@ import java.util.Set;
 import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.logging.Level;
-import java.util.logging.Logger;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import java.util.stream.Collectors;
 
 import com.github.gumtreediff.actions.MyAction.MyMove;
@@ -96,7 +98,7 @@ import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon.SpoonAS
 // CAUTION same limitation as MyImpactsMiner
 public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
-    static Logger logger = Logger.getLogger(MyCoEvolutionsMiner.class.getName());
+    static Logger logger = LogManager.getLogger();
 
     private final class CoEvolutionsManyCommit extends CoEvolutions {
         private final Set<CoEvolution> coevolutions = new LinkedHashSet<>();
@@ -165,9 +167,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             List<Sources.Commit> commits;
             try {
                 commits = sourcesProvider.getCommitsBetween(initialCommitId, spec.evoSpec.commitIdAfter);
-                logger.info(
-                        commits.size() > 2 ? "caution computation of coevolutions only between consecutive commits"
-                                : "# of commits to analyze: " + commits.size());
+                logger.info(commits.size() > 2 ? "caution computation of coevolutions only between consecutive commits"
+                        : "# of commits to analyze: " + commits.size());
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -199,7 +200,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 }
             }
             if (smallSuppressedExc.getSuppressed().length > 0) {
-                logger.log(Level.INFO, "Small exceptions", smallSuppressedExc);
+                logger.info("Small exceptions", smallSuppressedExc);
             }
             // depr(global_evolutions_set);
             return globalResult;
@@ -256,8 +257,9 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         EvolutionsAtCommit currEvoAtCommit = ((GumTreeSpoonMiner.EvolutionsMany) currentGTSEvolutions)
                 .getPerCommit(currentCommit.getId(), nextCommit.getId());
-        if(currEvoAtCommit==null) {
-            logger.warning("no evolution here for this pair of commits: " + currentCommit.getId() + ", " + nextCommit.getId());
+        if (currEvoAtCommit == null) {
+            logger.warn(
+                    "no evolution here for this pair of commits: " + currentCommit.getId() + ", " + nextCommit.getId());
             return currCoevolutions;
         }
 
@@ -269,9 +271,12 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         Path pathToIndividualExperiment = Paths.get("/tmp/applyResults", getRepoRawPath(), nextCommit.getId(),
                 currentCommit.getId(), "" + new Date().getTime());
         EvolutionsAtProj rootModule = currEvoAtCommit.getRootModule();
-        if(rootModule==null) logger.warning("rootModule is null");
-        if(rootModule.getBeforeProj()==null) logger.warning("beforeProj is null");
-        if(rootModule.getAfterProj()==null) logger.warning("afterProj is null");
+        if (rootModule == null)
+            logger.warn("rootModule is null");
+        if (rootModule.getBeforeProj() == null)
+            logger.warn("beforeProj is null");
+        if (rootModule.getAfterProj() == null)
+            logger.warn("afterProj is null");
         Path oriPath = ((SpoonAST) rootModule.getBeforeProj().getAst()).rootDir;
         Path afterOriPath = ((SpoonAST) rootModule.getAfterProj().getAst()).rootDir;
         // setup directory where validation will append
@@ -391,7 +396,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             for (DescRange descRange : evolution.getBefore()) {
                 CtElement ele = (CtElement) descRange.getTarget().getOriginal();
                 if (ele == null) {
-                    logger.warning("no original for" + descRange.getTarget());
+                    logger.warn("no original for" + descRange.getTarget());
                 } else {
                     decomposeAux(acc, ele);
                 }
@@ -399,7 +404,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             for (DescRange descRange : evolution.getAfter()) {
                 CtElement ele = (CtElement) descRange.getTarget().getOriginal();
                 if (ele == null) {
-                    logger.warning("no original for" + descRange.getTarget());
+                    logger.warn("no original for" + descRange.getTarget());
                 } else {
                     decomposeAux(acc, ele);
                 }
@@ -553,7 +558,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 //     FailureReport old = causeRevIndex.get(entry.getValue().left).put(entry.getKey(),
                 //             entry.getValue().right);
                 //     if (old!=null) {
-                //         logger.warning("unclear impact status");
+                //         logger.warn("unclear impact status");
                 //     }
                 // }
                 // remaining possibleReso are real reso
@@ -570,22 +575,18 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         Range testAfterR = resoEntry.getValue().left;
                         Range testAfterC = causeThing.left;
                         CoEvolutionExtension res; // TODO to discus
-                        if (testAfterR == testBefore && testAfterC == testBefore){
+                        if (testAfterR == testBefore && testAfterC == testBefore) {
                             res = new CoEvolutionExtension(new LinkedHashSet<>(eimpCauses.evolutions.keySet()),
-                                    resolutions, Collections.singleton(testBefore),
-                                    Collections.singleton(testBefore));
+                                    resolutions, Collections.singleton(testBefore), Collections.singleton(testBefore));
                         } else if (testAfterR == testBefore) { // TODO can we really undershoot here?
                             res = new CoEvolutionExtension(new LinkedHashSet<>(eimpCauses.evolutions.keySet()),
-                                    resolutions, Collections.singleton(testBefore),
-                                    Collections.singleton(testAfterC));
+                                    resolutions, Collections.singleton(testBefore), Collections.singleton(testAfterC));
                         } else if (testAfterC == testBefore) {
                             res = new CoEvolutionExtension(new LinkedHashSet<>(eimpCauses.evolutions.keySet()),
-                                    resolutions, Collections.singleton(testBefore),
-                                    Collections.singleton(testAfterR));
-                        } else if (testAfterR == testAfterC){
+                                    resolutions, Collections.singleton(testBefore), Collections.singleton(testAfterR));
+                        } else if (testAfterR == testAfterC) {
                             res = new CoEvolutionExtension(new LinkedHashSet<>(eimpCauses.evolutions.keySet()),
-                                    resolutions, Collections.singleton(testBefore),
-                                    Collections.singleton(testAfterR));
+                                    resolutions, Collections.singleton(testBefore), Collections.singleton(testAfterR));
                         } else {
                             continue;
                         }
@@ -631,8 +632,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             return Collections.unmodifiableSet(coevolutions);
         }
     }
-    private static 
-    class InterestingCasesExtractor {
+
+    private static class InterestingCasesExtractor {
         Map<EvolutionsAtProj, Set<InterestingCase>> interestingCases = new LinkedHashMap<>();
         Map<EvolutionsAtProj, Set<Evolution>> evoPerProj = new HashMap<>();
         Map<EvolutionsAtProj, Set<Range>> impactedTestsPerProj = new HashMap<>();
@@ -640,10 +641,9 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         private Impacts currentImpacts;
         private Impacts afterImpacts;
         private Map<Evolution, Set<Evolution>> atomizedRefactorings;
-        
 
-        public InterestingCasesExtractor(EvolutionsAtCommit currEvoAtCommit,
-                Impacts currentImpacts, Impacts afterImpacts, Map<Evolution, Set<Evolution>> atomizedRefactorings) {
+        public InterestingCasesExtractor(EvolutionsAtCommit currEvoAtCommit, Impacts currentImpacts,
+                Impacts afterImpacts, Map<Evolution, Set<Evolution>> atomizedRefactorings) {
             this.currEvoAtCommit = currEvoAtCommit;
             this.currentImpacts = currentImpacts;
             this.afterImpacts = afterImpacts;
@@ -651,18 +651,14 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
 
         private Map<Project, Set<Entry<Range, Set<Object>>>> testNevosPerProjects() {
-        Map<Project, Set<Entry<Range, Set<Object>>>> r = new HashMap<>();
+            Map<Project, Set<Entry<Range, Set<Object>>>> r = new HashMap<>();
             for (Entry<Range, Set<Object>> impactedTests : currentImpacts.getImpactedTests().entrySet()) {
-                r.putIfAbsent(impactedTests.getKey().getFile().getAST().getProject(),
-                        new HashSet<>());
-                r.get(impactedTests.getKey().getFile().getAST().getProject())
-                        .add(impactedTests);
+                r.putIfAbsent(impactedTests.getKey().getFile().getAST().getProject(), new HashSet<>());
+                r.get(impactedTests.getKey().getFile().getAST().getProject()).add(impactedTests);
             }
             for (Entry<Range, Set<Object>> impactedTests : afterImpacts.getImpactedTests().entrySet()) {
-                r.putIfAbsent(impactedTests.getKey().getFile().getAST().getProject(),
-                        new HashSet<>());
-                r.get(impactedTests.getKey().getFile().getAST().getProject())
-                        .add(impactedTests);
+                r.putIfAbsent(impactedTests.getKey().getFile().getAST().getProject(), new HashSet<>());
+                r.get(impactedTests.getKey().getFile().getAST().getProject()).add(impactedTests);
             }
             return r;
         }
@@ -704,7 +700,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         }
                         if (treeTestBefore.getInsertVersion() != currEvoAtCommit.afterVersion) {
                             testBefore = GumTreeSpoonMiner.toRange(projectBefore, treeTestBefore,
-                                currEvoAtCommit.afterVersion);
+                                    currEvoAtCommit.afterVersion);
                         }
                         if (testBefore == null) {
                             // For now we cannnot handle such new test
@@ -716,11 +712,13 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         }
                     }
                     if (testBefore != null && !(testBefore.getOriginal() instanceof CtMethod)) {
-                        logger.warning("original of testBefore should be a CtMethod but was " + testBefore.getOriginal().getClass().toString());
+                        logger.warn("original of testBefore should be a CtMethod but was "
+                                + testBefore.getOriginal().getClass().toString());
                         continue;
                     }
-                    if (testAfter != null && !(testAfter.getOriginal() instanceof CtMethod)){
-                        logger.warning("original of testAfter should be a CtMethod but was " + testAfter.getOriginal().getClass().toString());
+                    if (testAfter != null && !(testAfter.getOriginal() instanceof CtMethod)) {
+                        logger.warn("original of testAfter should be a CtMethod but was "
+                                + testAfter.getOriginal().getClass().toString());
                         continue;
                     }
                     Set<Evolutions.Evolution.DescRange> evosInGame = (Set) impactedTest.getValue();
@@ -759,7 +757,6 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 }
             }
         }
-        
 
         // also put the cases without using the static analysis of dependencies (to avoid missing co-evolutions, for now because we can ignore to much evo from the code)
         public void computeRelax() {

@@ -13,7 +13,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
-import org.apache.log4j.Logger;
+import java.util.logging.Logger;
 import org.refactoringminer.api.Refactoring;
 
 import fr.quentin.impactMiner.Evolution;
@@ -186,7 +186,7 @@ public class ImpactGumtreeSpoonHandler implements ImpactRoute {
 			try {
 				if (op instanceof MoveOperation) {
 					CtElement src = op.getSrcNode();
-					logger.info(src.getClass());
+					logger.info(src.getClass().toString());
 					if (src.getPosition().isValidPosition()) {
 						System.out.println(src.getPosition().hashCode());
 						processedEvolutions.add(new MoveEvolution((MoveOperation) op));

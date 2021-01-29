@@ -72,6 +72,11 @@ public abstract class Sources {
                 return false;
             return true;
         }
+
+        @Override
+        public String toString() {
+            return "Specifier [repository=" + repository + ", stars=" + stars + ", miner=" + miner + "]";
+        }
     }
 
     public Repository getRepository() {
@@ -79,7 +84,7 @@ public abstract class Sources {
     }
 
     public class Repository {
-        
+
         Set<String> releases = new HashSet<>();
 
         Repository(String url) {
@@ -214,11 +219,11 @@ public abstract class Sources {
             return true;
         }
 
-        public Map<String,Object> toMap() {
-            Map<String,Object> r = new HashMap<>();
+        public Map<String, Object> toMap() {
+            Map<String, Object> r = new HashMap<>();
             // repo:e.content.repository, sha1:e.content.commitIdBefore
-            r.put("repository",getRepository().getUrl());
-            r.put("commitId",getId());
+            r.put("repository", getRepository().getUrl());
+            r.put("commitId", getId());
             return r;
         }
 
@@ -226,7 +231,7 @@ public abstract class Sources {
         public String toString() {
             return getRepository().getUrl() + "/" + id.substring(0, Math.min(id.length(), 16));
         }
-        
+
     }
 
     public abstract List<Commit> getCommitsBetween(String commitIdBefore, String commitIdAfter) throws Exception;

@@ -47,8 +47,9 @@ import spoon.support.compiler.FilteringFolder;
 import spoon.support.compiler.SpoonPom;
 import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class SpoonMiner implements ProjectMiner<CtElement> {
     public class ProjectSpoon extends Project<CtElement> {
@@ -92,11 +93,12 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                 FileSnapshot.Range range = super.getRange(path, start, end, original);
                 CtElement tmp = range.getOriginal();
                 if (tmp == null) {
-                    tmp = Utils.matchApproxChild((ProjectSpoon.SpoonAST)ast, augmented.rootFolder.relativize(rootDir.resolve(path)).toString(), start, end);
+                    tmp = Utils.matchApproxChild((ProjectSpoon.SpoonAST) ast,
+                            augmented.rootFolder.relativize(rootDir.resolve(path)).toString(), start, end);
                 }
                 // TODO also match imports and package decl, through the compilation unit
                 if (tmp == null) {
-                    logger.warning("no original element found at " + range);
+                    logger.warn("no original element found at " + range);
                     return range;
                 }
                 Object old = range.setOriginal(tmp);
@@ -109,11 +111,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         }
     }
 
-    private static Logger logger = Logger.getLogger(SpoonMiner.class.getName());
-
-    {
-        logger.setLevel(Level.FINER);
-    }
+    private static Logger logger = LogManager.getLogger();
 
     private Specifier spec;
     private SourcesHandler srcHandler;
@@ -124,21 +122,21 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
     }
 
     public ProjectSpoon compute() {
-        logger.entering("SpoonMiner", "compute");
+        logger.traceEntry("Compute()");
         Sources src = srcHandler.handle(spec.sources, "JGit");
         try (SourcesHelper helper = src.open();) {
             Path root = helper.materialize(spec.commitId);
             // Compile with maven
 
-		    StringBuilder prepareResult = new StringBuilder();
+            StringBuilder prepareResult = new StringBuilder();
             InvocationResult prepared = SourcesHelper.prepare(root,
-                Paths.get(MyProperties.getPropValues().getProperty("mavenHome")).toFile() , x -> {
-		        prepareResult.append(x + "\n");
-            });
-            logger.finer(prepareResult.toString());
+                    Paths.get(MyProperties.getPropValues().getProperty("mavenHome")).toFile(), x -> {
+                        prepareResult.append(x + "\n");
+                    });
+            logger.debug(prepareResult.toString());
             CommandLineException compilerException = prepared.getExecutionException();
             if (compilerException != null) {
-                logger.throwing("SourcesHelper", "prepare", compilerException);
+                logger.debug("Could not compile the source due to the following error", compilerException);
             }
             return extractedPrecise(src, root, root, null);
         } catch (SpoonException e) {
@@ -146,7 +144,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
-            logger.exiting("SpoonMiner", "compute");
+            logger.traceExit();
         }
     }
 
@@ -168,21 +166,21 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         // System.out.println(modules.get(0));
 
         StringBuilder prepareResult = new StringBuilder();
-        InvocationResult prepared = SourcesHelper.prepare(path, "." ,x -> {
+        InvocationResult prepared = SourcesHelper.prepare(path, ".", x -> {
             prepareResult.append(x + "\n");
         });
-        logger.finer(prepareResult.toString());
+        logger.debug(prepareResult.toString());
 
         CommandLineException compilerException = prepared.getExecutionException();
         if (compilerException != null) {
-            logger.throwing("SourcesHelper", "prepare", compilerException);
+            logger.debug("Could not compile the source due to the following error", compilerException);
         }
 
         try {
             launcher.buildModel();
         } catch (Exception e) {
             for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcher.getModelBuilder()).getProblems()) {
-                logger.log(Level.FINE, pb.toString());
+                logger.debug(pb.toString());
                 // System.err.println(pb.toString());
             }
             throw new RuntimeException(e);
@@ -207,7 +205,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
 
     private SpoonMiner.ProjectSpoon extractedPrecise(Sources src, Path path, Path root, SpoonPom spoonPom)
             throws IOException, InterruptedException, Exception {
-        logger.entering("SpoonMiner", "extractedPrecise", new Object[]{src, path ,root, spoonPom});
+        logger.traceEntry("parameters (src={}, path={}, root={}, spoonPom={})", src, path, root, spoonPom);
         Commit commit = src.getCommit(spec.commitId);
         ProjectSpoon r = null;
         try {
@@ -222,15 +220,15 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             launcherCode.getEnvironment().setCommentEnabled(false);
             launcherCode.getFactory().getEnvironment().setCommentEnabled(false);
 
-		    StringBuffer prepareCodeResult = new StringBuffer();
-            InvocationResult preparedCode = SourcesHelper.prepare(path, "." ,x -> {
-		        prepareCodeResult.append(x + "\n");
+            StringBuffer prepareCodeResult = new StringBuffer();
+            InvocationResult preparedCode = SourcesHelper.prepare(path, ".", x -> {
+                prepareCodeResult.append(x + "\n");
             });
-            logger.finer(prepareCodeResult.toString());
-            
+            logger.debug(prepareCodeResult.toString());
+
             CommandLineException compilerExceptionCode = preparedCode.getExecutionException();
             if (compilerExceptionCode != null) {
-                logger.throwing("SourcesHelper", "prepare", compilerExceptionCode);
+                logger.debug("Could not compile the source due to the following error", compilerExceptionCode);
             }
             // ALL_SOURCE
             MavenLauncher launcherAll = spoonPom != null
@@ -246,7 +244,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                 launcherCode.buildModel();
             } catch (Exception e) {
                 for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcherCode.getModelBuilder()).getProblems()) {
-                    logger.log(Level.FINE, pb.toString());
+                    logger.debug(pb.toString());
                 }
 
                 r = new ProjectSpoon(new Specifier<>(spec.sources, relPath, spec.commitId, spec.miner), modules, commit,
@@ -255,14 +253,14 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                 r.getAst().getGlobalStats().testsAST = 1;
             }
 
-		    StringBuilder prepareAllResult = new StringBuilder();
-            InvocationResult preparedAll = SourcesHelper.prepareAll(path, "." ,x -> {
-		        prepareAllResult.append(x + "\n");
+            StringBuilder prepareAllResult = new StringBuilder();
+            InvocationResult preparedAll = SourcesHelper.prepareAll(path, ".", x -> {
+                prepareAllResult.append(x + "\n");
             });
-		    logger.finer(prepareAllResult.toString());
+            logger.debug(prepareAllResult.toString());
             CommandLineException compilerExceptionAll = preparedAll.getExecutionException();
             if (compilerExceptionAll != null) {
-                logger.throwing("SourcesHelper", "prepareAll", compilerExceptionAll);
+                logger.debug("Could not compile the source due to the following error", compilerExceptionAll);
             }
 
             if (r == null) {
@@ -272,7 +270,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                 } catch (Exception e) {
                     for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcherAll.getModelBuilder())
                             .getProblems()) {
-                        logger.log(Level.FINE, pb.toString());
+                        logger.debug(pb.toString());
                         // System.err.println(pb.toString());
                     }
                     // throw new RuntimeException(e);
@@ -307,7 +305,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             return r;
         } finally {
             computeLOC2(path, r);
-            logger.exiting("SpoonMiner", "extractedPrecise", r);
+            logger.traceExit("result: {}", r);
         }
     }
 
@@ -398,7 +396,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         public String toString() {
             return "Line [loc=" + loc + ", name=" + name + "]";
         }
-        
+
     }
 
     /**
@@ -417,45 +415,51 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         Process process = null;
         int i = 0;
         IOException ee = null;
-        while (i<10) {
+        while (i < 10) {
             try {
                 process = processBuilder.start();
                 break;
             } catch (IOException e) {
                 i++;
                 ee = e;
-                logger.warning("fail "+ i);
+                logger.warn("fail " + i);
                 try {
                     logger.info("try other dir");
-                    Process process2 = new ProcessBuilder().command(new String[] { "scc", "-f", "json", "-c", "/home/qledilav/bin" }).start();
+                    Process process2 = new ProcessBuilder()
+                            .command(new String[] { "scc", "-f", "json", "-c", "/home/qledilav/bin" }).start();
                     int exitCode = process2.waitFor();
-                    logger.info("ret code of try other dir "+ exitCode);
+                    logger.info("ret code of try other dir " + exitCode);
                 } catch (IOException eee) {
                     logger.info("fail try other dir");
                     eee.printStackTrace();
                 }
                 try {
                     logger.info("try abs exe");
-                    Process process2 = new ProcessBuilder().command(new String[] { "/home/qledilav/bin/scc", "-f", "json", "-c", path.toAbsolutePath().toString() }).start();
+                    Process process2 = new ProcessBuilder().command(new String[] { "/home/qledilav/bin/scc", "-f",
+                            "json", "-c", path.toAbsolutePath().toString() }).start();
                     int exitCode = process2.waitFor();
-                    logger.info("ret code of try abs exe "+ exitCode);
+                    logger.info("ret code of try abs exe " + exitCode);
                 } catch (IOException eee) {
                     logger.info("fail try abs exe");
                     eee.printStackTrace();
                 }
                 try {
                     logger.info("try both");
-                    Process process2 = new ProcessBuilder().command(new String[] { "/home/qledilav/bin/scc", "-f", "json", "-c", "/home/qledilav/bin" }).start();
+                    Process process2 = new ProcessBuilder()
+                            .command(
+                                    new String[] { "/home/qledilav/bin/scc", "-f", "json", "-c", "/home/qledilav/bin" })
+                            .start();
                     int exitCode = process2.waitFor();
-                    logger.info("ret code of try both "+ exitCode);
+                    logger.info("ret code of try both " + exitCode);
                 } catch (IOException eee) {
                     logger.info("fail try both");
                     eee.printStackTrace();
                 }
             }
-            Thread.sleep(5000);;
+            Thread.sleep(5000);
+            ;
         }
-        if (i>=10) {
+        if (i >= 10) {
             throw ee;
         }
         Gson gson = new Gson();

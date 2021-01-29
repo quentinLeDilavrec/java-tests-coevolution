@@ -19,7 +19,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
-import java.util.logging.Logger;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -84,7 +86,7 @@ public class SourcesHelper implements AutoCloseable {
 	 */
 	public static final String MVN_HOME = MyProperties.getPropValues().getProperty("mavenHome");
 
-	static Logger logger = Logger.getLogger("ImpactAna");
+	static Logger logger = LogManager.getLogger();
 
 	public static final String RESOURCES_PATH = MyProperties.getPropValues().getProperty("resources");
 	static String VERSIONS_PATH = Paths.get(RESOURCES_PATH, "Versions").toString();
@@ -208,7 +210,7 @@ public class SourcesHelper implements AutoCloseable {
 			try {
 				runCommand(Paths.get(REPOS_PATH), "rm", "-rf", this.repoRawPath);
 			} catch (Exception ee) {
-				logger.log(Level.WARNING, "normal if on windows", ee);
+				logger.warn("normal if on windows {}", ee);
 			}
 			// runCommand(Paths.get(REPOS_PATH + this.repoRawPath),"git", "reset",
 			// "--hard");
@@ -240,7 +242,7 @@ public class SourcesHelper implements AutoCloseable {
 		if (!Files.exists(directory)) {
 			throw new RuntimeException("can't run command in non-existing directory '" + directory + "'");
 		}
-		logger.info("In "+directory+" running: "+ String.join(" ", command));
+		logger.info("In " + directory + " running: " + String.join(" ", command));
 		ProcessBuilder pb = new ProcessBuilder().command(command).directory(directory.toFile());
 		Process p = pb.start();
 		StreamGobbler errorGobbler = new StreamGobbler(p.getErrorStream(), "ERROR");
@@ -279,10 +281,11 @@ public class SourcesHelper implements AutoCloseable {
 	}
 
 	public static InvocationResult prepare(Path path, InvocationOutputHandler outputHandler) throws Exception {
-		return prepare(path, (File) null, outputHandler);	
+		return prepare(path, (File) null, outputHandler);
 	}
 
-	public static InvocationResult prepare(Path path, File MvnHome, InvocationOutputHandler outputHandler) throws Exception {
+	public static InvocationResult prepare(Path path, File MvnHome, InvocationOutputHandler outputHandler)
+			throws Exception {
 		InvocationRequest request = new DefaultInvocationRequest();
 		request.setOutputHandler(outputHandler);
 		request.setErrorHandler(outputHandler);
@@ -302,7 +305,8 @@ public class SourcesHelper implements AutoCloseable {
 		}
 	}
 
-	public static InvocationResult prepare(Path path, String project, InvocationOutputHandler outputHandler) throws Exception {
+	public static InvocationResult prepare(Path path, String project, InvocationOutputHandler outputHandler)
+			throws Exception {
 		InvocationRequest request = new DefaultInvocationRequest();
 		request.setOutputHandler(outputHandler);
 		request.setErrorHandler(outputHandler);
@@ -312,7 +316,8 @@ public class SourcesHelper implements AutoCloseable {
 		return prepareAux(request);
 	}
 
-	public static InvocationResult prepareAll(Path path, String project, InvocationOutputHandler outputHandler) throws Exception {
+	public static InvocationResult prepareAll(Path path, String project, InvocationOutputHandler outputHandler)
+			throws Exception {
 		InvocationRequest request = new DefaultInvocationRequest();
 		request.setOutputHandler(outputHandler);
 		request.setErrorHandler(outputHandler);
@@ -371,7 +376,8 @@ public class SourcesHelper implements AutoCloseable {
 		}
 	}
 
-	public static InvocationResult compileAllTests(File baseDir, InvocationOutputHandler outputHandler) throws Exception {
+	public static InvocationResult compileAllTests(File baseDir, InvocationOutputHandler outputHandler)
+			throws Exception {
 		InvocationRequest request = new DefaultInvocationRequest();
 		request.setBatchMode(true);
 		request.setBaseDirectory(baseDir);

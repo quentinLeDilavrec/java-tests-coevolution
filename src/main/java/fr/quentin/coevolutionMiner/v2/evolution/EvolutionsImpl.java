@@ -8,13 +8,14 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.Logger;
 
 import com.google.gson.JsonElement;
 import com.googlecode.javaewah.IteratorUtil;
 
 import org.apache.commons.compress.utils.Sets;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.logging.log4j.LogManager;
 
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
@@ -24,6 +25,7 @@ import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 
 public class EvolutionsImpl extends Evolutions {
+    Logger logger = LogManager.getLogger();
 
     public EvolutionsImpl(Specifier spec, Sources sources) {
         super(spec, sources);
@@ -45,7 +47,7 @@ public class EvolutionsImpl extends Evolutions {
         evolutions.add(evo);
         final Evolution old = evoByBeforeList.put(new ImmutablePair<>(type, before), evo);
         if (old != null && evo.equals(old))
-            Logger.getLogger("evo").info("evo sharing same type and before");
+            logger.info("evo sharing same type and before");
         return evo;
     }
 
