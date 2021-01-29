@@ -88,7 +88,7 @@ public class MyImpactsMiner implements ImpactsMiner {
         if (!ast.isUsable()) {
             // return null;
         }
-        ImpactAnalysis l = new ImpactAnalysis(ast.augmented, 50);
+        ImpactAnalysis l = new ImpactAnalysis(ast.augmented, 20);
         ImpactsExtension result = new ImpactsExtension(new Impacts.Specifier(project.spec, spec.evoSpec, spec.miner),
                 project, rootDir, l);
 
