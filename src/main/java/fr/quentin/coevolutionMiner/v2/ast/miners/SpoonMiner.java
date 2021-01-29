@@ -415,7 +415,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         Process process = null;
         int i = 0;
         IOException ee = null;
-        while (i < 10) {
+        while (i < 3) {
             try {
                 process = processBuilder.start();
                 break;
@@ -424,24 +424,31 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                 ee = e;
                 logger.warn("fail " + i);
                 try {
-                    logger.info("try other dir");
+                    logger.debug("try ls the directory");
+                    Process process2 = new ProcessBuilder()
+                            .command(new String[] { "ls", path.toAbsolutePath().toString() }).start();
+                    int exitCode = process2.waitFor();
+                    logger.info("ret code of try other dir " + exitCode);
+                } catch (IOException eee) {
+                    logger.debug("fail try other dir", eee);
+                }
+                try {
+                    logger.debug("try other dir");
                     Process process2 = new ProcessBuilder()
                             .command(new String[] { "scc", "-f", "json", "-c", "/home/qledilav/bin" }).start();
                     int exitCode = process2.waitFor();
                     logger.info("ret code of try other dir " + exitCode);
                 } catch (IOException eee) {
-                    logger.info("fail try other dir");
-                    eee.printStackTrace();
+                    logger.debug("fail try other dir", eee);
                 }
                 try {
-                    logger.info("try abs exe");
+                    logger.debug("try abs exe");
                     Process process2 = new ProcessBuilder().command(new String[] { "/home/qledilav/bin/scc", "-f",
                             "json", "-c", path.toAbsolutePath().toString() }).start();
                     int exitCode = process2.waitFor();
                     logger.info("ret code of try abs exe " + exitCode);
                 } catch (IOException eee) {
-                    logger.info("fail try abs exe");
-                    eee.printStackTrace();
+                    logger.debug("fail try abs exe", eee);
                 }
                 try {
                     logger.info("try both");
@@ -452,15 +459,15 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                     int exitCode = process2.waitFor();
                     logger.info("ret code of try both " + exitCode);
                 } catch (IOException eee) {
-                    logger.info("fail try both");
-                    eee.printStackTrace();
+                    logger.debug("fail try both", eee);
                 }
             }
             Thread.sleep(5000);
             ;
         }
-        if (i >= 10) {
-            throw ee;
+        if (i >= 3) {
+            logger.warn("fail all tries", ee);
+            return ;
         }
         Gson gson = new Gson();
         try (JsonReader reader = new JsonReader(new InputStreamReader(process.getInputStream()))) {
