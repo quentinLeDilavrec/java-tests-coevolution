@@ -1,19 +1,3 @@
-
-FOREACH (l IN $rangesToType |
-    MERGE (repoCause:Repository {url:l.repository})
-    MERGE (commitIdCause:Commit {repo:l.repository, sha1:l.commitId})
-    ON CREATE SET commitIdCause.isParsed = true
-    ON MATCH SET commitIdCause.isParsed = true
-    MERGE (commitIdCause)-[:IS_COMMIT_OF]->(repoCause)
-    MERGE (commitIdCause)<-[:CONTAIN_COMMIT]-(repoCause)
-    MERGE (cause:Range {range:[toInteger(l.start),toInteger(l.end)], start:toInteger(l.start), end:toInteger(l.end), 
-    path:l.file, repo:l.repository, commitId:l.commitId})
-    ON CREATE SET cause.type = l.type, cause.isTest = l.isTest, cause.sig = l.sig, cause.astPath = l.astPath, cause.value = l.value
-    ON MATCH SET cause.isTest = l.isTest, cause.sig = l.sig, cause.astPath = l.astPath, cause.value = l.value
-    MERGE (snapCause:FileSnapshot {path:l.file, repo:l.repository, commitId:l.commitId})
-    MERGE (snapCause)-[:IS_SNAPSHOT_IN]->(commitIdCause)
-    MERGE (cause)-[:IS_RANGE_IN]->(snapCause)
-)
 WITH $json as data, $tool as tool
 UNWIND data as imp
 
