@@ -38,7 +38,6 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.maven.shared.invoker.DefaultInvocationRequest;
@@ -131,11 +130,15 @@ public class CLI {
         options.addOption("f", "file", true,
                 "a file that contain per line <repo> <stars> <list of important commitId time ordered and starting with the most recent>");
 
-        try {
             if (args.length < 1) {
                 throw new UnsupportedOperationException("use batch, compare or ast");
             }
-            CommandLine line = parser.parse(options, Arrays.copyOfRange(args, 1, args.length));
+            CommandLine line;
+            try {
+                line = parser.parse(options, Arrays.copyOfRange(args, 1, args.length));
+            } catch (ParseException e) {
+                throw new RuntimeException(e);
+            }
             if (line.hasOption("splitOut")) {
                 splitedOut = true;
             }
@@ -187,11 +190,6 @@ public class CLI {
             } else {
                 throw new UnsupportedOperationException("use compare or ast");
             }
-        } catch (ParseException exp) {
-            System.out.println("Unexpected exception:" + exp.getMessage());
-        } catch (Throwable exp) {
-            System.out.println("Unexpected exception:" + exp.getMessage());
-        }
         System.exit(0);
     }
 
@@ -624,7 +622,7 @@ public class CLI {
         try (BatchExecutor executor = new BatchExecutor1(pool_size, max_commits_impacts);) {
             executor.process(stream);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            logger.warn("whole batch crached", e);
         }
     }
 
