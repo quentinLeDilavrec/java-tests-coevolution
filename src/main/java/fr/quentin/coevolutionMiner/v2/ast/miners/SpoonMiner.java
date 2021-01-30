@@ -151,7 +151,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
     private ProjectSpoon extracted(Sources src, Path path, Path root, SpoonPom spoonPom)
             throws IOException, InterruptedException, Exception {
         MavenLauncher launcher = spoonPom != null ? new MavenLauncher(spoonPom, MavenLauncher.SOURCE_TYPE.ALL_SOURCE)
-                : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
+                : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE, MyProperties.getPropValues().getProperty("mavenHome"));
         // FilteringFolder resources = new FilteringFolder();
         // resources.addFolder(new FileSystemFolder(path.toString()));
         // for (String string : x) {
@@ -214,7 +214,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             // APP_SOURCE
             MavenLauncher launcherCode = spoonPom != null
                     ? new MavenLauncher(spoonPom, MavenLauncher.SOURCE_TYPE.APP_SOURCE)
-                    : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.APP_SOURCE);
+                    : new MavenLancher(path.toString(), MavenLauncher.SOURCE_TYPE.APP_SOURCE, MyProperties.getPropValues().getProperty("mavenHome"));
             launcherCode.getEnvironment().setLevel("INFO");
             launcherCode.getFactory().getEnvironment().setLevel("INFO");
             launcherCode.getEnvironment().setCommentEnabled(false);
@@ -233,7 +233,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             // ALL_SOURCE
             MavenLauncher launcherAll = spoonPom != null
                     ? new MavenLauncher(spoonPom, MavenLauncher.SOURCE_TYPE.ALL_SOURCE)
-                    : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
+                    : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE, MyProperties.getPropValues().getProperty("mavenHome"));
             launcherAll.getEnvironment().setLevel("INFO");
             launcherAll.getFactory().getEnvironment().setLevel("INFO");
             launcherAll.getEnvironment().setCommentEnabled(false);
@@ -451,7 +451,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                     logger.debug("fail try abs exe", eee);
                 }
                 try {
-                    logger.info("try both");
+                    logger.debug("try both");
                     Process process2 = new ProcessBuilder()
                             .command(
                                     new String[] { "/home/qledilav/bin/scc", "-f", "json", "-c", "/home/qledilav/bin" })
@@ -484,6 +484,6 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             }
         }
         int exitCode = process.waitFor();
-        System.out.printf("scc ended with exitCode %d\n", exitCode);
+        logger.info("scc ended with exitCode " + exitCode);
     }
 }
