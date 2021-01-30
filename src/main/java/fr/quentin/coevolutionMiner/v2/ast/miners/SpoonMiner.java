@@ -214,7 +214,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             // APP_SOURCE
             MavenLauncher launcherCode = spoonPom != null
                     ? new MavenLauncher(spoonPom, MavenLauncher.SOURCE_TYPE.APP_SOURCE)
-                    : new MavenLancher(path.toString(), MavenLauncher.SOURCE_TYPE.APP_SOURCE, MyProperties.getPropValues().getProperty("mavenHome"));
+                    : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.APP_SOURCE, MyProperties.getPropValues().getProperty("mavenHome"));
             launcherCode.getEnvironment().setLevel("INFO");
             launcherCode.getFactory().getEnvironment().setLevel("INFO");
             launcherCode.getEnvironment().setCommentEnabled(false);
