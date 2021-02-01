@@ -17,6 +17,7 @@ import com.google.gson.JsonObject;
 import org.apache.commons.lang3.tuple.Pair;
 
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
+import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts.Impact.DescRange;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.coevolutionMiner.v2.utils.DbUtils;
@@ -197,12 +198,12 @@ public abstract class Impacts {
         }
     }
 
-    public Map<Range, Set<Object>> getImpactedTests() {
+    public Map<Range, Set<Evolution.DescRange>> getImpactedTests() {
         return Collections.unmodifiableMap(impactedTests);
     }
 
     protected Map<Impact, Impact> impacts = new HashMap<>();
-    protected Map<Range, Set<Object>> impactedTests = new HashMap<>();
+    protected Map<Range, Set<Evolution.DescRange>> impactedTests = new HashMap<>();
     protected Map<Object, Set<Impact>> perRoot = new HashMap<>();
 
     protected Impact addImpact(String type, Set<Pair<Range, String>> idCauses, Set<Pair<Range, String>> idEffects) {

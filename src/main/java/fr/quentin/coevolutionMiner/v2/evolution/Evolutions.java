@@ -135,10 +135,6 @@ public abstract class Evolutions implements Iterable<Evolutions.Evolution> {
             return commitBefore;
         }
 
-        public Evolutions getContainer() {
-            return Evolutions.this;
-        }
-
         /**
          * @return the commitAfter
          */
@@ -271,7 +267,7 @@ public abstract class Evolutions implements Iterable<Evolutions.Evolution> {
             return true;
         }
 
-        private Evolutions getEnclosingInstance() {
+        public Evolutions getEnclosingInstance() {
             return Evolutions.this;
         }
 

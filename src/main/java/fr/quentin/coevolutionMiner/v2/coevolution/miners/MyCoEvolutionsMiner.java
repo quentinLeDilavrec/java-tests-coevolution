@@ -26,6 +26,7 @@ import com.github.gumtreediff.actions.MyAction.MyMove;
 import com.github.gumtreediff.actions.model.Move;
 import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.ITree;
+import com.github.gumtreediff.tree.Version;
 import com.github.gumtreediff.tree.VersionedTree;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -48,6 +49,7 @@ import fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsAtCommit;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsAtCommit.EvolutionsAtProj;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsMany;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.VersionCommit;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts.Impact;
@@ -209,23 +211,24 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
     }
 
-    private CoEvolutionsExtension computeDirectCoevolutions(Sources sourcesProvider, Commit currentCommit,
-            Commit nextCommit) throws SmallMiningException, SeverMiningException {
+    private CoEvolutionsExtension computeDirectCoevolutions(Sources sourcesProvider, Commit beforeCommit,
+            Commit afterCommit) throws SmallMiningException, SeverMiningException {
 
-        Project.Specifier<SpoonMiner> before_ast_id = astHandler.buildSpec(spec.evoSpec.sources, currentCommit.getId());
-        Project.Specifier<SpoonMiner> after_ast_id = astHandler.buildSpec(spec.evoSpec.sources, nextCommit.getId());
+        Project.Specifier<SpoonMiner> before_ast_id = astHandler.buildSpec(spec.evoSpec.sources, beforeCommit.getId());
+        Project.Specifier<SpoonMiner> after_ast_id = astHandler.buildSpec(spec.evoSpec.sources, afterCommit.getId());
 
-        Evolutions.Specifier currEvoMixedSpec = EvolutionHandler.buildSpec(sourcesProvider.spec, currentCommit.getId(),
-                nextCommit.getId(), MixedMiner.class);
+        Evolutions.Specifier currEvoMixedSpec = EvolutionHandler.buildSpec(sourcesProvider.spec, beforeCommit.getId(),
+                afterCommit.getId(), MixedMiner.class);
 
-        Evolutions.Specifier currEvoSpecGTS = EvolutionHandler.buildSpec(sourcesProvider.spec, currentCommit.getId(),
-                nextCommit.getId(), GumTreeSpoonMiner.class);
+        Evolutions.Specifier currEvoSpecGTS = EvolutionHandler.buildSpec(sourcesProvider.spec, beforeCommit.getId(),
+                afterCommit.getId(), GumTreeSpoonMiner.class);
         Evolutions currentGTSEvolutions = evoHandler.handle(currEvoSpecGTS);
 
-        Evolutions.Specifier currEvoSpecRM = EvolutionHandler.buildSpec(sourcesProvider.spec, currentCommit.getId(),
-                nextCommit.getId(), RefactoringMiner.class);
+        Evolutions.Specifier currEvoSpecRM = EvolutionHandler.buildSpec(sourcesProvider.spec, beforeCommit.getId(),
+                afterCommit.getId(), RefactoringMiner.class);
         Evolutions currentRMEvolutions = evoHandler.handle(currEvoSpecRM);
-        logNaiveCostCoEvoValidation(evoHandler.handle(currEvoMixedSpec));
+        Evolutions currEvoMixed = evoHandler.handle(currEvoMixedSpec);
+        logNaiveCostCoEvoValidation(currEvoMixed);
 
         Project<CtElement> before_proj = astHandler.handle(before_ast_id);
         if (before_proj.getAst().compilerException != null || !before_proj.getAst().isUsable()) {
@@ -252,33 +255,35 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         Impacts afterImpacts = impactHandler.handle(impactHandler.buildSpec(after_ast_id, currEvoMixedSpec));
 
         CoEvolutions.Specifier coevoSpec = CoEvolutionHandler.buildSpec(sourcesProvider.spec, currEvoMixedSpec);
-        CoEvolutionsExtension currCoevolutions = new CoEvolutionsExtension(coevoSpec, currentRMEvolutions, before_proj,
+        CoEvolutionsExtension currCoevolutions = new CoEvolutionsExtension(coevoSpec, currEvoMixed, before_proj,
                 after_proj);
 
-        EvolutionsAtCommit currEvoAtCommit = ((GumTreeSpoonMiner.EvolutionsMany) currentGTSEvolutions)
-                .getPerCommit(currentCommit.getId(), nextCommit.getId());
-        if (currEvoAtCommit == null) {
-            logger.warn(
-                    "no evolution here for this pair of commits: " + currentCommit.getId() + ", " + nextCommit.getId());
-            return currCoevolutions;
-        }
+        // EvolutionsAtCommit currEvoAtCommit = ((GumTreeSpoonMiner.EvolutionsMany) currentGTSEvolutions)
+        //         .getPerCommit(currentCommit.getId(), nextCommit.getId());
+        // if (currEvoAtCommit == null) {
+        //     logger.warn(
+        //             "no evolutions here for this pair of commits: " + currentCommit.getId() + ", " + nextCommit.getId());
+        //     return currCoevolutions;
+        // }
+        Version beforeVersion = VersionCommit.build(beforeCommit);
+        Version afterVersion = VersionCommit.build(afterCommit);
 
-        InterestingCasesExtractor icExtractor = new InterestingCasesExtractor(currEvoAtCommit, currentImpacts,
-                afterImpacts, atomizedRefactorings);
+        InterestingCasesExtractor icExtractor = new InterestingCasesExtractor(currentImpacts, beforeVersion,
+                afterImpacts, afterVersion, atomizedRefactorings);
         icExtractor.computeRelax();
 
         // Validation phase, by compiling and running tests
-        Path pathToIndividualExperiment = Paths.get("/tmp/applyResults", getRepoRawPath(), nextCommit.getId(),
-                currentCommit.getId(), "" + new Date().getTime());
-        EvolutionsAtProj rootModule = currEvoAtCommit.getRootModule();
-        if (rootModule == null)
-            logger.warn("rootModule is null");
-        if (rootModule.getBeforeProj() == null)
-            logger.warn("beforeProj is null");
-        if (rootModule.getAfterProj() == null)
-            logger.warn("afterProj is null");
-        Path oriPath = ((SpoonAST) rootModule.getBeforeProj().getAst()).rootDir;
-        Path afterOriPath = ((SpoonAST) rootModule.getAfterProj().getAst()).rootDir;
+        Path pathToIndividualExperiment = Paths.get("/tmp/applyResults", getRepoRawPath(), afterCommit.getId(),
+                beforeCommit.getId(), "" + new Date().getTime());
+        // EvolutionsAtProj rootModule = currEvoAtCommit.getRootModule();
+        // if (rootModule == null)
+        //     logger.warn("rootModule is null");
+        // if (rootModule.getBeforeProj() == null)
+        //     logger.warn("beforeProj is null");
+        // if (rootModule.getAfterProj() == null)
+        //     logger.warn("afterProj is null");
+        Path oriPath = ast_before.rootDir;// ((SpoonAST) rootModule.getBeforeProj().getAst()).rootDir;
+        Path afterOriPath = ast_after.rootDir;// ((SpoonAST) rootModule.getAfterProj().getAst()).rootDir;
         // setup directory where validation will append
         FileUtils.deleteQuietly(pathToIndividualExperiment.toFile());
         try {
@@ -286,9 +291,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-
         JavaOutputProcessor outputProcessor = new JavaOutputProcessor();
-        EvoStateMaintainerImpl evoState = new EvoStateMaintainerImpl(currEvoAtCommit.beforeVersion,
+        EvoStateMaintainerImpl evoState = new EvoStateMaintainerImpl(beforeVersion, //currEvoAtCommit.beforeVersion,
                 atomizedRefactorings);
 
         logger.info(
@@ -355,7 +359,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     private void printAtomised(Map<Evolution, Set<Evolution>> atomizedRefactorings) {
         for (Entry<Evolution, Set<Evolution>> entry : atomizedRefactorings.entrySet()) {
             Evolution evo = entry.getKey();
-            System.out.println("---------------" + evo.getContainer().spec.miner.getSimpleName());
+            System.out.println("---------------" + evo.getEnclosingInstance().spec.miner.getSimpleName());
             System.out.println(evo.getType());
             for (Evolution atom : entry.getValue()) {
                 if (atom != evo) {
@@ -366,7 +370,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     }
 
     private static class InterestingCase {
-        public EvolutionsAtProj evolutionsAtProj;
+        public Set<EvolutionsAtProj> evolutionsAtProjSet;
         public Set<Evolution> evosForThisTest;
         public Range testBefore;
         public Range testAfter;
@@ -637,125 +641,206 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         Map<EvolutionsAtProj, Set<InterestingCase>> interestingCases = new LinkedHashMap<>();
         Map<EvolutionsAtProj, Set<Evolution>> evoPerProj = new HashMap<>();
         Map<EvolutionsAtProj, Set<Range>> impactedTestsPerProj = new HashMap<>();
-        public EvolutionsAtCommit currEvoAtCommit;
-        private Impacts currentImpacts;
+        private Impacts beforeImpacts;
         private Impacts afterImpacts;
         private Map<Evolution, Set<Evolution>> atomizedRefactorings;
+        private Version beforeVersion;
+        private Version afterVersion;
 
-        public InterestingCasesExtractor(EvolutionsAtCommit currEvoAtCommit, Impacts currentImpacts,
-                Impacts afterImpacts, Map<Evolution, Set<Evolution>> atomizedRefactorings) {
-            this.currEvoAtCommit = currEvoAtCommit;
-            this.currentImpacts = currentImpacts;
+        public InterestingCasesExtractor(Impacts beforeImpacts, Version beforeVersion, Impacts afterImpacts,
+                Version afterVersion, Map<Evolution, Set<Evolution>> atomizedRefactorings) {
+            this.beforeImpacts = beforeImpacts;
             this.afterImpacts = afterImpacts;
             this.atomizedRefactorings = atomizedRefactorings;
+            this.beforeVersion = beforeVersion;
+            this.afterVersion = afterVersion;
         }
 
-        private Map<Project, Set<Entry<Range, Set<Object>>>> testNevosPerProjects() {
-            Map<Project, Set<Entry<Range, Set<Object>>>> r = new HashMap<>();
-            for (Entry<Range, Set<Object>> impactedTests : currentImpacts.getImpactedTests().entrySet()) {
-                r.putIfAbsent(impactedTests.getKey().getFile().getAST().getProject(), new HashSet<>());
-                r.get(impactedTests.getKey().getFile().getAST().getProject()).add(impactedTests);
+        class DPair {
+            Set<Entry<Range, Set<Evolution.DescRange>>> before = new HashSet<>();
+            Set<Entry<Range, Set<Evolution.DescRange>>> after = new HashSet<>();
+        }
+
+        private Map<Project, DPair> testNevosPerProjects() {
+            Map<Project, DPair> r = new HashMap<>();
+            for (Entry<Range, Set<Evolution.DescRange>> impactedTests : beforeImpacts.getImpactedTests().entrySet()) {
+                r.putIfAbsent(impactedTests.getKey().getFile().getAST().getProject(), new DPair());
+                r.get(impactedTests.getKey().getFile().getAST().getProject()).before.add(impactedTests);
             }
-            for (Entry<Range, Set<Object>> impactedTests : afterImpacts.getImpactedTests().entrySet()) {
-                r.putIfAbsent(impactedTests.getKey().getFile().getAST().getProject(), new HashSet<>());
-                r.get(impactedTests.getKey().getFile().getAST().getProject()).add(impactedTests);
+            for (Entry<Range, Set<Evolution.DescRange>> impactedTests : afterImpacts.getImpactedTests().entrySet()) {
+                r.putIfAbsent(impactedTests.getKey().getFile().getAST().getProject(), new DPair());
+                r.get(impactedTests.getKey().getFile().getAST().getProject()).after.add(impactedTests);
             }
             return r;
         }
 
         public void computeExact() {
-            for (Entry<Project, Set<Entry<Range, Set<Object>>>> entry : testNevosPerProjects().entrySet()) {
-                boolean isBefore = entry.getKey().spec.commitId.equals(currentImpacts.spec.evoSpec.commitIdBefore);
-                Project projectCurr = entry.getKey();
-                Project.Specifier projectSpecBefore = isBefore ? projectCurr.spec
-                        : currEvoAtCommit.getProjectSpec(projectCurr.spec);
-                Project.Specifier projectSpecAfter = isBefore ? currEvoAtCommit.getProjectSpec(projectCurr.spec)
-                        : projectCurr.spec;
-                EvolutionsAtProj evolutionsAtProj = currEvoAtCommit.getModule(projectSpecBefore, projectSpecAfter);
-                Project projectBefore = evolutionsAtProj.getBeforeProj();
-                Project projectAfter = evolutionsAtProj.getAfterProj();
+            for (Entry<Project, DPair> atProject : testNevosPerProjects().entrySet()) {
 
-                Map<Range, InterestingCase> intInterestingCases = new HashMap<>();
-                for (Entry<Range, Set<Object>> impactedTest : entry.getValue()) {
-                    Range testAfter = isBefore ? null : impactedTest.getKey();
-                    Range testBefore = isBefore ? impactedTest.getKey() : null;
+                Map<Range, Map<Range, InterestingCase>> interestingCasesLocalIndex = new HashMap<>();
+
+                for (Entry<Range, Set<Evolution.DescRange>> impactedTest : atProject.getValue().before) {
+                    Set<EvolutionsAtProj> evolutionsAtProjSet = new HashSet<>();
+                    Set<Evolutions.Evolution.DescRange> evosInGame = impactedTest.getValue();
+                    Set<Evolution> evosForThisTest = new LinkedHashSet<>();
+                    computingOnEvos(evolutionsAtProjSet, evosInGame, evosForThisTest);
+                    if (evolutionsAtProjSet.size() == 0) {
+                        logger.warn(
+                                "no applicable evolutions found thus no possibility to validate potential coevolutions");
+                        continue;
+                    } else if (evolutionsAtProjSet.size() > 1) {
+                        logger.warn("not handling the validation of coevolutions spanning over multiple projects");
+                        continue;
+                    }
+
+                    EvolutionsAtProj evolutionsAtProj = evolutionsAtProjSet.iterator().next();
+                    Project projectBefore = evolutionsAtProj.getBeforeProj();
+                    Project projectAfter = evolutionsAtProj.getAfterProj();
+
+                    Range testAfter = null;
+                    Range testBefore = impactedTest.getKey();
+
                     // TODO extract functionality
-                    if (isBefore) {
-                        AbstractVersionedTree treeTestBefore = (AbstractVersionedTree) ((CtElement) testBefore
-                                .getOriginal()).getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
-                        AbstractVersionedTree treeTestAfter = treeTestBefore;
-                        MyMove mov = (MyMove) treeTestBefore.getMetadata(MyScriptGenerator.MOVE_SRC_ACTION);
-                        if (mov != null) {
-                            treeTestAfter = mov.getInsert().getTarget();
-                        }
-                        testAfter = GumTreeSpoonMiner.toRange(projectAfter, treeTestAfter,
-                                currEvoAtCommit.afterVersion);
-                    } else {
-                        AbstractVersionedTree treeTestAfter = (AbstractVersionedTree) ((CtElement) testAfter
-                                .getOriginal()).getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
-                        AbstractVersionedTree treeTestBefore = treeTestAfter;
-                        MyMove mov = (MyMove) treeTestAfter.getMetadata(MyScriptGenerator.MOVE_DST_ACTION);
-                        if (mov != null) {
-                            treeTestAfter = mov.getInsert().getTarget();
-                        }
-                        if (treeTestBefore.getInsertVersion() != currEvoAtCommit.afterVersion) {
-                            testBefore = GumTreeSpoonMiner.toRange(projectBefore, treeTestBefore,
-                                    currEvoAtCommit.afterVersion);
-                        }
-                        if (testBefore == null) {
-                            // For now we cannnot handle such new test
-                            try {
-                                logger.info("new test ignored: " + ((CtMethod) testAfter).getSignature());
-                            } catch (Exception e) {
-                            }
-                            continue;// TODO handle this
-                        }
+                    AbstractVersionedTree treeTestBefore = (AbstractVersionedTree) ((CtElement) testBefore
+                            .getOriginal()).getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
+                    AbstractVersionedTree treeTestAfter = treeTestBefore;
+                    MyMove mov = (MyMove) treeTestBefore.getMetadata(MyScriptGenerator.MOVE_SRC_ACTION);
+                    if (mov != null) {
+                        treeTestAfter = mov.getInsert().getTarget();
                     }
-                    if (testBefore != null && !(testBefore.getOriginal() instanceof CtMethod)) {
-                        logger.warn("original of testBefore should be a CtMethod but was "
-                                + testBefore.getOriginal().getClass().toString());
-                        continue;
-                    }
-                    if (testAfter != null && !(testAfter.getOriginal() instanceof CtMethod)) {
-                        logger.warn("original of testAfter should be a CtMethod but was "
-                                + testAfter.getOriginal().getClass().toString());
-                        continue;
-                    }
-                    Set<Evolutions.Evolution.DescRange> evosInGame = (Set) impactedTest.getValue();
+                    testAfter = GumTreeSpoonMiner.toRange(projectAfter, treeTestAfter, afterVersion);
 
-                    Set<Evolution> evosForThisTest;
-                    InterestingCase curr = intInterestingCases.get(testBefore);
-                    if (curr == null) {
-                        curr = new InterestingCase();
-                        intInterestingCases.put(testBefore, curr);
-                        curr.evosForThisTest = new HashSet<>();
-                        curr.testBefore = testBefore;
-                        curr.testAfter = testAfter;
-                        curr.evolutionsAtProj = evolutionsAtProj;
-                    } else {
-                        if (!testBefore.equals(curr.testBefore)) {
-                            throw new RuntimeException("not same test before");
+                    if (testBefore == null) {
+                        // For now we cannnot handle such ndeleted test
+                        try {
+                            logger.info("deleted test ignored: " + ((CtMethod) testAfter).getSignature());
+                        } catch (Exception e) {
                         }
-                    }
-                    evosForThisTest = curr.evosForThisTest;
-
-                    for (Evolutions.Evolution.DescRange obj : evosInGame) {
-                        Evolution src = ((Evolutions.Evolution.DescRange) obj).getSource();
-                        evosForThisTest.add(src);
-                        evosForThisTest.addAll(atomizedRefactorings.get(src)); // TODO eval of imp. on precision
+                        continue;// TODO handle this
                     }
 
-                    evoPerProj.putIfAbsent(evolutionsAtProj, new LinkedHashSet<>());
-                    evoPerProj.get(evolutionsAtProj).addAll(evosForThisTest);
-
-                    impactedTestsPerProj.putIfAbsent(evolutionsAtProj, new HashSet<>());
-                    impactedTestsPerProj.get(evolutionsAtProj).add(testBefore);
+                    aggregating(interestingCasesLocalIndex, evolutionsAtProjSet, evosForThisTest, evolutionsAtProj,
+                            testAfter, testBefore);
                 }
-                if (intInterestingCases.size() > 0) {
-                    interestingCases.putIfAbsent(evolutionsAtProj, new LinkedHashSet<>());
-                    interestingCases.get(evolutionsAtProj).addAll(intInterestingCases.values());
+
+                for (Entry<Range, Set<Evolution.DescRange>> impactedTest : atProject.getValue().before) {
+                    Set<EvolutionsAtProj> evolutionsAtProjSet = new HashSet<>();
+                    Set<Evolutions.Evolution.DescRange> evosInGame = impactedTest.getValue();
+                    Set<Evolution> evosForThisTest = new LinkedHashSet<>();
+                    computingOnEvos(evolutionsAtProjSet, evosInGame, evosForThisTest);
+                    if (evolutionsAtProjSet.size() == 0) {
+                        logger.warn(
+                                "no applicable evolutions found thus no possibility to validate potential coevolutions");
+                        continue;
+                    } else if (evolutionsAtProjSet.size() > 1) {
+                        logger.warn("not handling the validation of coevolutions spanning over multiple projects");
+                        continue;
+                    }
+
+                    EvolutionsAtProj evolutionsAtProj = evolutionsAtProjSet.iterator().next();
+                    Project projectBefore = evolutionsAtProj.getBeforeProj();
+                    Project projectAfter = evolutionsAtProj.getAfterProj();
+
+                    Range testAfter = impactedTest.getKey();
+                    Range testBefore = null;
+
+                    AbstractVersionedTree treeTestAfter = (AbstractVersionedTree) ((CtElement) testAfter.getOriginal())
+                            .getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
+                    AbstractVersionedTree treeTestBefore = treeTestAfter;
+                    MyMove mov = (MyMove) treeTestAfter.getMetadata(MyScriptGenerator.MOVE_DST_ACTION);
+                    if (mov != null) {
+                        treeTestAfter = mov.getInsert().getTarget();
+                    }
+                    if (treeTestBefore.getInsertVersion() != afterVersion) {
+                        testBefore = GumTreeSpoonMiner.toRange(projectBefore, treeTestBefore, afterVersion);
+                    }
+                    if (testBefore == null) {
+                        // For now we cannnot handle such new test
+                        try {
+                            logger.info("new test ignored: " + ((CtMethod) testAfter).getSignature());
+                        } catch (Exception e) {
+                        }
+                        continue;// TODO handle this
+                    }
+
+                    aggregating(interestingCasesLocalIndex, evolutionsAtProjSet, evosForThisTest, evolutionsAtProj,
+                            testAfter, testBefore);
+                }
+                if (interestingCasesLocalIndex.size() > 0) {
+                    for (Map<Range, InterestingCase> cazeM : interestingCasesLocalIndex.values()) {
+                        for (InterestingCase caze : cazeM.values()) {
+                            if (caze.evolutionsAtProjSet.size() == 0) {
+                                logger.warn(
+                                        "no applicable evolutions found, thus no possibility to validate potential coevolutions");
+                            } else if (caze.evolutionsAtProjSet.size() > 1) {
+                                logger.warn(
+                                        "not handling the validation of coevolutions spanning over multiple projects");
+                            } else {
+                                EvolutionsAtProj evolutionsAtProj = caze.evolutionsAtProjSet.iterator().next();
+                                interestingCases.putIfAbsent(evolutionsAtProj, new LinkedHashSet<>());
+                                interestingCases.get(evolutionsAtProj).add(caze);
+                            }
+                        }
+                    }
                 }
             }
+        }
+
+        private void computingOnEvos(Set<EvolutionsAtProj> evolutionsAtProjSet,
+                Set<Evolutions.Evolution.DescRange> evosInGame, Set<Evolution> evosForThisTest) {
+            for (Evolutions.Evolution.DescRange dr : evosInGame) {
+                Evolution evolution = dr.getSource();
+                evosForThisTest.add(evolution);
+                evosForThisTest.addAll(atomizedRefactorings.get(evolution)); // TODO eval of imp. on precision
+            }
+            for (Evolution evolution : evosForThisTest) {
+                if (evolution.getEnclosingInstance() instanceof EvolutionsAtProj) {
+                    evolutionsAtProjSet.add((EvolutionsAtProj) evolution.getEnclosingInstance());
+                }
+            }
+        }
+
+        private void aggregating(Map<Range, Map<Range, InterestingCase>> interestingCasesLocalIndex,
+                Set<EvolutionsAtProj> evolutionsAtProjSet, Set<Evolution> evosForThisTest,
+                EvolutionsAtProj evolutionsAtProj, Range testAfter, Range testBefore) {
+
+            if (testBefore != null && !(testBefore.getOriginal() instanceof CtMethod)) {
+                logger.warn("original of testBefore should be a CtMethod but was "
+                        + testBefore.getOriginal().getClass().toString());
+                return;
+            }
+            if (testAfter != null && !(testAfter.getOriginal() instanceof CtMethod)) {
+                logger.warn("original of testAfter should be a CtMethod but was "
+                        + testAfter.getOriginal().getClass().toString());
+                return;
+            }
+
+            Map<Range, InterestingCase> currM = interestingCasesLocalIndex.get(testBefore);
+            InterestingCase curr;
+            if (currM != null) {
+                curr = currM.get(testAfter);
+            } else {
+                curr = null;
+            }
+            if (curr == null) {
+                curr = new InterestingCase();
+                HashMap<Range, InterestingCase> aaa = new HashMap<>();
+                aaa.put(testAfter, curr);
+                interestingCasesLocalIndex.put(testBefore, aaa);
+                curr.evosForThisTest = new HashSet<>();
+                curr.testBefore = testBefore;
+                curr.testAfter = testAfter;
+                curr.evolutionsAtProjSet = evolutionsAtProjSet;
+            }
+
+            evoPerProj.putIfAbsent(evolutionsAtProj, new LinkedHashSet<>());
+            evoPerProj.get(evolutionsAtProj).addAll(evosForThisTest);
+
+            curr.evosForThisTest.addAll(evosForThisTest);
+            evosForThisTest = curr.evosForThisTest;
+
+            impactedTestsPerProj.putIfAbsent(evolutionsAtProj, new HashSet<>());
+            impactedTestsPerProj.get(evolutionsAtProj).add(testBefore);
         }
 
         // also put the cases without using the static analysis of dependencies (to avoid missing co-evolutions, for now because we can ignore to much evo from the code)
@@ -770,7 +855,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     // need RefactoringMiner evos ?
                     curr.testBefore = c.testBefore;
                     curr.testAfter = c.testAfter;
-                    curr.evolutionsAtProj = c.evolutionsAtProj;
+                    curr.evolutionsAtProjSet = c.evolutionsAtProjSet;
                     tmpIntereSet.add(curr);
                 }
                 this.interestingCases.get(k).addAll(tmpIntereSet);

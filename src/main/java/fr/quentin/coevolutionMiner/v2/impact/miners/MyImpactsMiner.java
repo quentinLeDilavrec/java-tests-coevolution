@@ -111,8 +111,8 @@ public class MyImpactsMiner implements ImpactsMiner {
         ImpactAnalysis analyzer;
         Map<Path, ImpactsExtension> modules = new HashMap<>();
 
-        public void addImpactedTest(Range range, Set<Object> evolutions) {
-            Set<Object> tmp = impactedTests.get(range);
+        public void addImpactedTest(Range range, Set<Evolution.DescRange> evolutions) {
+            Set<Evolution.DescRange> tmp = impactedTests.get(range);
             if (tmp == null) {
                 tmp = new HashSet<>();
                 impactedTests.put(range, tmp);
@@ -254,7 +254,7 @@ public class MyImpactsMiner implements ImpactsMiner {
             for (ImpactChain ic : imptst1.getFinishedChains()) {
                 Set<ImpactChain> marched = new HashSet<>();
                 LinkedList<ImpactChain> toProcess = new LinkedList<>();
-                Set<Object> rootsDescsForTest = new HashSet<>();
+                Set<Evolution.DescRange> rootsDescsForTest = new HashSet<>();
                 toProcess.add(ic);
                 while (!toProcess.isEmpty()) {
                     ImpactChain current = toProcess.poll();
@@ -422,7 +422,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                         current = prev;
                     }
                 }
-                addImpactedTest(ie2range(ast, ic.getLast()), rootsDescsForTest);
+                addImpactedTest(ie2range(ast, ic.getLast()), (Set)rootsDescsForTest);
                 // continue;
                 // ImpactElement root = ic.getRoot();
                 // Set<Object> roots = new HashSet<>();
