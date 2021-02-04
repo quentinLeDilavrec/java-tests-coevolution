@@ -304,7 +304,7 @@ public class CLI {
                         Thread.currentThread().setName("coevoAna " + entry.left);
                         return process(s, entry.left);
                     } catch (Throwable e) {
-                        logger.error("", e, "failed whole analysis of " + s.get(0));
+                        logger.error("failed whole analysis of " + s.get(0), e);
                         return 1;
                     } finally {
                         Thread.currentThread().setName("coEana " + entry.left + " done");
