@@ -57,6 +57,7 @@ import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.coevolutionMiner.v2.utils.Iterators2;
+import fr.quentin.coevolutionMiner.v2.utils.Utils.Spanning;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsMiner;
@@ -148,6 +149,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
     private ImpactHandler impactHandler;
 
+    public static Spanning spanning = Spanning.PER_COMMIT;
+
     public MyCoEvolutionsMiner(CoEvolutions.Specifier spec, SourcesHandler srcHandler, ProjectHandler astHandler,
             EvolutionHandler evoHandler, ImpactHandler impactHandler, CoEvolutionsStorage store) {
         this.spec = spec;
@@ -161,54 +164,73 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     @Override
     public CoEvolutions compute() {
         assert spec.evoSpec != null : spec;
-        try {
-
-            CoEvolutionsManyCommit globalResult = new CoEvolutionsManyCommit(spec);
-            Sources sourcesProvider = srcHandler.handle(spec.evoSpec.sources, "JGit");
-            String initialCommitId = spec.evoSpec.commitIdBefore;
-            List<Sources.Commit> commits;
-            try {
-                commits = sourcesProvider.getCommitsBetween(initialCommitId, spec.evoSpec.commitIdAfter);
-                logger.info(commits.size() > 2 ? "caution computation of coevolutions only between consecutive commits"
-                        : "# of commits to analyze: " + commits.size());
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-
-            // final Evolutions global_evolutions = evoHandler.handle(spec.evoSpec);
-            // Set<Evolution> global_evolutions_set = global_evolutions.toSet();
-
-            // GET COMMIT FROM ID
-            // // // NOTE GOING FORWARD in time
-            // for (Evolution evolution : evolutions) {
-            // String commitIdBefore = evolution.getCommitBefore().getId();
-            // perBeforeCommit.get(sourcesProvider.temporaryCreateCommit(commitIdBefore)).add(evolution);
-            // // String commitIdAfter = evolution.getCommitIdAfter();
-            // }
-            SmallMiningException smallSuppressedExc = new SmallMiningException(
-                    "Small errors occured during consecutive commits analysis");
-            Commit currentCommit = null;
-            for (Commit nextCommit : commits) {
-                if (currentCommit == null) {
-                    currentCommit = nextCommit;
-                    continue;
-                }
+        Sources sourcesProvider = srcHandler.handle(spec.evoSpec.sources, "JGit");
+        String initialCommitId = spec.evoSpec.commitIdBefore;
+        switch (spanning) {
+            case ONCE: {
                 try {
-                    CoEvolutionsExtension currCoevolutions = computeDirectCoevolutions(sourcesProvider, currentCommit,
-                            nextCommit);
-                    globalResult.add(currCoevolutions);
-                } catch (SmallMiningException e) {
-                    smallSuppressedExc.addSuppressed(e);
+                    Commit beforeCom = sourcesProvider.getCommit(spec.evoSpec.commitIdBefore);
+                    Commit afterCom = sourcesProvider.getCommit(spec.evoSpec.commitIdAfter);
+                    try {
+                        return computeDirectCoevolutions(sourcesProvider, beforeCom,
+                                afterCom);
+                    } catch (SmallMiningException e) {
+                        throw new RuntimeException(e);
+                    }
+                } catch (SeverMiningException e) {
+                    throw new RuntimeException(e);
                 }
             }
-            if (smallSuppressedExc.getSuppressed().length > 0) {
-                logger.info("Small exceptions", smallSuppressedExc);
+            case PER_COMMIT:
+            default: {
+                try {
+                    CoEvolutionsManyCommit globalResult = new CoEvolutionsManyCommit(spec);
+                    List<Sources.Commit> commits;
+                    try {
+                        commits = sourcesProvider.getCommitsBetween(initialCommitId, spec.evoSpec.commitIdAfter);
+                        logger.info(commits.size() > 2 ? "caution computation of coevolutions only between consecutive commits"
+                                : "# of commits to analyze: " + commits.size());
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+        
+                    // final Evolutions global_evolutions = evoHandler.handle(spec.evoSpec);
+                    // Set<Evolution> global_evolutions_set = global_evolutions.toSet();
+        
+                    // GET COMMIT FROM ID
+                    // // // NOTE GOING FORWARD in time
+                    // for (Evolution evolution : evolutions) {
+                    // String commitIdBefore = evolution.getCommitBefore().getId();
+                    // perBeforeCommit.get(sourcesProvider.temporaryCreateCommit(commitIdBefore)).add(evolution);
+                    // // String commitIdAfter = evolution.getCommitIdAfter();
+                    // }
+                    SmallMiningException smallSuppressedExc = new SmallMiningException(
+                            "Small errors occured during consecutive commits analysis");
+                    Commit beforeCommit = null;
+                    for (Commit afterCommit : commits) {
+                        if (beforeCommit == null) {
+                            beforeCommit = afterCommit;
+                            continue;
+                        }
+                        try {
+                            CoEvolutionsExtension currCoevolutions = computeDirectCoevolutions(sourcesProvider, beforeCommit,
+                                    afterCommit);
+                            globalResult.add(currCoevolutions);
+                        } catch (SmallMiningException e) {
+                            smallSuppressedExc.addSuppressed(e);
+                        }
+                    }
+                    if (smallSuppressedExc.getSuppressed().length > 0) {
+                        logger.info("Small exceptions", smallSuppressedExc);
+                    }
+                    // depr(global_evolutions_set);
+                    return globalResult;
+                } catch (SeverMiningException e) {
+                    throw new RuntimeException(e);
+                }
             }
-            // depr(global_evolutions_set);
-            return globalResult;
-        } catch (SeverMiningException e) {
-            throw new RuntimeException(e);
         }
+        
     }
 
     private CoEvolutionsExtension computeDirectCoevolutions(Sources sourcesProvider, Commit beforeCommit,

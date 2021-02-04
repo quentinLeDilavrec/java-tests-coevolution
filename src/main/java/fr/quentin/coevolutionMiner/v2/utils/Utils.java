@@ -97,6 +97,11 @@ public class Utils {
 		}
 	}
 
+	public enum Spanning {
+	    PER_COMMIT,
+	    ONCE
+	}
+
 	public static CtElement matchExactChild(CtElement parent, int start, int end) {
 		return fr.quentin.impactMiner.Utils.matchExact(parent, start, end);
 	}

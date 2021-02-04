@@ -127,6 +127,7 @@ public class CLI {
         options.addOption("s", "start", true, "starting line 0-indexed");
         options.addOption("c", "commitsMax", true, "number of commits to compute impacts");
         options.addOption(null, "splitOut", false, "split outputs");
+        options.addOption(null, "once", false, "compute coevolutions between commit pairs, commits in between are ignored");
         options.addOption("f", "file", true,
                 "a file that contain per line <repo> <stars> <list of important commitId time ordered and starting with the most recent>");
 
@@ -141,6 +142,12 @@ public class CLI {
             }
             if (line.hasOption("splitOut")) {
                 splitedOut = true;
+            }
+            if (line.hasOption("once")) {
+                // TODO do something cleaner
+                fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner.spanning = fr.quentin.coevolutionMiner.v2.utils.Utils.Spanning.ONCE;
+                fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.spanning = fr.quentin.coevolutionMiner.v2.utils.Utils.Spanning.ONCE;
+                fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner.spanning = fr.quentin.coevolutionMiner.v2.utils.Utils.Spanning.ONCE;
             }
             if (Objects.equals(args[0], "batch")) {
                 if (line.getOptionValue("file") != null) {

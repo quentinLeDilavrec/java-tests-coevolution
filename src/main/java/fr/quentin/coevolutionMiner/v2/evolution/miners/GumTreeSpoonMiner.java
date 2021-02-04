@@ -58,6 +58,7 @@ import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution.DescRange;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
+import fr.quentin.coevolutionMiner.v2.utils.Utils;
 import gumtree.spoon.AstComparator;
 import gumtree.spoon.apply.operations.MyScriptGenerator;
 import gumtree.spoon.builder.CtWrapper;
@@ -88,6 +89,8 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
     // TODO instanciate filters correctly and make use of them
     private List<Object> filters;
 
+    public static Utils.Spanning spanning = Utils.Spanning.PER_COMMIT;
+
     public GumTreeSpoonMiner(Evolutions.Specifier spec, SourcesHandler srcHandler, ProjectHandler astHandler) {
         this.spec = spec;
         this.astHandler = astHandler;
@@ -104,8 +107,17 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
     public Evolutions compute() {
         Sources src = srcHandler.handle(spec.sources, "jgit");
 
+        switch (spanning) {
+            case ONCE: {
+                EvolutionsOnce result = new EvolutionsOnce(spec, src);
+                return result.compute();
+            }
+            case PER_COMMIT:
+            default: {
         EvolutionsMany result = new EvolutionsMany(spec, src);
         return result.compute();
+    }
+        }
     }
 
     public static class SpecificifierAtProj extends Evolutions.Specifier {
@@ -169,7 +181,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             return rootModule;
         }
 
-        public EvolutionsAtCommit(Specifier spec, Sources sources, Commit beforeCom, Commit commit) {
+        public EvolutionsAtCommit(Specifier spec, Sources sources) {
             super(spec, sources);
             this.beforeVersion = VersionCommit.build(sources.getCommit(spec.commitIdBefore));
             this.afterVersion = VersionCommit.build(sources.getCommit(spec.commitIdAfter));
@@ -640,6 +652,126 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         }
     }
 
+    public final class EvolutionsOnce extends EvolutionsImpl {
+
+        private EvolutionsOnce(Specifier spec, Sources sources) {
+            super(spec, sources);
+        }
+
+        public Diff getDiff(Project.Specifier<?> before, Project.Specifier<?> after, String relPath) {
+            EvolutionsAtCommit tmp = getPerCommit(before.commitId, after.commitId);
+            return tmp.getDiff(before, after);
+        }
+
+        public EvolutionsAtCommit getPerCommit(String before, String after) {
+            return perCommit.get(new ImmutablePair<>(before, after));
+        }
+
+        @Override
+        public Project<?>.AST.FileSnapshot.Range map(Project<?>.AST.FileSnapshot.Range range, Project<?> target) {
+            return getPerCommit(range.getFile().getCommit().getId(), target.spec.commitId).map(range, target);
+        }
+
+        EvolutionsOnce compute() {
+            Commit beforeCom = null;
+            Commit afterCom = null;
+            try (SourcesHelper helper = this.sources.open()) {
+                beforeCom = this.sources.getCommit(spec.commitIdBefore);
+                afterCom = this.sources.getCommit(spec.commitIdAfter);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            EvolutionsAtCommit perCommit = new EvolutionsAtCommit(
+                    new Evolutions.Specifier(spec.sources, beforeCom.getId(), afterCom.getId(), spec.miner), sources);
+            perCommit.compute();
+            putPerCommit(beforeCom, afterCom, perCommit);
+            return this;
+        }
+
+        @Override
+        public Set<Evolution> getEvolution(String type, Project<?> source, List<ImmutablePair<Range, String>> before,
+                Project<?> target, List<ImmutablePair<Range, String>> after) {
+            // Project source = before.get(0).left.getFile().getAST().getProject();
+            return getPerCommit(source.spec.commitId, target.spec.commitId).getEvolution(type, source, before, target,
+                    after);
+        }
+
+        Map<ImmutablePair<String, String>, EvolutionsAtCommit> perCommit = new HashMap<>();
+
+        private EvolutionsAtCommit putPerCommit(Commit beforeCom, Commit commit, EvolutionsAtCommit perCommit) {
+            return this.perCommit.put(new ImmutablePair<>(beforeCom.getId(), commit.getId()), perCommit);
+        }
+
+        private boolean evoSetWasBuilt = false;
+
+        @Override
+        public Set<Evolution> toSet() {
+            if (evoSetWasBuilt) {
+                return evolutions;
+            }
+            for (Evolution e : this) {
+                evolutions.add(e);
+            }
+            evoSetWasBuilt = true;
+            return evolutions;
+        }
+
+        @Override
+        public Iterator<Evolution> iterator() {
+            if (evoSetWasBuilt) {
+                return evolutions.iterator();
+            }
+            return new Iterator<Evolutions.Evolution>() {
+
+                Iterator<EvolutionsAtCommit> commitIt = EvolutionsOnce.this.perCommit.values().iterator();
+                Iterator<Evolutions.Evolution> it = EvolutionsOnce.this.evolutions.iterator();
+
+                @Override
+                public boolean hasNext() {
+                    while (true) {
+                        if (it != null && it.hasNext()) {
+                            return true;
+                        } else if (commitIt.hasNext()) {
+                            it = commitIt.next().iterator();
+                        } else {
+                            return false;
+                        }
+                    }
+                }
+
+                @Override
+                public Evolution next() {
+                    if (hasNext()) {
+                        return it.next();
+                    } else {
+                        throw new NoSuchElementException();
+                    }
+                }
+
+            };
+        }
+
+        @Override
+        public JsonElement toJson() {
+            // TODO optimize (serializing then deserializing is a dirty hack)
+            Object diff = new Gson().fromJson(
+                    JSON(spec.sources.repository, spec.commitIdAfter,
+                            evolutions.stream().map(x -> (Action) x.getOriginal()).collect(Collectors.toList())),
+                    new TypeToken<Object>() {
+                    }.getType());
+            return new Gson().toJsonTree(diff);
+        }
+
+        @Override
+        public Map<Commit, Evolutions> perBeforeCommit() {
+            EvolutionsAtCommit tmp = getPerCommit(spec.commitIdBefore, spec.commitIdAfter);
+            Map<Commit, Evolutions> r = new LinkedHashMap<>();
+            r.put(tmp.beforeVersion.commit, tmp);
+            return r;
+        }
+
+    }
+
     public final class EvolutionsMany extends EvolutionsImpl {
 
         private EvolutionsMany(Specifier spec, Sources sources) {
@@ -667,18 +799,18 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
 
         EvolutionsMany compute() {
             List<Commit> commits;
-            Commit beforeCom = null;
             try (SourcesHelper helper = this.sources.open()) {
                 commits = this.sources.getCommitsBetween(spec.commitIdBefore, spec.commitIdAfter);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
+            Commit beforeCom = null;
             for (Commit commit : commits) {
                 if (beforeCom != null) {
                     // per commit evolutions
                     EvolutionsAtCommit perCommit = new EvolutionsAtCommit(
                             new Evolutions.Specifier(spec.sources, beforeCom.getId(), commit.getId(), spec.miner),
-                            sources, beforeCom, commit);
+                            sources);
                     perCommit.compute();
                     putPerCommit(beforeCom, commit, perCommit);
                 }

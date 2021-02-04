@@ -43,10 +43,14 @@ import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.coevolutionMiner.v2.utils.Utils;
+import fr.quentin.coevolutionMiner.v2.utils.Utils.Spanning;
 import gr.uom.java.xmi.diff.CodeRange;
 import spoon.reflect.declaration.CtElement;
 
 public class RefactoringMiner implements EvolutionsMiner {
+
+    public static Spanning spanning = Spanning.PER_COMMIT;
+
     Logger logger = LogManager.getLogger();
     private static final String systemFileSeparator = java.util.regex.Matcher.quoteReplacement(File.separator);
 
@@ -78,7 +82,7 @@ public class RefactoringMiner implements EvolutionsMiner {
         } catch (Exception e1) {
             e1.printStackTrace();
         }
-        GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
+        GitHistoryRefactoringMinerImpl miner = new GitHistoryRefactoringMinerImpl();
 
         // List<Refactoring> detectedRefactorings = new ArrayList<Refactoring>();
         // List<Evolutions.Evolution> evolutions = new
@@ -86,31 +90,65 @@ public class RefactoringMiner implements EvolutionsMiner {
 
         EvolutionsExtension result = new EvolutionsExtension(spec, src);
         Map<ImmutablePair<String, String>, List<Refactoring>> mapOpByCommit = new HashMap<>();
+        List<Refactoring> opOnce = new ArrayList<>();
         try (SourcesHelper helper = src.open()) {
-            miner.detectBetweenCommits(helper.getRepo(), spec.commitIdBefore, spec.commitIdAfter,
-                    new RefactoringHandler() {
-                        @Override
-                        public void handle(String commitId, List<Refactoring> refactorings) {
-                            for (Refactoring op : refactorings) {
-                                String before;
-                                try {
-                                    before = helper.getBeforeCommit(commitId);
-                                } catch (IOException e) {
-                                    throw new RuntimeException(e);
-                                }
-                                ImmutablePair<String, String> tmp1 = new ImmutablePair<String, String>(before,
-                                        commitId);
-                                mapOpByCommit.putIfAbsent(tmp1, new ArrayList<>());
-                                mapOpByCommit.get(tmp1).add(op);
-                                logger.info("O- " + op + "\n");
-                            }
+            RefactoringHandler rh = new RefactoringHandler() {
+                @Override
+                public void handle(String commitId, List<Refactoring> refactorings) {
+                    for (Refactoring op : refactorings) {
+                        String before;
+                        try {
+                            before = helper.getBeforeCommit(commitId);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
                         }
+                        ImmutablePair<String, String> tmp1 = new ImmutablePair<String, String>(before, commitId);
+                        mapOpByCommit.putIfAbsent(tmp1, new ArrayList<>());
+                        mapOpByCommit.get(tmp1).add(op);
+                        opOnce.add(op);
+                        logger.info("O- " + op + "\n");
+                    }
+                }
 
-                    });
+            };
+            switch (spanning) {
+                case ONCE:
+                    miner.detectBetweenCommits(helper.getRepo(), spec.commitIdBefore, spec.commitIdAfter, rh);
+                    break;
+                case PER_COMMIT:
+                default:
+                    // TODO would need to mat expli evolution spanning over multiple commits for this to be clean 
+                    miner.detectBetweenCommitsOnce(helper.getRepo(), spec.commitIdBefore, spec.commitIdAfter, rh);
+                    break;
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+        switch (spanning) {
+            case ONCE:
+                // TODO would need to mat expli evolution spanning over multiple commits for this to be clean 
+                oncePostProcess(result, opOnce);
+                break;
+            case PER_COMMIT:
+            default:
+                perCommitPostProcess(result, mapOpByCommit);
+                break;
+        }
+        return result;
+    }
 
+    private void oncePostProcess(EvolutionsExtension result, List<Refactoring> opRelaxed) {
+        Project beforeAST = astHandler.handle(astHandler.buildSpec(spec.sources, spec.commitIdBefore));
+        assert beforeAST != null;
+        Project afterAST = astHandler.handle(astHandler.buildSpec(spec.sources, spec.commitIdAfter));
+        assert afterAST != null;
+        for (Refactoring op : opRelaxed) {
+            result.addEvolution(op, beforeAST, afterAST);
+        }
+    }
+
+    private void perCommitPostProcess(EvolutionsExtension result,
+            Map<ImmutablePair<String, String>, List<Refactoring>> mapOpByCommit) {
         for (Entry<ImmutablePair<String, String>, List<Refactoring>> entry : mapOpByCommit.entrySet()) {
             Project beforeAST = astHandler.handle(astHandler.buildSpec(spec.sources, entry.getKey().left));
             assert beforeAST != null;
@@ -120,8 +158,6 @@ public class RefactoringMiner implements EvolutionsMiner {
                 result.addEvolution(op, beforeAST, afterAST);
             }
         }
-
-        return result;
     }
 
     public final class EvolutionsExtension extends EvolutionsImpl {
