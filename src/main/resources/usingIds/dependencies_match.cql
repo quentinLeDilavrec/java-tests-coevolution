@@ -14,4 +14,5 @@ WITH distinct e as e, wanted as wanted, count(distinct r) as s
 WHERE s = size(e.targets)
 
 WITH distinct e as e, collect(ID(wanted)) as ids
-RETURN (CASE WHEN size(ids)>0 THEN ids[0] ELSE null END) as id
+WITH distinct e as e, (CASE WHEN size(ids)>0 THEN ids[0] ELSE null END) as id
+RETURN id
