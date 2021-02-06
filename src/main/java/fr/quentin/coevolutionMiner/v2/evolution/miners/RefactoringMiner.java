@@ -113,12 +113,12 @@ public class RefactoringMiner implements EvolutionsMiner {
             };
             switch (spanning) {
                 case ONCE:
-                    miner.detectBetweenCommits(helper.getRepo(), spec.commitIdBefore, spec.commitIdAfter, rh);
+                    // TODO would need to mat expli evolution spanning over multiple commits for this to be clean 
+                    miner.detectBetweenCommitsOnce(helper.getRepo(), spec.commitIdBefore, spec.commitIdAfter, rh);
                     break;
                 case PER_COMMIT:
                 default:
-                    // TODO would need to mat expli evolution spanning over multiple commits for this to be clean 
-                    miner.detectBetweenCommitsOnce(helper.getRepo(), spec.commitIdBefore, spec.commitIdAfter, rh);
+                    miner.detectBetweenCommits(helper.getRepo(), spec.commitIdBefore, spec.commitIdAfter, rh);
                     break;
             }
         } catch (Exception e) {
