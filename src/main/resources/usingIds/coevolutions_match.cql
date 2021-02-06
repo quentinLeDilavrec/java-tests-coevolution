@@ -14,4 +14,4 @@ WITH distinct e as e, wanted as wanted, count(distinct evo) as s
 WHERE s = size(e.resolutions)
 
 WITH distinct e as e, collect(ID(wanted)) as ids
-RETURN (CASE WHEN size(ids)>0 THEN ids[0] ELSE null) as id
+RETURN (CASE WHEN size(ids)>0 THEN ids[0] ELSE null END) as id
