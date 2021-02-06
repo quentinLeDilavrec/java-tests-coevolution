@@ -260,8 +260,8 @@ public class Project<T> implements Iterable<Project> {
 
             public class Range {
 
-                private Integer end;
-                private Integer start;
+                private final int end;
+                private final int start;
                 private T original;
 
                 public FileSnapshot getFile() {
@@ -294,8 +294,8 @@ public class Project<T> implements Iterable<Project> {
                     final int prime = 31;
                     int result = 1;
                     result = prime * result + getFileSnapshot().hashCode();
-                    result = prime * result + ((end == null) ? 0 : end.hashCode());
-                    result = prime * result + ((start == null) ? 0 : start.hashCode());
+                    result = prime * result + end;
+                    result = prime * result + start;
                     return result;
                 }
 
@@ -310,15 +310,9 @@ public class Project<T> implements Iterable<Project> {
                     Range other = (Range) obj;
                     if (!getFileSnapshot().equals(other.getFileSnapshot()))
                         return false;
-                    if (end == null) {
-                        if (other.end != null)
-                            return false;
-                    } else if (!end.equals(other.end))
+                    if (end != other.end)
                         return false;
-                    if (start == null) {
-                        if (other.start != null)
-                            return false;
-                    } else if (!start.equals(other.start))
+                    if (start != other.start)
                         return false;
                     return true;
                 }
