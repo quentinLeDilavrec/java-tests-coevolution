@@ -58,9 +58,9 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
     }
 
     static final String CYPHER_RANGES_MERGE = Utils.memoizedReadResource("usingIds/ranges_merge.cql");
-    static final String CYPHER_DEPENDENCY_MATCH = Utils.memoizedReadResource("usingIds/dependency_match.cql");
-    static final String CYPHER_DEPENDENCY_UPDATE = Utils.memoizedReadResource("usingIds/update.cql");
-    static final String CYPHER_DEPENDENCY_CREATE = Utils.memoizedReadResource("usingIds/dependency_create.cql");
+    static final String CYPHER_DEPENDENCIES_MATCH = Utils.memoizedReadResource("usingIds/dependencies_match.cql");
+    static final String CYPHER_DEPENDENCIES_UPDATE = Utils.memoizedReadResource("usingIds/update.cql");
+    static final String CYPHER_DEPENDENCIES_CREATE = Utils.memoizedReadResource("usingIds/dependencies_create.cql");
 
     class ChunckedUploadEvos extends Utils.ChunckedUpload<Impact> {
         private final Specifier spec;
@@ -95,7 +95,7 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
 
                 List<Integer> toUpdate = new ArrayList<>();
                 List<Map<String, Object>> toCreate = new ArrayList<>();
-                List<Integer> evolutionsId = tx.run(CYPHER_DEPENDENCY_MATCH, parameters("data", toMatch))
+                List<Integer> evolutionsId = tx.run(CYPHER_DEPENDENCIES_MATCH, parameters("data", toMatch))
                         .list(x1 -> x1.get("id", -1));
                 for (int i = 0; i < evolutionsId.size(); i++) {
                     Integer id = evolutionsId.get(i);
@@ -107,10 +107,10 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
                     }
                 }
                 if (toUpdate.size() > 0) {
-                    tx.run(CYPHER_DEPENDENCY_UPDATE, parameters("data", toUpdate, "tool", tool)).consume();
+                    tx.run(CYPHER_DEPENDENCIES_UPDATE, parameters("data", toUpdate, "tool", tool)).consume();
                 }
                 if (toCreate.size() > 0) {
-                    tx.run(CYPHER_DEPENDENCY_CREATE, parameters("data", toCreate, "tool", tool)).consume();
+                    tx.run(CYPHER_DEPENDENCIES_CREATE, parameters("data", toCreate, "tool", tool)).consume();
                 }
                 tx.commit();
                 return whatIsUploaded();
