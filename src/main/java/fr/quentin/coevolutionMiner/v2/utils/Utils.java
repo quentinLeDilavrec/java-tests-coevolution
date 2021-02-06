@@ -9,6 +9,8 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -23,7 +25,9 @@ import org.neo4j.driver.TransactionWork;
 import org.neo4j.driver.Value;
 import org.neo4j.driver.exceptions.TransientException;
 
+import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon.SpoonAST;
+import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.CoEvolution;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.storages.Neo4jEvolutionsStorage;
 import fr.quentin.impactMiner.Evolution;
@@ -38,14 +42,42 @@ import spoon.reflect.declaration.CtType;
 
 public class Utils {
 
+	public static abstract class SimpleChunckedUpload<U> extends ChunckedUpload<U> {
+		public SimpleChunckedUpload(Driver driver, int TIMEOUT) {
+			super(driver, TIMEOUT);
+		}
+
+		protected abstract Value format(Collection<U> chunk);
+
+		protected abstract String getCypher();
+
+		@Override
+		protected String put(Session session, List<U> chunk, Logger logger) {
+			try {
+				String done = session.writeTransaction(new TransactionWork<String>() {
+					@Override
+					public String execute(Transaction tx) {
+						tx.run(getCypher(), format(chunk)).consume();
+						return whatIsUploaded();
+					}
+				}, config);
+				return done;
+			} catch (TransientException e) {
+				logger.error(whatIsUploaded() + " could not be uploaded", e);
+				return null;
+			} catch (Exception e) {
+				logger.error(whatIsUploaded() + " could not be uploaded", e);
+				return null;
+			}
+		}
+	}
+
 	public static abstract class ChunckedUpload<U> {
 		private int TIMEOUT;
 
 		protected abstract String whatIsUploaded();
 
-		protected abstract String getCypher();
-
-		protected abstract Value format(Collection<U> chunk);
+		protected abstract String put(Session session, List<U> chunk, Logger logger);
 
 		public ChunckedUpload(Driver driver, int TIMEOUT) {
 			this.driver = driver;
@@ -56,50 +88,38 @@ public class Utils {
 		protected void execute(Logger logger, int STEP, List<U> processed) {
 			int index = 0;
 			int step = STEP;
-			while (index < processed.size()) {
-				long start = System.nanoTime();
-				String done = put(processed.subList(index, Math.min(index + step, processed.size())), logger);
-				if (done != null) {
-					logger.info(done + ": " + Math.min(index + step, processed.size()) + "/" + processed.size());
-					index += step;
-					if (((System.nanoTime() - start) / 1000000 / 60 < (TIMEOUT / 2))) {
-						step = step * 2;
-					}
-				} else if (step == 1) {
-					throw new RuntimeException(
-							"took too long to upload " + whatIsUploaded() + "even one element is to much");
-				} else {
-					logger.info("took too long to upload " + whatIsUploaded() + " with a chunk of size " + step);
-					step = step / 2;
-				}
-			}
-		}
-
-		private final Driver driver;
-		private final TransactionConfig config;
-
-		private String put(Collection<U> chunk, Logger logger) {
 			try (Session session = driver.session()) {
-				String done = session.writeTransaction(new TransactionWork<String>() {
-					@Override
-					public String execute(Transaction tx) {
-						tx.run(getCypher(), ChunckedUpload.this.format(chunk)).consume();
-						return whatIsUploaded();
+				while (index < processed.size()) {
+					long start = System.nanoTime();
+					String done = put(session, processed.subList(index, Math.min(index + step, processed.size())),
+							logger);
+					if (done != null) {
+						logger.info(done + ": " + Math.min(index + step, processed.size()) + "/" + processed.size());
+						index += step;
+						if (((System.nanoTime() - start) / 1000000 / 60 < (TIMEOUT / 2))) {
+							step = step * 2;
+						}
+					} else if (step == 1) {
+						throw new RuntimeException(
+								"took too long to upload " + whatIsUploaded() + "even one element is to much");
+					} else {
+						logger.info("took too long to upload " + whatIsUploaded() + " with a chunk of size " + step);
+						step = step / 2;
 					}
-				}, config);
-				return done;
+				}
 			} catch (TransientException e) {
 				logger.error(whatIsUploaded() + " could not be uploaded", e);
 			} catch (Exception e) {
 				logger.error(whatIsUploaded() + " could not be uploaded", e);
 			}
-			return null;
 		}
+
+		private final Driver driver;
+		protected final TransactionConfig config;
 	}
 
 	public enum Spanning {
-	    PER_COMMIT,
-	    ONCE
+		PER_COMMIT, ONCE
 	}
 
 	public static CtElement matchExactChild(CtElement parent, int start, int end) {
@@ -212,5 +232,23 @@ public class Utils {
 		name = name.startsWith("Ct") ? name.substring("Ct".length()) : name;
 		name = name.endsWith("Wrapper") ? name.substring(0, name.length() - "Wrapper".length()) : name;
 		return name;
+	}
+
+	public static <T, U> Map<T, U> map(Object... keyValues) {
+		Map<T, U> r = new LinkedHashMap<>();
+		Iterator<Object> it = Arrays.stream(keyValues).iterator();
+		while (it.hasNext()) {
+			r.put((T) it.next(), (U) it.next());
+		}
+		return r;
+	}
+
+	public static Map<String, Object> formatRangeWithType(Range targetR) {
+		final Map<String, Object> rDescR = targetR.toMap();
+		final CtElement e_ori = (CtElement) targetR.getOriginal();
+		if (e_ori != null) {
+			rDescR.put("type", formatedType(e_ori));
+		}
+		return rDescR;
 	}
 }

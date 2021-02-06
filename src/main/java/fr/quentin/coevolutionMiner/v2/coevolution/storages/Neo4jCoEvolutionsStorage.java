@@ -7,6 +7,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -18,7 +20,11 @@ import org.apache.logging.log4j.Logger;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Result;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.Transaction;
 import org.neo4j.driver.Value;
+import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.driver.types.Node;
 import org.neo4j.driver.types.Path.Segment;
 import org.neo4j.driver.types.Relationship;
@@ -41,6 +47,7 @@ import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact.FailureReport;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
+import fr.quentin.coevolutionMiner.v2.evolution.storages.Neo4jEvolutionsStorage;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.v2.utils.Utils;
@@ -48,23 +55,20 @@ import fr.quentin.coevolutionMiner.v2.utils.Utils;
 public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
     public static Logger logger = LogManager.getLogger();
 
-    class ChunckedUploadCoEvos extends Utils.ChunckedUpload<Map<String, Object>> {
-        private final Specifier spec;
+    static final String CYPHER_EVOLUTIONS_MATCH = Utils.memoizedReadResource("usingIds/evolutions_match.cql");
+    static final String CYPHER_COEVOLUTIONS_MATCH = Utils.memoizedReadResource("usingIds/coevolutions_match.cql");
+    static final String CYPHER_COEVOLUTIONS_UPDATE = Utils.memoizedReadResource("usingIds/update.cql");
+    static final String CYPHER_COEVOLUTIONS_CREATE = Utils.memoizedReadResource("usingIds/coevolutions_create.cql");
 
-        public ChunckedUploadCoEvos(Specifier spec, List<Map<String, Object>> processed) {
+    class ChunckedUploadCoEvos extends Utils.ChunckedUpload<CoEvolution> {
+        private final Specifier spec;
+        private final Map<String, Object> tool;
+
+        public ChunckedUploadCoEvos(Specifier spec, List<CoEvolution> processed) {
             super(driver, 10);
             this.spec = spec;
+            tool = Utils.map("name", spec.miner, "version", 0);
             execute(logger, 256, processed);
-        }
-
-        @Override
-        protected String getCypher() {
-            return Utils.memoizedReadResource("coevolutions_cypher.cql");
-        }
-
-        @Override
-        public Value format(Collection<Map<String, Object>> chunk) {
-            return parameters("coevoSimp", chunk, "tool", spec.miner);
         }
 
         @Override
@@ -72,51 +76,243 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
             return "coevolutions of " + spec.srcSpec.repository;
         }
 
+        @Override
+        protected String put(Session session, List<CoEvolution> chunk, Logger logger) {
+            Map<Evolution, Integer> idsByEvo = new LinkedHashMap<>();
+            for (CoEvolution coEvolution : chunk) {
+                for (Evolution e : coEvolution.getCauses()) {
+                    idsByEvo.put(e, -1);
+                }
+                for (Evolution e : coEvolution.getResolutions()) {
+                    idsByEvo.put(e, -1);
+                }
+            }
+            Set<Evolution> keySet = new LinkedHashSet<>();
+            for (Entry<Evolution, Integer> entry : idsByEvo.entrySet()) {
+                if (entry.getValue() == -1) {
+                    Evolution e = entry.getKey();
+                    keySet.add(e);
+                }
+            }
+            try (Transaction tx = session.beginTransaction(config);) {
+
+                if (keySet.size() > 0) {
+                    Map<Range, Integer> idsByRange = Neo4jEvolutionsStorage.idsByRangeFromEvos(keySet);
+                    List<Map<String, Object>> formatedRanges2 = new ArrayList<>();
+                    Set<Range> keySetRForEvos = new LinkedHashSet<>();
+                    for (Entry<Range, Integer> entry : idsByRange.entrySet()) {
+                        if (entry.getValue() == -1) {
+                            Range r = entry.getKey();
+                            keySetRForEvos.add(r);
+                            formatedRanges2.add(r.toMap());
+                        }
+                    }
+                    matchAndGetRangeIds(idsByRange, formatedRanges2, keySetRForEvos, tx);
+    
+                    List<Map<String, Object>> evoToMatch = new ArrayList<>();
+                    for (Evolution evo : keySet) {
+                        evoToMatch.add(Neo4jEvolutionsStorage.formatEvolutionWithRangesAsIds(idsByRange, evo));
+                    }
+    
+                    List<Integer> matchedEvoIds = new ArrayList<>();
+                    List<Map<String, Object>> toCreate = new ArrayList<>();
+                    Neo4jEvolutionsStorage.matchEvolutions(tx, evoToMatch, matchedEvoIds, toCreate);
+    
+                    if (toCreate.size() > 0) {
+                        throw new RuntimeException("evolutions should have been created");
+                    }
+    
+                    int i = 0;
+                    for (Evolution r : keySet) {
+                        idsByEvo.put(r, matchedEvoIds.get(i));
+                        i++;
+                    }
+                }
+    
+                List<Map<String, Object>> toMatch = new ArrayList<>();
+                for (CoEvolution coevo : chunk) {
+                    toMatch.add(formatCoEvolutionWithEvolutionsAsIds(idsByEvo, coevo));
+                }
+
+                Result matchResult = tx.run(CYPHER_COEVOLUTIONS_MATCH, parameters("data", toMatch));
+                List<Integer> evolutionsId = matchResult
+                        .list(x -> x.get("id", -1));
+                List<Map<String, Object>> toUpdate = new ArrayList<>();
+                List<Map<String, Object>> toCreate = new ArrayList<>();
+                for (int i = 0; i < evolutionsId.size(); i++) {
+                    Integer id = evolutionsId.get(i);
+                    Map<String, Object> formatedCoEvo = toMatch.get(i);
+                    if (id == -1) {
+                        toCreate.add(formatedCoEvo);
+                    } else {
+                        toUpdate.add(Utils.map("id",id));
+                    }
+                }
+                if (toUpdate.size() > 0) {
+                    tx.run(CYPHER_COEVOLUTIONS_UPDATE, parameters("data", toUpdate, "tool", tool)).consume();
+                }
+                if (toCreate.size() > 0) {
+                    tx.run(CYPHER_COEVOLUTIONS_CREATE, parameters("data", toCreate, "tool", tool)).consume();
+                }
+                tx.commit();
+                return whatIsUploaded();
+            } catch (TransientException e) {
+                logger.error(whatIsUploaded() + " could not be uploaded", e);
+                return null;
+            } catch (Exception e) {
+                logger.error(whatIsUploaded() + " could not be uploaded", e);
+                return null;
+            }
+        }
+
     }
 
-    class ChunckedUploadEImpacts extends Utils.ChunckedUpload<Map<String, Object>> {
-        private final Specifier spec;
+    static final String CYPHER_RANGES_MERGE = Utils.memoizedReadResource("usingIds/ranges_merge.cql");
+    static final String CYPHER_RANGES_MATCH = Utils.memoizedReadResource("usingIds/ranges_match.cql");
+    static final String CYPHER_IMPACTS_MATCH = Utils.memoizedReadResource("usingIds/impacts_match.cql");
+    static final String CYPHER_IMPACTS_UPDATE = Utils.memoizedReadResource("usingIds/update.cql");
+    static final String CYPHER_IMPACTS_CREATE = Utils.memoizedReadResource("usingIds/impacts_create.cql");
 
-        public ChunckedUploadEImpacts(Specifier spec, List<Map<String, Object>> processed) {
+    class ChunckedUploadImpacts extends Utils.ChunckedUpload<EImpact> {
+        private final Specifier spec;
+        private final Map<String, Object> tool;
+
+        public ChunckedUploadImpacts(Specifier spec, List<EImpact> processed) {
             super(driver, 10);
             this.spec = spec;
+            tool = Utils.map("name", spec.miner, "version", 0);
             execute(logger, 256, processed);
-        }
-
-        @Override
-        protected String getCypher() {
-            return Utils.memoizedReadResource("eimpact_cypher.cql");
-        }
-
-        @Override
-        public Value format(Collection<Map<String, Object>> chunk) {
-            return parameters("eImpacts", chunk, "tool", spec.miner);
         }
 
         @Override
         protected String whatIsUploaded() {
-            return "eimpact of " + spec.srcSpec.repository;
+            return "impacts of " + spec.srcSpec.repository;
+        }
+
+        @Override
+        protected String put(Session session, List<EImpact> chunk, Logger logger) {
+            Map<Evolution, Integer> idsByEvo = new LinkedHashMap<>();
+            Map<Range, Integer> idsByTest = new LinkedHashMap<>();
+            for (EImpact eimpact : chunk) {
+                for (Evolution e : eimpact.getEvolutions().keySet()) {
+                    idsByEvo.put(e, -1);
+                }
+                for (Entry<Range, ImmutablePair<Range, FailureReport>> entry : eimpact.getTests().entrySet()) {
+                    idsByTest.put(entry.getKey(), -1);
+                    idsByTest.put(entry.getValue().left, -1);
+                }
+            }
+            Set<Evolution> evoKeySet = new LinkedHashSet<>();
+            for (Entry<Evolution, Integer> entry : idsByEvo.entrySet()) {
+                if (entry.getValue() == -1) {
+                    Evolution e = entry.getKey();
+                    evoKeySet.add(e);
+                }
+            }
+            List<Map<String, Object>> formatedTests = new ArrayList<>();
+            Set<Range> keySet = new LinkedHashSet<>();
+            for (Entry<Range, Integer> entry : idsByTest.entrySet()) {
+                if (entry.getValue() == -1) {
+                    Range r = entry.getKey();
+                    keySet.add(r);
+                    formatedTests.add(r.toMap());
+                }
+            }
+            try (Transaction tx = session.beginTransaction(config);) {
+
+                Neo4jEvolutionsStorage.mergeAndGetRangeIds(idsByTest, formatedTests, keySet, tx);
+
+                if (evoKeySet.size() > 0) {
+                    Map<Range, Integer> idsByRange = Neo4jEvolutionsStorage.idsByRangeFromEvos(evoKeySet);
+                    List<Map<String, Object>> formatedRanges2 = new ArrayList<>();
+                    Set<Range> keySetRForEvos = new LinkedHashSet<>();
+                    for (Entry<Range, Integer> entry : idsByRange.entrySet()) {
+                        if (entry.getValue() == -1) {
+                            Range r = entry.getKey();
+                            keySetRForEvos.add(r);
+                            formatedRanges2.add(r.toMap());
+                        }
+                    }
+                    matchAndGetRangeIds(idsByRange, formatedRanges2, keySetRForEvos, tx);
+
+                    List<Map<String, Object>> evoToMatch = new ArrayList<>();
+                    for (Evolution evo : evoKeySet) {
+                        evoToMatch.add(Neo4jEvolutionsStorage.formatEvolutionWithRangesAsIds(idsByRange, evo));
+                    }
+
+                    List<Integer> matched = new ArrayList<>();
+                    List<Map<String, Object>> toCreate = new ArrayList<>();
+                    Neo4jEvolutionsStorage.matchEvolutions(tx, evoToMatch, matched, toCreate);
+
+                    if (toCreate.size() > 0) {
+                        throw new RuntimeException("evolutions should have been created");
+                    }
+
+                    int i = 0;
+                    for (Evolution r : evoKeySet) {
+                        idsByEvo.put(r, matched.get(i));
+                        i++;
+                    }
+                }
+
+                List<Map<String, Object>> toMatch = new ArrayList<>();
+
+                for (EImpact imp : chunk) {
+                    toMatch.add(formatImpactWithRangesAndEvolutionsAsIds(idsByTest, idsByEvo, imp));
+                }
+
+                Result matchResult = tx.run(CYPHER_IMPACTS_MATCH, parameters("data", toMatch));
+                List<Integer> evolutionsId = matchResult
+                        .list(x -> x.get("id", -1));
+                List<Map<String, Object>> toUpdate = new ArrayList<>();
+                List<Map<String, Object>> toCreate = new ArrayList<>();
+                for (int i = 0; i < evolutionsId.size(); i++) {
+                    Integer id = evolutionsId.get(i);
+                    Map<String, Object> formatedCoEvo = toMatch.get(i);
+                    if (id == -1) {
+                        toCreate.add(formatedCoEvo);
+                    } else {
+                        toUpdate.add(Utils.map("id",id));
+                    }
+                }
+                if (toUpdate.size() > 0) {
+                    tx.run(CYPHER_IMPACTS_UPDATE, parameters("data", toUpdate, "tool", tool)).consume();
+                }
+                if (toCreate.size() > 0) {
+                    tx.run(CYPHER_IMPACTS_CREATE, parameters("data", toCreate, "tool", tool)).consume();
+                }
+                tx.commit();
+                return whatIsUploaded();
+            } catch (TransientException e) {
+                logger.error(whatIsUploaded() + " could not be uploaded", e);
+                return null;
+            } catch (Exception e) {
+                logger.error(whatIsUploaded() + " could not be uploaded", e);
+                return null;
+            }
         }
 
     }
 
-    class ChunckedUploadInitTests extends Utils.ChunckedUpload<Map<String, Object>> {
+    class ChunckedUploadInitTests extends Utils.SimpleChunckedUpload<Map<String, Object>> {
         private final Specifier spec;
+        private final Map<String, Object> tool;
 
         public ChunckedUploadInitTests(Specifier spec, List<Map<String, Object>> processed) {
             super(driver, 10);
             this.spec = spec;
+            tool = Utils.map("name", spec.miner, "version", 0);
             execute(logger, 256, processed);
         }
 
         @Override
         protected String getCypher() {
-            return Utils.memoizedReadResource("initTest_cypher.cql");
+            return Utils.memoizedReadResource("initTest_merge.cql");
         }
 
         @Override
         public Value format(Collection<Map<String, Object>> chunk) {
-            return parameters("initTests", chunk, "tool", spec.miner);
+            return parameters("initTests", chunk, "tool", tool);
         }
 
         @Override
@@ -127,7 +323,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
     }
 
     @Override
-    public void put(CoEvolutions value) {
+    public synchronized void put(CoEvolutions value) {
         List<Map<String, Object>> initTests = new ArrayList<>();
         for (ImmutablePair<Range, FailureReport> initTest : value.getInitialTests()) {
             initTests.add(basifyInitTests(initTest));
@@ -135,99 +331,34 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         new ChunckedUploadInitTests(value.spec, initTests);
 
         Set<CoEvolution> coevos = value.getCoEvolutions();
-        List<Map<String, Object>> coevoSimp = new ArrayList<>();
-        for (CoEvolution coevolution : coevos) {
-            coevoSimp.add(basifyCoevo(coevolution, true, value.spec.srcSpec.repository));
-        }
-        new ChunckedUploadCoEvos(value.spec, coevoSimp);
+        new ChunckedUploadCoEvos(value.spec, new ArrayList<>(coevos));
 
-        List<Map<String, Object>> eImpacts = new ArrayList<>();
-        for (EImpact eImpact : value.getEImpacts()) {
-            if (eImpact.getEvolutions().size() > 0) {
-                eImpacts.add(basifyEImpacts(eImpact));
-            }
-        }
-        new ChunckedUploadEImpacts(value.spec, eImpacts);
+        // List<Map<String, Object>> eImpacts = new ArrayList<>();
+        // for (EImpact eImpact : value.getEImpacts()) {
+        //     if (eImpact.getEvolutions().size() > 0) {
+        //         eImpacts.add(basifyEImpacts(eImpact));
+        //     }
+        // }
+        new ChunckedUploadImpacts(value.spec, new ArrayList<>(value.getEImpacts()));
     }
 
     private Map<String, Object> basifyInitTests(ImmutablePair<Range, FailureReport> initialTest) {
         Map<String, Object> r = initialTest.left.toMap();
-        FailureReport fr = initialTest.right;
-        r.put("what", fr == null ? null : fr.what);
-        r.put("where", fr == null ? null : fr.where);
-        r.put("when", fr == null ? null : fr.when);
+        Map<String, Object> report = basifyReport(initialTest.right);
+        report.put("report", report);
         return r;
     }
 
-    private Map<String, Object> basifyEImpacts(EImpact eImpact) {
-        Map<String, Object> r = new HashMap<>();
-        List<Map<String, Object>> tests = new ArrayList<>();
-        r.put("tests", tests);
-        for (Entry<Range, ImmutablePair<Range, FailureReport>> t : eImpact.getTests().entrySet()) {
-            Map<String, Object> test = t.getValue().left.toMap();
-            tests.add(test);
-            FailureReport fr = t.getValue().right;
-            test.put("what", fr == null ? null : fr.what);
-            test.put("where", fr == null ? null : fr.where);
-            test.put("when", fr == null ? null : fr.when);
-            List<Map<String, Object>> before = new ArrayList<>();
-            test.put("before", before);
-            if (t.getKey() != t.getValue().left) {
-                before.add(t.getKey().toMap());
-            }
+    private static Map<String, Object> basifyReport(FailureReport fr) {
+        Map<String, Object> report = new HashMap<>();
+        if (fr != null) {
+            report.put("what", fr.what);
+            report.put("where", fr.where);
+            report.put("when", fr.when);
         }
-        List<String> evolutions_url = new ArrayList<>();
-        List<Map<String, Object>> evolutions = new ArrayList<>();
-        r.put("evolutions", evolutions);
-        for (Entry<Evolution, ?> evo : eImpact.getEvolutions().entrySet()) {
-            Map<String, Object> evolution = new HashMap<>();
-            evolutions.add(evolution);
-            Map<String, Object> tmp = evo.getKey().asMap();
-            evolution.put("content", tmp);
-            // TODO show fraction? for now it is always at 1
-            evolutions_url.add((String) (((Map<String, Object>) tmp.get("content")).get("url")));
-        }
-        Map<String, Object> content = new HashMap<>();
-        evolutions_url.sort((a, b) -> a.compareTo(b));
-        content.put("evolutions", evolutions_url);
-        r.put("content", content);
-
-        return r;
+        return report;
     }
 
-    private Map<String, Object> basifyCoevo(CoEvolution coevolution, boolean validated, String repository) { // TODO
-                                                                                                             // refactor
-        Map<String, Object> coevo = new HashMap<>();
-        List<String> causes_url = new ArrayList<>();
-        List<Map<String, Object>> pointed = new ArrayList<>();
-        for (Evolution evolution : coevolution.getCauses()) {
-            Map<String, Object> tmp = evolution.asMap();
-            Map<String, Object> o = new HashMap<>();
-            o.put("content", tmp);
-            o.put("type", "cause");
-            pointed.add(o);
-            causes_url.add((String) (((Map<String, Object>) tmp.get("content")).get("url")));
-        }
-        List<String> resolutions_url = new ArrayList<>();
-        for (Evolution evolution : coevolution.getResolutions()) {
-            Map<String, Object> tmp = evolution.asMap();
-            Map<String, Object> o = new HashMap<>();
-            o.put("content", tmp);
-            o.put("type", "resolution");
-            pointed.add(o);
-            resolutions_url.add((String) (((Map<String, Object>) tmp.get("content")).get("url")));
-        }
-        Map<String, Object> content = new HashMap<>();
-        content.put("validated", validated);
-        causes_url.sort((a, b) -> a.compareTo(b));
-        content.put("causes", causes_url);
-        resolutions_url.sort((a, b) -> a.compareTo(b));
-        content.put("resolutions", resolutions_url);
-        coevo.put("content", content);
-        coevo.put("pointed", pointed);
-
-        return coevo;
-    }
 
     private final Driver driver;
     private ProjectHandler astHandler;
@@ -413,8 +544,78 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         return new ImmutablePair<Project.AST.FileSnapshot.Range, String>(range, type);
     }
 
-    public static String getMinerCypher() {
-        return Utils.memoizedReadResource("coevolution_miner.cql");
+    // public static String getMinerCypher() {
+    //     return Utils.memoizedReadResource("coevolution_miner.cql");
+    // }
+
+    public static Map<String, Object> formatCoEvolutionWithEvolutionsAsIds(Map<Evolution, Integer> idsByEvo,
+            CoEvolution coevo) {
+        final Map<String, Object> res = new HashMap<>();
+        // TODO compute a type
+        final List<Map<String, Object>> causes = new ArrayList<>();
+        for (final Evolution cause : coevo.getCauses()) {
+            final Map<String, Object> dr = new HashMap<>();
+            // TODO compute a description
+            Integer id = idsByEvo.get(cause);
+            dr.put("id",id);
+            causes.add(dr);
+        }
+        res.put("causes", causes);
+
+        final List<Map<String, Object>> resolutions = new ArrayList<>();
+        for (final Evolution resolution : coevo.getResolutions()) {
+            final Map<String, Object> dr = new HashMap<>();
+            // TODO compute a description
+            Integer id = idsByEvo.get(resolution);
+            dr.put("id",id);
+            resolutions.add(dr);
+        }
+        res.put("resolutions", resolutions);
+
+        return res;
+    }
+
+    public static Map<String, Object> formatImpactWithRangesAndEvolutionsAsIds(Map<Range, Integer> idsByRange,
+            Map<Evolution, Integer> idsByEvo, EImpact imp) {
+        Map<String, Object> r = new HashMap<>();
+        List<Map<String, Object>> testsSame = new ArrayList<>();
+        r.put("testsSame", testsSame);
+        List<Map<String, Object>> testsChanged = new ArrayList<>();
+        r.put("testsChanged", testsChanged);
+        for (Entry<Range, ImmutablePair<Range, FailureReport>> t : imp.getTests().entrySet()) {
+            final Map<String, Object> test = new HashMap<>();
+            Integer id = idsByRange.get(t.getValue().left);
+            test.put("id", id);
+            if (t.getKey() != t.getValue().left) {
+                testsChanged.add(test);
+                test.put("before", idsByRange.get(t.getKey()));
+            } else {
+                testsSame.add(test);
+            }
+            Map<String, Object> report = basifyReport(t.getValue().right);
+            test.put("report", report);
+        }
+        List<Map<String, Object>> evolutions = new ArrayList<>();
+        r.put("evolutions", evolutions);
+        for (Evolution evo : imp.getEvolutions().keySet()) {
+            Integer id = idsByEvo.get(evo);
+            evolutions.add(Utils.map("id", id));
+        }
+        return r;
+    }
+
+    public static void matchAndGetRangeIds(Map<Range, Integer> idsByRange, List<Map<String, Object>> formatedRanges,
+            Set<Range> keySet, Transaction tx) {
+        if (keySet.size() > 0) {
+            List<Integer> rangesId = tx.run(CYPHER_RANGES_MATCH, parameters("data", formatedRanges))
+                    .list(x -> x.get("id", -1));
+
+            int i = 0;
+            for (Range r : keySet) {
+                idsByRange.put(r, rangesId.get(i));
+                i++;
+            }
+        }
     }
 
     @Override
