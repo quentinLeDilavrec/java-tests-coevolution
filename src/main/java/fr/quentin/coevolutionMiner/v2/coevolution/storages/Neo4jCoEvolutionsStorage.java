@@ -244,7 +244,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                     List<Map<String, Object>> toCreate = new ArrayList<>();
                     Neo4jEvolutionsStorage.matchEvolutions(tx, evoToMatch, matched, toCreate);
 
-                    if (toCreate.size() > 0) {
+                    if (toCreate.size() > 0 || matched.size() != evoKeySet.size()) {
                         throw new RuntimeException("evolutions should have been created");
                     }
 
@@ -294,6 +294,8 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
 
     }
 
+    static final String CYPHER_INITTEST_MERGE = Utils.memoizedReadResource("usingIds/initTest_merge.cql");
+
     class ChunckedUploadInitTests extends Utils.SimpleChunckedUpload<Map<String, Object>> {
         private final Specifier spec;
         private final Map<String, Object> tool;
@@ -307,7 +309,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
 
         @Override
         protected String getCypher() {
-            return Utils.memoizedReadResource("initTest_merge.cql");
+            return CYPHER_INITTEST_MERGE;
         }
 
         @Override
