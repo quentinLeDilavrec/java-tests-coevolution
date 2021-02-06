@@ -13,6 +13,5 @@ WHERE ID(r) = x.id AND rel.description = x.description
 WITH distinct e as e, wanted as wanted, count(distinct r) as s
 WHERE s = size(e.after)
 
-WITH collect(ID(wanted)) as ids
-WITH distinct e as e, (CASE WHEN size(ids)>0 THEN ids[0] ELSE null END) as id
+WITH distinct e as e, head(collect(ID(wanted))) as id
 RETURN id

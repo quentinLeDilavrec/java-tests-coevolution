@@ -19,6 +19,5 @@ WHERE ID(ra) = x.id AND ID(rb) = x.before AND EXISTS((rb)<-[:TEST_FROM]-(ra))
 WITH distinct e as e, wanted as wanted, count(distinct ra) as s
 WHERE s = size(e.testsChanged)
 
-WITH distinct e as e, collect(ID(wanted)) as ids
-WITH distinct e as e, (CASE WHEN size(ids)>0 THEN ids[0] ELSE null END) as id
+WITH distinct e as e, head(collect(ID(wanted))) as id
 RETURN id
