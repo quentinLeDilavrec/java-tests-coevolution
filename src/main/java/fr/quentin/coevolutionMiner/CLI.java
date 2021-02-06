@@ -401,7 +401,7 @@ public class CLI {
                             }
                         } catch (Exception e) {
                             e.printStackTrace();
-                            logger.error("", e, "failed statistics " + srcSpec.repository);
+                            logger.error("failed statistics " + srcSpec.repository, e);
                             break;
                         }
 
@@ -417,7 +417,7 @@ public class CLI {
                                 processCoEvo(commitIdAfter, commitIdBefore);
                             }
                         } catch (Exception e) {
-                            logger.error("", e, "failed evolution analysis " + srcSpec.repository);
+                            logger.error("failed evolution analysis " + srcSpec.repository, e);
                             e.printStackTrace();
                             break;
                         }
@@ -425,8 +425,8 @@ public class CLI {
                     } catch (Throwable e) {
                         final String cA = commitIdAfter;
                         final String cB = commitIdBefore;
-                        logger.error("", e, "failed to analyze the interval [" + cB + "," + cA + "] of "
-                                + srcSpec.repository);
+                        logger.error("failed to analyze the interval [" + cB + "," + cA + "] of "
+                                + srcSpec.repository, e);
                         // break;
                     } finally {
                         if (splitedOut) {
@@ -446,7 +446,7 @@ public class CLI {
                     logger.info(Integer.toString(coevo.getCoEvolutions().size()) + " coevolutions found for "
                             + srcSpec.repository + " from " + commitIdBefore + " to " + commitIdAfter);
                 } catch (Throwable e) {
-                    logger.error("", e, "failed coevolution analysis " + srcSpec.repository);
+                    logger.error("failed coevolution analysis " + srcSpec.repository, e);
                 }
             }
 
@@ -457,7 +457,7 @@ public class CLI {
                     logger.info(Integer.toString(impacts.getPerRootCause().size()) + " impacts found for "
                             + srcSpec.repository + " from " + commitIdBefore + " to " + commitIdAfter);
                 } catch (Throwable e) {
-                    logger.error("", e, "failed impact analysis " + srcSpec.repository);
+                    logger.error("failed impact analysis " + srcSpec.repository, e);
                 }
             }
         }
@@ -695,7 +695,7 @@ public class CLI {
                                     evos = evoH.handle(evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter));
                                     logger.info("done evolution analysis " + s.get(0));
                                 } catch (Throwable e) {
-                                    logger.error("", "failed evolution analysis " + s.get(0), e);
+                                    logger.error("failed evolution analysis " + s.get(0), e);
                                     e.printStackTrace();
                                     break;
                                 } finally {
@@ -821,7 +821,7 @@ public class CLI {
                                     evos = evoH.handle(evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter));
                                     logger.info("done evolution analysis " + s.get(0));
                                 } catch (Throwable e) {
-                                    logger.error("", "failed evolution analysis " + s.get(0), e);
+                                    logger.error("failed evolution analysis " + s.get(0), e);
                                     e.printStackTrace();
                                     break;
                                 } finally {
