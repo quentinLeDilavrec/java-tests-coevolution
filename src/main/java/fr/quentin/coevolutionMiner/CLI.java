@@ -128,6 +128,7 @@ public class CLI {
         options.addOption("c", "commitsMax", true, "number of commits to compute impacts");
         options.addOption(null, "splitOut", false, "split outputs");
         options.addOption(null, "once", false, "compute coevolutions between commit pairs, commits in between are ignored");
+        options.addOption(null, "greedy", false, "search for coevo even if there is no RM evolutions");
         options.addOption("f", "file", true,
                 "a file that contain per line <repo> <stars> <list of important commitId time ordered and starting with the most recent>");
 
@@ -142,6 +143,9 @@ public class CLI {
             }
             if (line.hasOption("splitOut")) {
                 splitedOut = true;
+            }
+            if (line.hasOption("greedy")) {
+                SEARCH_ONLY_IF_RM_FOUND = false;
             }
             if (line.hasOption("once")) {
                 // TODO do something cleaner
@@ -199,6 +203,8 @@ public class CLI {
             }
         System.exit(0);
     }
+
+    static boolean SEARCH_ONLY_IF_RM_FOUND = true;
 
     static boolean splitedOut = false;
 
@@ -403,7 +409,7 @@ public class CLI {
                         try {
                             Evolutions evos = evoH.handle(evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter));
                             logger.info("done evolution analysis " + srcSpec.repository);
-                            if (evos != null && evos.toSet().size() > 0) {
+                            if (!SEARCH_ONLY_IF_RM_FOUND && evos != null && evos.toSet().size() > 0) {
                                 logger.info(Integer.toString(evos.toSet().size()) + " evolutions found for "
                                         + srcSpec.repository + " from " + commitIdBefore + " to " + commitIdAfter);
                                 coevoAnaTried++;
