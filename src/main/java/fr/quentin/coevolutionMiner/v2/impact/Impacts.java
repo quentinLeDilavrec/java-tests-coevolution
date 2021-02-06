@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,7 +20,6 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
-import fr.quentin.coevolutionMiner.v2.impact.Impacts.Impact.DescRange;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.coevolutionMiner.v2.utils.DbUtils;
 import fr.quentin.impactMiner.Position;
@@ -27,7 +28,7 @@ import fr.quentin.coevolutionMiner.v2.ast.Project.AST;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 
-public abstract class Impacts {
+public abstract class Impacts implements Iterable<Impacts.Impact> {
 
     public final Specifier spec;
     protected final Project ast;
@@ -101,7 +102,7 @@ public abstract class Impacts {
         return r;
     }
 
-    protected Map<String, Object> makeRange(DescRange descRange) {
+    protected Map<String, Object> makeRange(Impact.DescRange descRange) {
         return descRange.toMap();
     }
 
@@ -202,7 +203,7 @@ public abstract class Impacts {
         return Collections.unmodifiableMap(impactedTests);
     }
 
-    protected Map<Impact, Impact> impacts = new HashMap<>();
+    protected Map<Impact, Impact> impacts = new LinkedHashMap<>();
     protected Map<Range, Set<Evolution.DescRange>> impactedTests = new HashMap<>();
     protected Map<Object, Set<Impact>> perRoot = new HashMap<>();
 
@@ -404,6 +405,11 @@ public abstract class Impacts {
             Map<String, Object> map = impacts.makeImpact(content, causes, effects);
             return map;
         }
+    }
+
+    @Override
+    public Iterator<Impact> iterator() {
+        return impacts.keySet().iterator();
     }
 
 }
