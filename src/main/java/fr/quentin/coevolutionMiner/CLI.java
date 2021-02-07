@@ -409,7 +409,7 @@ public class CLI {
                         try {
                             Evolutions evos = evoH.handle(evoH.buildSpec(srcSpec, commitIdBefore, commitIdAfter));
                             logger.info("done evolution analysis " + srcSpec.repository);
-                            if (!SEARCH_ONLY_IF_RM_FOUND && evos != null && evos.toSet().size() > 0) {
+                            if (!SEARCH_ONLY_IF_RM_FOUND || evos != null && evos.toSet().size() > 0) {
                                 logger.info(Integer.toString(evos.toSet().size()) + " evolutions found for "
                                         + srcSpec.repository + " from " + commitIdBefore + " to " + commitIdAfter);
                                 coevoAnaTried++;
