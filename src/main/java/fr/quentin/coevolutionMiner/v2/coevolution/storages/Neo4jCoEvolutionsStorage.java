@@ -298,12 +298,10 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
 
     class ChunckedUploadInitTests extends Utils.SimpleChunckedUpload<Map<String, Object>> {
         private final Specifier spec;
-        private final Map<String, Object> tool;
 
         public ChunckedUploadInitTests(Specifier spec, List<Map<String, Object>> processed) {
             super(driver, 10);
             this.spec = spec;
-            tool = Utils.map("name", spec.miner, "version", 0);
             execute(logger, 256, processed);
         }
 
@@ -314,7 +312,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
 
         @Override
         public Value format(Collection<Map<String, Object>> chunk) {
-            return parameters("initTests", chunk, "tool", tool);
+            return parameters("data", chunk);
         }
 
         @Override
