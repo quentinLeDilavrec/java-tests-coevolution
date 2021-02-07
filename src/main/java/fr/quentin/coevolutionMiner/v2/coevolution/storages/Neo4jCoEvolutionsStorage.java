@@ -49,6 +49,7 @@ import fr.quentin.coevolutionMiner.v2.utils.Utils;
 
 public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
     public static Logger logger = LogManager.getLogger();
+    private static final boolean NO_UPDATE = true;
 
     static final String CYPHER_EVOLUTIONS_MATCH = Utils.memoizedReadResource("usingIds/evolutions_match.cql");
     static final String CYPHER_COEVOLUTIONS_MATCH = Utils.memoizedReadResource("usingIds/coevolutions_match.cql");
@@ -108,18 +109,13 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                     for (Evolution evo : keySet) {
                         evoToMatch.add(Neo4jEvolutionsStorage.formatEvolutionWithRangesAsIds(idsByRange, evo));
                     }
-    
+
                     List<Integer> matchedEvoIds = new ArrayList<>();
-                    List<Map<String, Object>> toCreate = new ArrayList<>();
-                    Neo4jEvolutionsStorage.matchEvolutions(tx, evoToMatch, matchedEvoIds, toCreate);
-    
-                    if (toCreate.size() > 0 || matchedEvoIds.size() != keySet.size()) {
-                        throw new RuntimeException("evolutions should have been created");
-                    }
+                    Neo4jEvolutionsStorage.matchExistingEvolutions(tx, evoToMatch, matchedEvoIds);
     
                     int i = 0;
                     for (Evolution r : keySet) {
-                        idsByEvo.put(r, matchedEvoIds.get(i));
+                        idsByEvo.put(r, (Integer) matchedEvoIds.get(i));
                         i++;
                     }
                 }
@@ -130,21 +126,32 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                 }
 
                 Result matchResult = tx.run(CYPHER_COEVOLUTIONS_MATCH, parameters("data", toMatch));
-                List<Integer> evolutionsId = matchResult
+                List<Integer> coevolutionsId = matchResult
                         .list(x -> x.get("id", -1));
-                List<Map<String, Object>> toUpdate = new ArrayList<>();
+                
                 List<Map<String, Object>> toCreate = new ArrayList<>();
-                for (int i = 0; i < evolutionsId.size(); i++) {
-                    Integer id = evolutionsId.get(i);
-                    Map<String, Object> formatedCoEvo = toMatch.get(i);
-                    if (id == -1) {
-                        toCreate.add(formatedCoEvo);
-                    } else {
-                        toUpdate.add(Utils.map("id",id));
+                if (NO_UPDATE) {
+                    for (int i = 0; i < coevolutionsId.size(); i++) {
+                        Integer id = coevolutionsId.get(i);
+                        Map<String, Object> formatedCoEvo = toMatch.get(i);
+                        if (id == -1) {
+                            toCreate.add(formatedCoEvo);
+                        }
                     }
-                }
-                if (toUpdate.size() > 0) {
-                    tx.run(CYPHER_COEVOLUTIONS_UPDATE, parameters("data", toUpdate, "tool", tool)).consume();
+                } else {
+                    List<Map<String, Object>> toUpdate = new ArrayList<>();
+                    for (int i = 0; i < coevolutionsId.size(); i++) {
+                        Integer id = coevolutionsId.get(i);
+                        Map<String, Object> formatedCoEvo = toMatch.get(i);
+                        if (id == -1) {
+                            toCreate.add(formatedCoEvo);
+                        } else {
+                            toUpdate.add(Utils.map("id",id));
+                        }
+                    }
+                    if (toUpdate.size() > 0) {
+                        tx.run(CYPHER_COEVOLUTIONS_UPDATE, parameters("data", toUpdate, "tool", tool)).consume();
+                    }
                 }
                 if (toCreate.size() > 0) {
                     tx.run(CYPHER_COEVOLUTIONS_CREATE, parameters("data", toCreate, "tool", tool)).consume();
@@ -235,17 +242,12 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                         evoToMatch.add(Neo4jEvolutionsStorage.formatEvolutionWithRangesAsIds(idsByRange, evo));
                     }
 
-                    List<Integer> matched = new ArrayList<>();
-                    List<Map<String, Object>> toCreate = new ArrayList<>();
-                    Neo4jEvolutionsStorage.matchEvolutions(tx, evoToMatch, matched, toCreate);
-
-                    if (toCreate.size() > 0 || matched.size() != evoKeySet.size()) {
-                        throw new RuntimeException("evolutions should have been created");
-                    }
-
+                    List<Integer> matchedEvoIds = new ArrayList<>();
+                    Neo4jEvolutionsStorage.matchExistingEvolutions(tx, evoToMatch, matchedEvoIds);
+    
                     int i = 0;
                     for (Evolution r : evoKeySet) {
-                        idsByEvo.put(r, matched.get(i));
+                        idsByEvo.put(r, (Integer) matchedEvoIds.get(i));
                         i++;
                     }
                 }
@@ -257,22 +259,34 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                 }
 
                 Result matchResult = tx.run(CYPHER_IMPACTS_MATCH, parameters("data", toMatch));
-                List<Integer> evolutionsId = matchResult
+                List<Integer> impactssId = matchResult
                         .list(x -> x.get("id", -1));
-                List<Map<String, Object>> toUpdate = new ArrayList<>();
+
                 List<Map<String, Object>> toCreate = new ArrayList<>();
-                for (int i = 0; i < evolutionsId.size(); i++) {
-                    Integer id = evolutionsId.get(i);
-                    Map<String, Object> formatedCoEvo = toMatch.get(i);
-                    if (id == -1) {
-                        toCreate.add(formatedCoEvo);
-                    } else {
-                        toUpdate.add(Utils.map("id",id));
+                if (NO_UPDATE) {
+                    for (int i = 0; i < impactssId.size(); i++) {
+                        Integer id = impactssId.get(i);
+                        Map<String, Object> formatedCoEvo = toMatch.get(i);
+                        if (id == -1) {
+                            toCreate.add(formatedCoEvo);
+                        }
+                    }
+                } else {
+                    List<Map<String, Object>> toUpdate = new ArrayList<>();
+                    for (int i = 0; i < impactssId.size(); i++) {
+                        Integer id = impactssId.get(i);
+                        Map<String, Object> formatedCoEvo = toMatch.get(i);
+                        if (id == -1) {
+                            toCreate.add(formatedCoEvo);
+                        } else {
+                            toUpdate.add(Utils.map("id",id));
+                        }
+                    }
+                    if (toUpdate.size() > 0) {
+                        tx.run(CYPHER_IMPACTS_UPDATE, parameters("data", toUpdate, "tool", tool)).consume();
                     }
                 }
-                if (toUpdate.size() > 0) {
-                    tx.run(CYPHER_IMPACTS_UPDATE, parameters("data", toUpdate, "tool", tool)).consume();
-                }
+
                 if (toCreate.size() > 0) {
                     tx.run(CYPHER_IMPACTS_CREATE, parameters("data", toCreate, "tool", tool)).consume();
                 }

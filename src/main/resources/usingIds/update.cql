@@ -5,6 +5,6 @@ UNWIND data as e
 
 MATCH (wanted)
 WHERE ID(wanted) = e.id
-SET wanted += e.content
+SET wanted += e.more
 
 MERGE (wanted)-[:WAS_MINED_BY]->(t)

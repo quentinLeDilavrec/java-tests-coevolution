@@ -46,6 +46,7 @@ import fr.quentin.coevolutionMiner.v2.impact.ImpactsStorage;
 
 public class Neo4jImpactsStorage implements ImpactsStorage {
     static Logger logger = LogManager.getLogger();
+    private static final boolean NO_UPDATE = true;
     static final int STEP = 512;
     static final int TIMEOUT = 10;
 
@@ -93,21 +94,31 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
                     toMatch.add(formatImpactWithRangesAsIds(idsByRange, evo));
                 }
 
-                List<Integer> toUpdate = new ArrayList<>();
-                List<Map<String, Object>> toCreate = new ArrayList<>();
                 List<Integer> evolutionsId = tx.run(CYPHER_DEPENDENCIES_MATCH, parameters("data", toMatch))
                         .list(x1 -> x1.get("id", -1));
-                for (int i = 0; i < evolutionsId.size(); i++) {
-                    Integer id = evolutionsId.get(i);
-                    Map<String, Object> formatedDep = toMatch.get(i);
-                    if (id == -1) {
-                        toCreate.add(formatedDep);
-                    } else {
-                        toUpdate.add(id);
+                List<Map<String, Object>> toCreate = new ArrayList<>();
+                if (NO_UPDATE) {
+                    for (int i = 0; i < evolutionsId.size(); i++) {
+                        Integer id = evolutionsId.get(i);
+                        Map<String, Object> formatedDep = toMatch.get(i);
+                        if (id == -1) {
+                            toCreate.add(formatedDep);
+                        }
                     }
-                }
-                if (toUpdate.size() > 0) {
-                    tx.run(CYPHER_DEPENDENCIES_UPDATE, parameters("data", toUpdate, "tool", tool)).consume();
+                } else {
+                    List<Map<String, Object>> toUpdate = new ArrayList<>();
+                    for (int i = 0; i < evolutionsId.size(); i++) {
+                        Integer id = evolutionsId.get(i);
+                        Map<String, Object> formatedDep = toMatch.get(i);
+                        if (id == -1) {
+                            toCreate.add(formatedDep);
+                        } else {
+                            toUpdate.add(Utils.map("id",id,"more",formatedDep.get("more")));
+                        }
+                    }
+                    if (toUpdate.size() > 0) {
+                        tx.run(CYPHER_DEPENDENCIES_UPDATE, parameters("data", toUpdate, "tool", tool)).consume();
+                    }
                 }
                 if (toCreate.size() > 0) {
                     tx.run(CYPHER_DEPENDENCIES_CREATE, parameters("data", toCreate, "tool", tool)).consume();

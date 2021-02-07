@@ -51,6 +51,7 @@ import com.google.gson.reflect.TypeToken;
 
 public class Neo4jEvolutionsStorage implements EvolutionsStorage {
     public static Logger logger = LogManager.getLogger();
+    private static final boolean NO_UPDATE = true;
 
     @Override
     public synchronized void put(Specifier evos_spec, Evolutions evolutions) {
@@ -96,11 +97,15 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
                     toMatch.add(formatEvolutionWithRangesAsIds(idsByRange, evo));
                 }
 
-                List<Integer> toUpdate = new ArrayList<>();
                 List<Map<String, Object>> toCreate = new ArrayList<>();
-                matchEvolutions(tx, toMatch, toUpdate, toCreate);
-                if (toUpdate.size() > 0) {
-                    tx.run(CYPHER_EVOLUTIONS_UPDATE, parameters("data", toUpdate, "tool", tool)).consume();
+                if (NO_UPDATE) {
+                    matchEvolutions(tx, toMatch, toCreate);
+                } else {
+                    List<Map<String, Object>> toUpdate = new ArrayList<>();
+                    matchEvolutions(tx, toMatch, toUpdate, toCreate);
+                    if (toUpdate.size() > 0) {
+                        tx.run(CYPHER_EVOLUTIONS_UPDATE, parameters("data", toUpdate, "tool", tool)).consume();
+                    }
                 }
                 if (toCreate.size() > 0) {
                     tx.run(CYPHER_EVOLUTIONS_CREATE, parameters("data", toCreate, "tool", tool)).consume();
@@ -123,53 +128,49 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
 
     }
 
-    public static void matchEvolutions(Transaction tx, List<Map<String, Object>> toMatch, List<Integer> matched,
+    public static void matchEvolutions(Transaction tx, List<Map<String, Object>> toMatch, List<Map<String, Object>> matched,
             List<Map<String, Object>> notMatched) {
         List<Integer> evolutionsId = tx.run(CYPHER_EVOLUTIONS_MATCH, parameters("data", toMatch))
                 .list(x -> x.get("id", -1));
         // List<Evolution> toId = new ArrayList<>();
         for (int i = 0; i < evolutionsId.size(); i++) {
             Integer id = evolutionsId.get(i);
-            Map<String, Object> formatedEvo = toMatch.get(i);
             if (id == -1) {
+                Map<String, Object> formatedEvo = toMatch.get(i);
                 notMatched.add(formatedEvo);
                 // toId.add(chunk.get(i));
             } else {
-                matched.add(id);
+                Map<String, Object> formatedEvo = new HashMap<>();
+                formatedEvo.put("id", id);
+                formatedEvo.put("more", toMatch.get(i).get("more"));
+                matched.add(formatedEvo);
                 // chunk.get(i).neo4jId = id;
             }
         }
     }
 
-    private void putCommits(Specifier evos_spec, Evolutions value) {
-        List<Map<String, Object>> commits = new ArrayList<>();
-        try {
-            for (Commit commit : value.getSources().getCommitsBetween(evos_spec.commitIdBefore,
-                    evos_spec.commitIdAfter)) {
-                Map<String, Object> o = new HashMap<>();
-                o.put("repository", commit.getRepository().getUrl());
-                o.put("sha1", commit.getId());
-                o.put("children", commit.getChildrens().stream().map(x -> x.getId()).collect(Collectors.toList()));
-                o.put("parents", commit.getParents().stream().map(x -> x.getId()).collect(Collectors.toList()));
+    public static void matchExistingEvolutions(Transaction tx, List<Map<String, Object>> toMatch, List<Integer> matched) {
+        List<Integer> evolutionsId = tx.run(CYPHER_EVOLUTIONS_MATCH, parameters("data", toMatch))
+                .list(x -> x.get("id", -1));
+        for (int i = 0; i < evolutionsId.size(); i++) {
+            Integer id = evolutionsId.get(i);
+            if (id == -1) {
+                throw new RuntimeException("all needed evolutions should already be there");
+            } else {
+                matched.add(id);
             }
-        } catch (Exception e1) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
         }
-        try (Session session = driver.session()) {
-            String done = session.writeTransaction(new TransactionWork<String>() {
-                @Override
-                public String execute(Transaction tx) {
-                    Result result2 = tx.run(getCommitCypher(), parameters("commits", commits));
-                    result2.consume();
-                    return "done evolution on " + value.spec.sources.repository;
-                }
-            });
-            logger.info(done);
-        } catch (TransientException e) {
-            e.printStackTrace();
-        } catch (Exception e) {
-            e.printStackTrace();
+    }
+
+    public static void matchEvolutions(Transaction tx, List<Map<String, Object>> toMatch, List<Map<String, Object>> notMatched) {
+        List<Integer> evolutionsId = tx.run(CYPHER_EVOLUTIONS_MATCH, parameters("data", toMatch))
+                .list(x -> x.get("id", -1));
+        for (int i = 0; i < evolutionsId.size(); i++) {
+            Integer id = evolutionsId.get(i);
+            if (id == -1) {
+                Map<String, Object> formatedEvo = toMatch.get(i);
+                notMatched.add(formatedEvo);
+            }
         }
     }
 
