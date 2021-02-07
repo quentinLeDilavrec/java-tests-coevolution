@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,7 @@ import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.TransactionWork;
+import org.neo4j.driver.Value;
 import org.neo4j.driver.exceptions.TransientException;
 
 import fr.quentin.coevolutionMiner.utils.MyProperties;
@@ -38,32 +40,40 @@ import fr.quentin.coevolutionMiner.v2.utils.Utils;
 public class Neo4jProjectStorage implements ProjectStorage {
     public static Logger logger = LogManager.getLogger();
 
-    @Override
-    public <T> void put(Project.Specifier proj_spec, Project<T> value) {
-        List<Map<String, Object>> tmp = new ArrayList<>();
-        // Object commits = null;
+    
+    static final String CYPHER_PROJECTS_MERGE = Utils.memoizedReadResource("usingIds/projects_merge.cql");
 
-        // proj_spec.relPath;
-        extracted(value.spec, value, tmp);
+    class ChunckedUploadProjects extends Utils.SimpleChunckedUpload<Map<String, Object>> {
+        private final Project.Specifier spec;
 
-        try (Session session = driver.session()) {
-            String done = session.writeTransaction(new TransactionWork<String>() {
-                @Override
-                public String execute(Transaction tx) {
-                    Result result = tx.run(getCypher(),
-                            parameters("json", tmp, "tool", value.spec.miner.getSimpleName()));
-                    result.consume();
-                    // Result result2 = tx.run(getCommitCypher(), parameters("commits", commits));
-                    // result2.consume();
-                    return "done project on " + value.spec.sources.repository;
-                }
-            });
-            logger.info(done);
-        } catch (TransientException e) {
-            e.printStackTrace();
-        } catch (Exception e) {
-            e.printStackTrace();
+        public ChunckedUploadProjects(Project.Specifier spec, List<Map<String, Object>> processed) {
+            super(driver, 10);
+            this.spec = spec;
+            execute(logger, 256, processed);
         }
+
+        @Override
+        protected String getCypher() {
+            return CYPHER_PROJECTS_MERGE;
+        }
+
+        @Override
+        public Value format(Collection<Map<String, Object>> chunk) {
+            return parameters("data", chunk);
+        }
+
+        @Override
+        protected String whatIsUploaded() {
+            return "projects of " + spec.sources.repository;
+        }
+
+    }
+
+    @Override
+    public <T> void put(Project.Specifier spec, Project<T> value) {
+        List<Map<String, Object>> tmp = new ArrayList<>();
+        extracted(value.spec, value, tmp);
+        new ChunckedUploadProjects(spec, tmp);
     }
 
     private <T> Map<String, Object> extracted(Project.Specifier proj_spec, Project<T> project,

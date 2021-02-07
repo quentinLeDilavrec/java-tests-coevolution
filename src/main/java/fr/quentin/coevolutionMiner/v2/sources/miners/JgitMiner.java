@@ -24,7 +24,7 @@ public class JgitMiner implements SourcesMiner {
     public JgitMiner(Sources.Specifier spec) {
         this.spec = spec;
     }
-
+    
     @Override
     public Sources compute() {
         return new Sources(spec) {
@@ -38,35 +38,35 @@ public class JgitMiner implements SourcesMiner {
             public List<Sources.Commit> getCommitsBetween(String commitIdBefore, String commitIdAfter)
                     throws Exception {
                 try (SourcesHelper helper = open();) {
-                    Map<String, Sources.Commit> result = new HashMap<>();
+                    Set<Sources.Commit> main = new HashSet<>();
                     ImmutableTriple<RevCommit, Iterable<RevCommit>, RevCommit> tmp0 = helper
                             .getCommitsBetween(commitIdBefore, commitIdAfter);
                     Consumer<? super RevCommit> consumer = x -> {
                         String name = x.getId().getName();
-                        Commit o = result.getOrDefault(name, createCommit(name));
+                        Commit o = getCommit(name);
                         for (RevCommit commit : x.getParents()) {
                             String pname = commit.getId().getName();
-                            Commit p = commits.getOrDefault(pname, createCommit(pname));
-                            commits.putIfAbsent(p.getId(), p);
-                            result.putIfAbsent(p.getId(), p);
+                            Commit p = getCommit(pname);
+                            main.add(p);
                             addParent(o, p);
                         }
-                        commits.putIfAbsent(o.getId(), o);
-                        result.putIfAbsent(o.getId(), o);
+                        main.add(o);
                     };
                     consumer.accept(tmp0.left);
                     tmp0.middle.forEach(consumer);
                     consumer.accept(tmp0.right);
-                    for (Commit commit : result.values()) {
+
+                    for (Commit commit : main) {
                         for (Commit parent : commit.getParents()) {
-                            Commit tmp = result.get(parent.getId());
+                            Commit tmp = getCommit(parent.getId());
                             if (tmp != null) {
                                 addChildren(tmp, commit);
                             }
                         }
                     }
+
                     List<Sources.Commit> rlist = new ArrayList<>();
-                    Sources.Commit curr = result.get(commitIdBefore);
+                    Sources.Commit curr = getCommit(commitIdBefore);
                     while (true) {
                         rlist.add(curr);
                         if (curr.getId().equals(commitIdAfter)) {
@@ -74,7 +74,7 @@ public class JgitMiner implements SourcesMiner {
                         } else {
                             boolean b = true;
                             for (Commit child : curr.getChildrens()) {
-                                if (result.containsKey(child.getId())) {
+                                if (main.contains(child)) {
                                     b = false;
                                     curr = child;
                                 }
@@ -84,6 +84,7 @@ public class JgitMiner implements SourcesMiner {
                             }
                         }
                     }
+                    uploadCommits();
                     return rlist;
                 }
             }

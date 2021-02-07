@@ -105,6 +105,10 @@ public abstract class Sources {
             return Collections.unmodifiableSet(releases);
         }
 
+        public Sources getEnclosingInstance() {
+            return Sources.this;
+        }
+
         @Override
         public int hashCode() {
             final int prime = 31;
@@ -131,27 +135,43 @@ public abstract class Sources {
         }
     }
 
-    protected final Map<String, Commit> commits = new HashMap<>();
+    Set<SourcesStorage> storers = new HashSet<>();
 
-    // TODO remove it when not used anymore i.e Evolution has bee refactored
-    public final Commit temporaryCreateCommit(String id) {
-        return new Commit(id);
+    public void onCommitsUpdate(SourcesStorage storer) {
+        storers.add(storer);
+    }
+
+    private final Map<String, Commit> commits = new HashMap<>();
+    private Set<Commit> updatedRelations = new HashSet<>();
+
+    public final void uploadCommits() {
+        if (updatedRelations.size()>0) {
+            Set<Commit> r = Collections.unmodifiableSet(updatedRelations);
+            updatedRelations = new HashSet<>();
+            for (SourcesStorage storer : storers) {
+                storer.putUpdatedCommits(r);
+            }
+        }
     }
 
     public final Commit getCommit(String id) {
-        return commits.get(id);
-    }
-
-    protected final Commit createCommit(String id) {
-        return new Commit(id);
+        if (commits.containsKey(id)) {
+            return commits.get(id);   
+        } else {
+            return new Commit(id);
+        }
     }
 
     protected final void addParent(Commit x, Commit c) {
-        x.parents.add(c);
+        if (!x.parents.contains(c)) {
+            x.parents.add(c);
+        }
     }
 
     protected final void addChildren(Commit x, Commit c) {
-        x.childrens.add(c);
+        if (!x.childrens.contains(c)) {
+            x.childrens.add(c);
+        }
     }
 
     public class Commit {
