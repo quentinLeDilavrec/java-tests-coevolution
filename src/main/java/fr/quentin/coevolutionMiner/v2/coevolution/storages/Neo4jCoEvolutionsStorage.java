@@ -31,11 +31,6 @@ import org.neo4j.driver.types.Relationship;
 
 import fr.quentin.coevolutionMiner.utils.MyProperties;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
-// import fr.quentin.impactMiner.ImpactAnalysis;
-// import fr.quentin.impactMiner.ImpactChain;
-// import fr.quentin.impactMiner.ImpactElement;
-// import fr.quentin.impactMiner.Position;
-// import fr.quentin.impactMiner.Impacts.Relations;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
