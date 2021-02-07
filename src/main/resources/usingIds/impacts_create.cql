@@ -1,11 +1,13 @@
 WITH $data as data, $tool as tool
 MERGE (t:Tool {name:tool.name, version:tool.version})
+WITH data as data, t as t
 UNWIND data as e
 
 CREATE (wanted:Impact)
 
 CREATE (wanted)-[:WAS_MINED_BY]->(t)
 
+WITH e as e, wanted as wanted
 UNWIND e.evolutions as x
 MATCH (evo:Evolution)
 WHERE ID(evo) = x.id
