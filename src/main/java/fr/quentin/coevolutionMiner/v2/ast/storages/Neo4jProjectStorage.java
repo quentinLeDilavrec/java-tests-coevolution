@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
@@ -34,6 +36,7 @@ import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.coevolutionMiner.v2.utils.Utils;
 
 public class Neo4jProjectStorage implements ProjectStorage {
+    public static Logger logger = LogManager.getLogger();
 
     @Override
     public <T> void put(Project.Specifier proj_spec, Project<T> value) {
@@ -52,10 +55,10 @@ public class Neo4jProjectStorage implements ProjectStorage {
                     result.consume();
                     // Result result2 = tx.run(getCommitCypher(), parameters("commits", commits));
                     // result2.consume();
-                    return "done evolution on " + value.spec.sources.repository;
+                    return "done project on " + value.spec.sources.repository;
                 }
             });
-            System.out.println(done);
+            logger.info(done);
         } catch (TransientException e) {
             e.printStackTrace();
         } catch (Exception e) {
