@@ -16,5 +16,5 @@ WITH distinct wanted as wanted, e as e
 
 UNWIND e.after as dr
 MATCH (r:Range)
-WHERE ID(r) = dr
+WHERE ID(r) = dr.id
 CREATE (wanted)-[:AFTER {description:dr.description}]->(r)
