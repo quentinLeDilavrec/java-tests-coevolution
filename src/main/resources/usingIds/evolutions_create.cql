@@ -1,12 +1,10 @@
 WITH $data as data, $tool as tool
-CREATE (wanted)-[:WAS_MINED_BY]->(t)
+MERGE (t:Tool {name:tool.name, version:tool.version})
 UNWIND data as e
-
-WITH e as e, t
 
 CREATE (wanted:Evolution {type:e.type})
 
-MERGE (t:Tool {name:tool.name, version:tool.version})
+CREATE (wanted)-[:WAS_MINED_BY]->(t)
 
 UNWIND e.before as dr
 MATCH (r:Range)
