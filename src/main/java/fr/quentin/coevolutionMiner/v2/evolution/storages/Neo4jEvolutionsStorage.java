@@ -165,7 +165,7 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
                     return "done evolution on " + value.spec.sources.repository;
                 }
             });
-            System.out.println(done);
+            logger.info(done);
         } catch (TransientException e) {
             e.printStackTrace();
         } catch (Exception e) {
