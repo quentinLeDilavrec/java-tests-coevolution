@@ -1,4 +1,4 @@
-WITH $data as data, $tool as tool
+WITH $data as data
 UNWIND data as e
 
 MERGE (repo:Repository {repository:e.content.repository})
@@ -17,7 +17,7 @@ ON MATCH SET
 MERGE (commit)-[:IS_COMMIT_OF]->(repo)
 MERGE (commit)<-[:CONTAIN_COMMIT]-(repo)
 
-WITH e, tool, repo, commit
+WITH e, repo, commit
 WHERE NOT(e.content.groupId is null OR e.content.artifactId is null)
 
 MERGE (project:Project {
