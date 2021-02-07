@@ -101,7 +101,7 @@ public class Utils {
 						}
 					} else if (step == 1) {
 						throw new RuntimeException(
-								"took too long to upload " + whatIsUploaded() + "even one element is to much");
+								"took too long to upload " + whatIsUploaded() + " even one element is to much");
 					} else {
 						logger.info("took too long to upload " + whatIsUploaded() + " with a chunk of size " + step);
 						step = step / 2;
