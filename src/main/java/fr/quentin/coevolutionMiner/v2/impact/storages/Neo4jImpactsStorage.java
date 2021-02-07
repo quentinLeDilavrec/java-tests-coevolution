@@ -82,7 +82,7 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
                 if (entry.getValue() == -1) {
                     Range r = entry.getKey();
                     keySet.add(r);
-                    formatedRanges.add(r.toMap());
+                    formatedRanges.add(Utils.formatRangeWithType(r));
                 }
             }
             try (Transaction tx = session.beginTransaction(config);) {
