@@ -113,7 +113,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                     List<Map<String, Object>> toCreate = new ArrayList<>();
                     Neo4jEvolutionsStorage.matchEvolutions(tx, evoToMatch, matchedEvoIds, toCreate);
     
-                    if (toCreate.size() > 0) {
+                    if (toCreate.size() > 0 || matchedEvoIds.size() != keySet.size()) {
                         throw new RuntimeException("evolutions should have been created");
                     }
     
