@@ -26,6 +26,7 @@ MATCH (ra:Range)
 WHERE ID(ra) = x.id
 CREATE (wanted)-[imp:IMPACT]->(ra)
 SET imp.failureLog = x.report.what, imp.failWhere = x.report.`where`, imp.failWhen = x.report.`when`
+WITH wanted as wanted, x as x
 MATCH (rb:Range)
 WHERE ID(rb) = x.before
 MERGE (wanted)-[:TEST_BEFORE]->(rb)
