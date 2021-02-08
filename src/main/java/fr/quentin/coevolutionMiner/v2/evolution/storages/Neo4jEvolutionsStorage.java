@@ -155,7 +155,7 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
         for (int i = 0; i < evolutionsId.size(); i++) {
             Integer id = evolutionsId.get(i);
             if (id == -1) {
-                throw new RuntimeException("all needed evolutions should already be there");
+                throw new RuntimeException("all needed evolutions should already be there for:\n" + parameters("data", toMatch).toString());
             } else {
                 matched.add(id);
             }
