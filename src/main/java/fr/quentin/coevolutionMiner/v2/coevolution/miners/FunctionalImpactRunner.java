@@ -1,6 +1,8 @@
 package fr.quentin.coevolutionMiner.v2.coevolution.miners;
 
 import java.io.File;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -214,7 +216,9 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
                 FileUtils.deleteQuietly(toRemove.toFile());
             }
         } catch (Exception e) {
-            return new EImpact.FailureReport(e.toString(), null, "App compiling");
+            StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            return new EImpact.FailureReport(sw.toString(), null, "Serializing");
         }
         return null;
     }
