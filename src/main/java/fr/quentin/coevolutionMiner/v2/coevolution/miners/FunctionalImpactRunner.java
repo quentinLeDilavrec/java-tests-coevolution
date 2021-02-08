@@ -140,6 +140,7 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
         private static String executeTest(File baseDir, String declaringClass, String name) throws Exception {
             StringBuffer r = new StringBuffer();
             FunctionalImpactRunner.logger.debug("Launching test: " + declaringClass + "#" + name);
+            r.append("$ maven test -Dtest=" + declaringClass + "#" + name + "\n");
             InvocationResult res = SourcesHelper.executeTests(baseDir, declaringClass + "#" + name, x -> {
                 r.append(x + "\n");
             });
@@ -295,12 +296,17 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
             Range testAfterB = evolutionsAtProj.getAfterProj().getRange(elePath, position.getSourceStart(),
                     position.getSourceEnd());
             if (testAfterB == null)
-                throw new RuntimeException();
+                throw new RuntimeException("missing match of test");
             if (testAfter != null) {
                 if (!testAfterB.equals(testAfter)) {
-                    logger.info("not sure about wich method is the test after the evolutions are applied.");
+                    logger.info("not sure about which method is the test after the evolutions are applied");
+                    try {
+                    logger.info("testAfterB: "+testAfterB.getOriginal().toString());
+                    logger.info("testAfter: "+testAfter.getOriginal().toString());
+                    } catch (Exception e) {
+                    }
                 }
-                this.testToExec = this.testAfter;
+                this.testToExec = testAfterB; //TODO this.testAfter should be ok but it is not always the case
             } else {
                 this.testToExec = testAfterB;
             }
