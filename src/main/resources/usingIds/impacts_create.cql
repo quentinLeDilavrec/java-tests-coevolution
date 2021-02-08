@@ -15,7 +15,7 @@ CALL apoc.do.when(
   evo IS NOT NULL,
   'CREATE (wanted)-[:APPLY]->(evo)',
   '',
-  {wanted:wanted, evo:evo})
+  {wanted:wanted, evo:evo}) YIELD value
 WITH distinct wanted as wanted, e as e
 
 UNWIND e.testsSame as x
@@ -25,7 +25,7 @@ CALL apoc.do.when(
   r IS NOT NULL,
   '(wanted)-[imp:IMPACT]->(r) SET imp.failureLog = x.report.what, imp.failWhere = x.report.`where`, imp.failWhen = x.report.`when`',
   '',
-  {wanted:wanted, r:r, x:x})
+  {wanted:wanted, r:r, x:x}) YIELD value
 CREATE 
 
 WITH distinct wanted as wanted, e as e
