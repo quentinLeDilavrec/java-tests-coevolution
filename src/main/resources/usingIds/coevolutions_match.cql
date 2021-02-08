@@ -1,13 +1,13 @@
 WITH $data as data
 UNWIND data as e
 
-UNWIND e.causes as evoId
+UNWIND (CASE WHEN size(e.causes)>0 THEN e.causes ELSE [{id:-1}] END) as evoId
 OPTIONAL MATCH (evo:Evolution)<-[rel:CAUSE]-(wanted:CoEvolution)
 WHERE ID(evo) = evoId
 WITH distinct e as e, wanted as wanted, count(distinct evo) as s
 WITH distinct e as e, (CASE WHEN s = size(e.causes) THEN wanted ELSE null END) as wanted
 
-UNWIND e.resolutions as evoId
+UNWIND (CASE WHEN size(e.resolutions)>0 THEN e.resolutions ELSE [{id:-1}] END) as evoId
 OPTIONAL MATCH (evo:Evolution)<-[rel:RESOLUTION]-(wanted:CoEvolution)
 WHERE ID(evo) = evoId
 WITH distinct e as e, wanted as wanted, count(distinct evo) as s

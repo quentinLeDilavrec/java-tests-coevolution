@@ -253,9 +253,13 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                 }
 
                 List<Map<String, Object>> toMatch = new ArrayList<>();
+                Set<Map<String, Object>> toMatchS = new HashSet<>();
 
                 for (EImpact imp : chunk) {
-                    toMatch.add(formatImpactWithRangesAndEvolutionsAsIds(idsByTest, idsByEvo, imp));
+                    Map<String, Object> f = formatImpactWithRangesAndEvolutionsAsIds(idsByTest, idsByEvo, imp);
+                    if (!toMatchS.contains(f)) {
+                        toMatch.add(f);
+                    }
                 }
 
                 Result matchResult = tx.run(CYPHER_IMPACTS_MATCH, parameters("data", toMatch));
