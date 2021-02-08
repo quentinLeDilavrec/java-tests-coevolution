@@ -158,7 +158,9 @@ public abstract class Sources {
         if (commits.containsKey(id)) {
             return commits.get(id);   
         } else {
-            return new Commit(id);
+            Commit commit = new Commit(id);
+            commits.put(id, commit);
+            return commit;
         }
     }
 
