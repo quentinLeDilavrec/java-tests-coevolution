@@ -232,6 +232,8 @@ public class MyImpactsMiner implements ImpactsMiner {
                         // targ.getEnd());
                         if (ori == null) {
                             logger.warn("no original element found at " + targ);
+                        } else if (ori.getPosition() == null || !ori.getPosition().isValidPosition()) {
+                            logger.warn("no valid position found for " + ori.getClass().toString() + " " + targ);
                         } else {
                             tmp.add(new ImmutablePair<>(bef, ori));
                         }
