@@ -114,9 +114,9 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             }
             case PER_COMMIT:
             default: {
-        EvolutionsMany result = new EvolutionsMany(spec, src);
-        return result.compute();
-    }
+                EvolutionsMany result = new EvolutionsMany(spec, src);
+                return result.compute();
+            }
         }
     }
 
@@ -204,7 +204,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         }
 
         public class EvolutionsAtProj extends EvolutionsImpl {
-            
+
             List<EvolutionsAtProj> modules = new ArrayList<>();
             private Diff diff = null;
             private MultiDiffImpl mdiff = null;
@@ -394,6 +394,10 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     ImmutablePair<Range, String> rangeBef = toRange(astBefore, target, "", beforeVersion);
                     if (rangeBef != null)
                         before.add(rangeBef);
+                }
+                if (before.size()==0 && after.size()==0) {
+                    LOGGER.error("an evolution should point on at least one range");
+                    return;
                 }
                 Evolution evo = super.addEvolution(op.getName(), before, after, astBefore.commit, astAfter.commit,
                         (Object) op);
@@ -928,6 +932,22 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
      * of the path must have all its Commit wrapped as VersionCommit
      */
     public static class VersionCommit implements Version {
+        public class LRU<K, V> extends LinkedHashMap<K, V> {
+            private final int limit;
+
+            public LRU(int limit) {
+                super(limit, 1.0f, true);
+                this.limit = limit - 1;
+            }
+
+            @Override
+            protected boolean removeEldestEntry(java.util.Map.Entry<K, V> eldest) {
+                return (size() > this.limit);
+            }
+        }
+
+        LRU<VersionCommit, Boolean> isAncestor = new LRU<>(1 << 4);
+        LRU<VersionCommit, Boolean> isDescendant = new LRU<>(1 << 4);
 
         @Override
         public COMP_RES partiallyCompareTo(Version other) {
@@ -948,16 +968,22 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         }
 
         private boolean isDescendant(VersionCommit o) {
+            if (isDescendant.containsKey(o)) {
+                return isDescendant.get(o);
+            }
             for (Commit x : this.commit.getChildrens()) {
                 VersionCommit y = commitsToVersions.get(x);
                 if (y == null) {
                     continue;
                 } else if (o == y) {
+                    isDescendant.put(o, true);
                     return true;
                 } else if (y.isDescendant(o)) {
+                    isDescendant.put(o, true);
                     return true;
                 }
             }
+            isDescendant.put(o, false);
             return false;
         }
 
