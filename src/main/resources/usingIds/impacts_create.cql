@@ -25,7 +25,7 @@ CALL apoc.do.when(
   r IS NOT NULL,
   '(wanted)-[imp:IMPACT]->(r) SET imp.failureLog = x.report.what, imp.failWhere = x.report.`where`, imp.failWhen = x.report.`when`',
   '',
-  {wanted:wanted, r:r})
+  {wanted:wanted, r:r, x:x})
 CREATE 
 
 WITH distinct wanted as wanted, e as e

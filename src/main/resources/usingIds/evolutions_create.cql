@@ -15,7 +15,7 @@ CALL apoc.do.when(
   r IS NOT NULL,
   'CREATE (wanted)-[:BEFORE {description:dr.description}]->(r)',
   '',
-  {wanted:wanted, r:r})
+  {wanted:wanted, r:r, dr:dr})
 
 WITH distinct wanted as wanted, e as e
 
