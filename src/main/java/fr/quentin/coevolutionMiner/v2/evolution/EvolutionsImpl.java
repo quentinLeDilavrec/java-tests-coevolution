@@ -37,6 +37,9 @@ public class EvolutionsImpl extends Evolutions {
     protected final Evolution addEvolution(final String type, final List<ImmutablePair<Range, String>> before,
             final List<ImmutablePair<Range, String>> after, final Commit commitBefore, final Commit commitAfter,
             final Object original) {
+        if (before.size()==0 && after.size()==0) {
+            throw new RuntimeException("an evolution should point on at least one range");
+        }
         final Evolution evo = new Evolutions.Evolution(original, type, commitBefore, commitAfter);
         for (final ImmutablePair<Range, String> immutablePair : before) {
             evo.addBefore(immutablePair.getLeft(), immutablePair.getRight());
