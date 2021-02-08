@@ -13,8 +13,8 @@ OPTIONAL MATCH (r:Range)
 WHERE ID(r) = dr.id
 CALL apoc.do.when(
   r IS NOT NULL,
-  'CREATE (wanted)-[:BEFORE {description:dr.description}]->(r)',
-  '',
+  'CREATE (wanted)-[:BEFORE {description:dr.description}]->(r) RETURN null',
+  'RETURN null',
   {wanted:wanted, r:r, dr:dr}) YIELD value
 
 WITH distinct wanted as wanted, e as e

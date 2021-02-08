@@ -13,8 +13,8 @@ OPTIONAL MATCH (evo:Evolution)
 WHERE ID(evo) = x.id
 CALL apoc.do.when(
   evo IS NOT NULL,
-  'CREATE (wanted)-[:APPLY]->(evo)',
-  '',
+  'CREATE (wanted)-[:APPLY]->(evo) RETURN null',
+  'RETURN null',
   {wanted:wanted, evo:evo}) YIELD value
 WITH distinct wanted as wanted, e as e
 
@@ -23,10 +23,9 @@ MATCH (r:Range)
 WHERE ID(r) = x.id
 CALL apoc.do.when(
   r IS NOT NULL,
-  '(wanted)-[imp:IMPACT]->(r) SET imp.failureLog = x.report.what, imp.failWhere = x.report.`where`, imp.failWhen = x.report.`when`',
-  '',
+  'CREATE (wanted)-[imp:IMPACT]->(r) SET imp.failureLog = x.report.what, imp.failWhere = x.report.`where`, imp.failWhen = x.report.`when` RETURN null',
+  'RETURN null',
   {wanted:wanted, r:r, x:x}) YIELD value
-CREATE 
 
 WITH distinct wanted as wanted, e as e
 
