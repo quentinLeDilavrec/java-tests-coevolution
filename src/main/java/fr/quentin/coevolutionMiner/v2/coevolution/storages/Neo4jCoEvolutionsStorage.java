@@ -104,7 +104,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                         }
                     }
                     matchAndGetRangeIds(idsByRange, formatedRanges2, keySetRForEvos, tx);
-    
+
                     List<Map<String, Object>> evoToMatch = new ArrayList<>();
                     for (Evolution evo : keySet) {
                         evoToMatch.add(Neo4jEvolutionsStorage.formatEvolutionWithRangesAsIds(idsByRange, evo));
@@ -112,23 +112,22 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
 
                     List<Integer> matchedEvoIds = new ArrayList<>();
                     Neo4jEvolutionsStorage.matchExistingEvolutions(tx, evoToMatch, matchedEvoIds);
-    
+
                     int i = 0;
                     for (Evolution r : keySet) {
                         idsByEvo.put(r, (Integer) matchedEvoIds.get(i));
                         i++;
                     }
                 }
-    
+
                 List<Map<String, Object>> toMatch = new ArrayList<>();
                 for (CoEvolution coevo : chunk) {
                     toMatch.add(formatCoEvolutionWithEvolutionsAsIds(idsByEvo, coevo));
                 }
 
                 Result matchResult = tx.run(CYPHER_COEVOLUTIONS_MATCH, parameters("data", toMatch));
-                List<Integer> coevolutionsId = matchResult
-                        .list(x -> x.get("id", -1));
-                
+                List<Integer> coevolutionsId = matchResult.list(x -> x.get("id", -1));
+
                 List<Map<String, Object>> toCreate = new ArrayList<>();
                 if (NO_UPDATE) {
                     for (int i = 0; i < coevolutionsId.size(); i++) {
@@ -146,7 +145,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                         if (id == -1) {
                             toCreate.add(formatedCoEvo);
                         } else {
-                            toUpdate.add(Utils.map("id",id));
+                            toUpdate.add(Utils.map("id", id));
                         }
                     }
                     if (toUpdate.size() > 0) {
@@ -244,7 +243,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
 
                     List<Integer> matchedEvoIds = new ArrayList<>();
                     Neo4jEvolutionsStorage.matchExistingEvolutions(tx, evoToMatch, matchedEvoIds);
-    
+
                     int i = 0;
                     for (Evolution r : evoKeySet) {
                         idsByEvo.put(r, (Integer) matchedEvoIds.get(i));
@@ -263,8 +262,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                 }
 
                 Result matchResult = tx.run(CYPHER_IMPACTS_MATCH, parameters("data", toMatch));
-                List<Integer> impactssId = matchResult
-                        .list(x -> x.get("id", -1));
+                List<Integer> impactssId = matchResult.list(x -> x.get("id", -1));
 
                 List<Map<String, Object>> toCreate = new ArrayList<>();
                 if (NO_UPDATE) {
@@ -283,7 +281,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                         if (id == -1) {
                             toCreate.add(formatedCoEvo);
                         } else {
-                            toUpdate.add(Utils.map("id",id));
+                            toUpdate.add(Utils.map("id", id));
                         }
                     }
                     if (toUpdate.size() > 0) {
@@ -371,7 +369,6 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         }
         return report;
     }
-
 
     private final Driver driver;
     private ProjectHandler astHandler;
@@ -570,7 +567,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
             final Map<String, Object> dr = new HashMap<>();
             // TODO compute a description
             Integer id = idsByEvo.get(cause);
-            dr.put("id",id);
+            dr.put("id", id);
             causes.add(dr);
         }
         res.put("causes", causes);
@@ -580,7 +577,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
             final Map<String, Object> dr = new HashMap<>();
             // TODO compute a description
             Integer id = idsByEvo.get(resolution);
-            dr.put("id",id);
+            dr.put("id", id);
             resolutions.add(dr);
         }
         res.put("resolutions", resolutions);
