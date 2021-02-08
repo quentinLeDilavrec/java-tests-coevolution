@@ -622,6 +622,9 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
 
             int i = 0;
             for (Range r : keySet) {
+                if (rangesId.get(i)==-1) {
+                    throw new RuntimeException("all needed ranges should already be there");
+                }
                 idsByRange.put(r, rangesId.get(i));
                 i++;
             }
