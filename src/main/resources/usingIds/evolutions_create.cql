@@ -8,10 +8,15 @@ CREATE (wanted:Evolution {type:e.type})
 CREATE (wanted)-[:WAS_MINED_BY]->(t)
 
 WITH e as e, wanted as wanted
-UNWIND e.before as dr
-MATCH (r:Range)
+UNWIND (CASE WHEN size(e.before)>0 THEN e.before ELSE [{id:-1}] END) as dr
+OPTIONAL MATCH (r:Range)
 WHERE ID(r) = dr.id
-CREATE (wanted)-[:BEFORE {description:dr.description}]->(r)
+CALL apoc.do.when(
+  r IS NOT NULL,
+  'CREATE (wanted)-[:BEFORE {description:dr.description}]->(r)',
+  '',
+  {wanted:wanted, r:r})
+
 WITH distinct wanted as wanted, e as e
 
 UNWIND e.after as dr

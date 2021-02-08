@@ -8,17 +8,26 @@ CREATE (wanted:Impact)
 CREATE (wanted)-[:WAS_MINED_BY]->(t)
 
 WITH e as e, wanted as wanted
-UNWIND e.evolutions as x
-MATCH (evo:Evolution)
+UNWIND CASE WHEN size(e.evolutions)>0 THEN e.evolutions ELSE [{id:-1}] END) as x
+OPTIONAL MATCH (evo:Evolution)
 WHERE ID(evo) = x.id
-CREATE (wanted)-[:APPLY]->(evo)
+CALL apoc.do.when(
+  evo IS NOT NULL,
+  'CREATE (wanted)-[:APPLY]->(evo)',
+  '',
+  {wanted:wanted, evo:evo})
 WITH distinct wanted as wanted, e as e
 
 UNWIND e.testsSame as x
 MATCH (r:Range)
 WHERE ID(r) = x.id
-CREATE (wanted)-[imp:IMPACT]->(r)
-SET imp.failureLog = x.report.what, imp.failWhere = x.report.`where`, imp.failWhen = x.report.`when`
+CALL apoc.do.when(
+  r IS NOT NULL,
+  '(wanted)-[imp:IMPACT]->(r) SET imp.failureLog = x.report.what, imp.failWhere = x.report.`where`, imp.failWhen = x.report.`when`',
+  '',
+  {wanted:wanted, r:r})
+CREATE 
+
 WITH distinct wanted as wanted, e as e
 
 UNWIND e.testsChanged as x
