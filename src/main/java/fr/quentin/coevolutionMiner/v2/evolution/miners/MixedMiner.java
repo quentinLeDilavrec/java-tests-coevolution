@@ -163,7 +163,7 @@ public class MixedMiner implements EvolutionsMiner {
     public Evolutions compute() {
         Sources src = srcHandler.handle(spec.sources);
         Evolutions rmEvos = evolutionHandler.handle(rmMinerSpec);
-        GumTreeSpoonMiner.EvolutionsMany gtsEvos = (GumTreeSpoonMiner.EvolutionsMany) evolutionHandler
+        Evolutions gtsEvos = evolutionHandler
                 .handle(gtsMinerSpec);
 
         return new EvolutionsExtension(spec, src, rmEvos, gtsEvos);
