@@ -946,8 +946,8 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             }
         }
 
-        LRU<VersionCommit, Boolean> isAncestor = new LRU<>(1 << 4);
-        LRU<VersionCommit, Boolean> isDescendant = new LRU<>(1 << 4);
+        // LRU<VersionCommit, Boolean> isAncestor = new LRU<>(1 << 4);
+        // LRU<VersionCommit, Boolean> isDescendant = new LRU<>(1 << 4);
 
         @Override
         public COMP_RES partiallyCompareTo(Version other) {
@@ -968,22 +968,22 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         }
 
         private boolean isDescendant(VersionCommit o) {
-            if (isDescendant.containsKey(o)) {
-                return isDescendant.get(o);
-            }
+            // if (isDescendant.containsKey(o)) {
+            //     return isDescendant.get(o);
+            // }
             for (Commit x : this.commit.getChildrens()) {
                 VersionCommit y = commitsToVersions.get(x);
                 if (y == null) {
                     continue;
                 } else if (o == y) {
-                    isDescendant.put(o, true);
+                    // isDescendant.put(o, true);
                     return true;
                 } else if (y.isDescendant(o)) {
-                    isDescendant.put(o, true);
+                    // isDescendant.put(o, true);
                     return true;
                 }
             }
-            isDescendant.put(o, false);
+            // isDescendant.put(o, false);
             return false;
         }
 
