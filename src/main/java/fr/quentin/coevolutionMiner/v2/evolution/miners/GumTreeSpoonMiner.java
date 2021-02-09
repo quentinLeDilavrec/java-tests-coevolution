@@ -80,7 +80,7 @@ import spoon.reflect.path.CtPath;
 import spoon.reflect.reference.CtReference;
 
 public class GumTreeSpoonMiner implements EvolutionsMiner {
-    Logger LOGGER = LogManager.getLogger();
+    Logger logger = LogManager.getLogger();
 
     private ProjectHandler astHandler;
     private SourcesHandler srcHandler;
@@ -323,7 +323,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     ((DiffImpl) diff).getComposed().forEach(op -> {
                         addComposedEvolution(op, beforeProj, afterProj);
                         try {
-                            LOGGER.info("O- " + op + "\n");
+                            logger.info("O- " + op + "\n");
                         } catch (Exception e) {
                         }
                     });
@@ -333,7 +333,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                         //     addEvolution(op, beforeProj, afterProj);
                         // }
                         try {
-                            LOGGER.info("O- " + op + "\n");
+                            logger.info("O- " + op + "\n");
                         } catch (Exception e) {
                         }
 
@@ -396,7 +396,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                         before.add(rangeBef);
                 }
                 if (before.size()==0 && after.size()==0) {
-                    LOGGER.error("an evolution should point on at least one range");
+                    logger.error("an evolution should point on at least one range");
                     return;
                 }
                 Evolution evo = super.addEvolution(op.getName(), before, after, astBefore.commit, astAfter.commit,
@@ -415,6 +415,10 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 List<ImmutablePair<Range, String>> after = new ArrayList<>();
 
                 addComposedEvolutionAux(op, astBefore, astAfter, before, after, null);
+                if (before.size()==0 && after.size()==0) {
+                    logger.error("an evolution should point on at least one range");
+                    return;
+                }
                 Evolution evo = super.addEvolution(op.getName(), before, after, astBefore.commit, astAfter.commit,
                         (Object) op);
                 for (DescRange dr : evo.getBefore()) {
