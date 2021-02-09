@@ -123,7 +123,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
 
     public ProjectSpoon compute() {
         logger.traceEntry("Compute()");
-        Sources src = srcHandler.handle(spec.sources, "JGit");
+        Sources src = srcHandler.handle(spec.sources);
         try (SourcesHelper helper = src.open();) {
             Path root = helper.materialize(spec.commitId);
             // Compile with maven

@@ -75,7 +75,7 @@ public class RefactoringMiner implements EvolutionsMiner {
 
     @Override
     public Evolutions compute() {
-        Sources src = srcHandler.handle(spec.sources, "jgit");
+        Sources src = srcHandler.handle(spec.sources);
         try {
             // TODO remove that, after fix the need to init things it inits
             List<Sources.Commit> commits = src.getCommitsBetween(spec.commitIdBefore, spec.commitIdAfter);

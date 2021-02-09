@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.VersionCommit;
 
 public abstract class Sources {
 
@@ -159,6 +160,7 @@ public abstract class Sources {
             return commits.get(id);   
         } else {
             Commit commit = new Commit(id);
+            VersionCommit.build(commit);
             commits.put(id, commit);
             return commit;
         }

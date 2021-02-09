@@ -33,6 +33,10 @@ public class SourcesHandler implements AutoCloseable {
         return neo4jStore;
     }
 
+    public Sources handle(Sources.Specifier spec) {
+        return handle(spec, "Neo4j");
+    }
+    
     public Sources handle(Sources.Specifier spec, String storeName) {
         Sources res = null;
         memoizedSources.putIfAbsent(spec, new Data<>());
@@ -47,10 +51,9 @@ public class SourcesHandler implements AutoCloseable {
             SourcesStorage db = null;
             switch (storeName) {
                 case "Neo4j":
+                default:
                     db = neo4jStore;
                     res = db.get(spec);
-                    break;
-                default:
                     break;
             }
 

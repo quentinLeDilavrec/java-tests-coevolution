@@ -161,7 +161,7 @@ public class MixedMiner implements EvolutionsMiner {
 
     @Override
     public Evolutions compute() {
-        Sources src = srcHandler.handle(spec.sources, "jgit");
+        Sources src = srcHandler.handle(spec.sources);
         Evolutions rmEvos = evolutionHandler.handle(rmMinerSpec);
         GumTreeSpoonMiner.EvolutionsMany gtsEvos = (GumTreeSpoonMiner.EvolutionsMany) evolutionHandler
                 .handle(gtsMinerSpec);

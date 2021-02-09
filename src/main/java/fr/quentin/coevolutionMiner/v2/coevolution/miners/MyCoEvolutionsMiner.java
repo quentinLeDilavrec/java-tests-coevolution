@@ -46,10 +46,10 @@ import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution.DescRange;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.MixedMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.VersionCommit;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsAtCommit;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsAtCommit.EvolutionsAtProj;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsMany;
-import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.VersionCommit;
 import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts;
 import fr.quentin.coevolutionMiner.v2.impact.Impacts.Impact;
@@ -164,7 +164,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
     @Override
     public CoEvolutions compute() {
         assert spec.evoSpec != null : spec;
-        Sources sourcesProvider = srcHandler.handle(spec.evoSpec.sources, "JGit");
+        Sources sourcesProvider = srcHandler.handle(spec.evoSpec.sources);
         String initialCommitId = spec.evoSpec.commitIdBefore;
         switch (spanning) {
             case ONCE: {
@@ -734,7 +734,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     testAfter = GumTreeSpoonMiner.toRange(projectAfter, treeTestAfter, afterVersion);
 
                     if (testBefore == null) {
-                        // For now we cannnot handle such ndeleted test
+                        // For now we cannnot handle such deleted test
                         try {
                             logger.info("deleted test ignored: " + ((CtMethod) testAfter).getSignature());
                         } catch (Exception e) {
@@ -873,7 +873,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 Set<InterestingCase> tmpIntereSet = new HashSet<>();
                 for (InterestingCase c : this.interestingCases.get(k)) {
                     InterestingCase curr = new InterestingCase();
-                    curr.evosForThisTest = new LinkedHashSet<>(k.toSet()); // k only contain evos from gts
+                    curr.evosForThisTest = new LinkedHashSet<>(k.toSet()); // k only contains evos from gts
                     curr.evosForThisTest.addAll(evoPerProj.get(k)); //  evoPerProj only contains impacting evos
                     // need RefactoringMiner evos ?
                     curr.testBefore = c.testBefore;

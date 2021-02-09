@@ -388,7 +388,7 @@ public class CLI {
 
                         // try to build the ast and to some stats
                         try {
-                            Sources src = srcH.handle(srcSpec, "JGit");
+                            Sources src = srcH.handle(srcSpec);
                             try {
                                 src.getCommitsBetween(commitIdBefore, commitIdAfter);
                             } catch (MissingObjectException e) {
@@ -539,7 +539,7 @@ public class CLI {
 
                         // try to build the ast and do some stats
                         try {
-                            Sources src = srcH.handle(srcSpec, "JGit");
+                            Sources src = srcH.handle(srcSpec);
                             try {
                                 src.getCommitsBetween(commitIdBefore, commitIdAfter);
                             } catch (MissingObjectException e) {
@@ -678,7 +678,7 @@ public class CLI {
 
                                 try { // https://github.com/chrisbanes/Android-PullToRefresh/commit/1f7a7e1daf89167b11166180d96bac54a9306c80
                                       // evos = spoon compile + count tests/methods/class
-                                    Sources src = srcH.handle(srcSpec, "JGit");
+                                    Sources src = srcH.handle(srcSpec);
                                     src.getCommitsBetween(commitIdBefore, commitIdAfter);
                                     Project<CtElement> project = astH.handle(astH.buildSpec(srcSpec, commitIdBefore));
                                     printThings(s.get(0), commitIdBefore, project);
@@ -804,7 +804,7 @@ public class CLI {
 
                                 try { // https://github.com/chrisbanes/Android-PullToRefresh/commit/1f7a7e1daf89167b11166180d96bac54a9306c80
                                       // evos = spoon compile + count tests/methods/class
-                                    Sources src = srcH.handle(srcSpec, "JGit");
+                                    Sources src = srcH.handle(srcSpec);
                                     src.getCommitsBetween(commitIdBefore, commitIdAfter);
                                     Project<CtElement> project = astH.handle(astH.buildSpec(srcSpec, commitIdBefore));
                                     printThings(s.get(0), commitIdBefore, project);

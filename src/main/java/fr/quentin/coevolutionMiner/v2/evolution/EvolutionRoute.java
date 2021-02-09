@@ -77,7 +77,7 @@ public class EvolutionRoute implements Route {
             Sources.Specifier srcSpec = sourcesHandler.buildSpec(body.repo);
             System.out.println(body.commitIdBefore);
             if (body.commitIdBefore == null) {
-                try (SourcesHelper helper = sourcesHandler.handle(srcSpec, "JGit").open();) {
+                try (SourcesHelper helper = sourcesHandler.handle(srcSpec).open();) {
                     body.commitIdBefore = helper.getBeforeCommit(body.commitIdAfter);
                 } catch (Exception e) {
                     throw new RuntimeException(e);

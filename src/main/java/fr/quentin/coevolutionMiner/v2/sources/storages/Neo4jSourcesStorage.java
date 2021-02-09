@@ -39,22 +39,24 @@ import fr.quentin.coevolutionMiner.v2.utils.Utils;
 public class Neo4jSourcesStorage implements SourcesStorage {
     public static Logger logger = LogManager.getLogger();
 
+    static final String CYPHER_REPOSITORY_MERGE = Utils.memoizedReadResource("usingIds/repository_merge.cql");
+
     @Override
     public void put(Sources sources) {
         Map<String, Object> value = new HashMap<>();
         Repository adfa = sources.getRepository();
-        value.put("url", adfa.getUrl());
+        value.put("repository", adfa.getUrl());
         value.put("releases", adfa.getReleases());
         try (Session session = driver.session()) {
             String done = session.writeTransaction(new TransactionWork<String>() {
                 @Override
                 public String execute(Transaction tx) {
-                    Result result = tx.run(getCypher(), value);
+                    Result result = tx.run(CYPHER_REPOSITORY_MERGE, value);
                     result.consume();
-                    return "done pushing sources metadata of " + sources.spec.repository;
+                    return "repository of " + sources.spec.repository + "1/1";
                 }
             });
-            System.out.println(done);
+            logger.info(done);
         } catch (TransientException e) {
             e.printStackTrace();
         } catch (Exception e) {
@@ -66,28 +68,27 @@ public class Neo4jSourcesStorage implements SourcesStorage {
 
     @Override
     public Sources get(Sources.Specifier spec) {
-        Map<String, Object> value = new HashMap<>();
-        value.put("url", spec.repository);
-        SourcesMiner inst = SourcesHandler.minerBuilder(spec);
-        Sources res = inst.compute();
-        try (Session session = driver.session()) {
-            List<String> releases = session.readTransaction(new TransactionWork<List<String>>() {
-                @Override
-                public List<String> execute(Transaction tx) {
-                    Result result = tx.run(getMiner(), value);
-                    return result.list(x -> x.get("releases").asString());
-                }
-            });
-            res.getRepository().addReleases(releases);
-        } catch (TransientException e) {
-            e.printStackTrace();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return res;
-    }
-    
-    
+        return null;
+        // Map<String, Object> value = new HashMap<>();
+        // value.put("url", spec.repository);
+        // SourcesMiner inst = SourcesHandler.minerBuilder(spec);
+        // Sources res = inst.compute();
+        // try (Session session = driver.session()) {
+        //     List<String> releases = session.readTransaction(new TransactionWork<List<String>>() {
+        //         @Override
+        //         public List<String> execute(Transaction tx) {
+        //             Result result = tx.run(getMiner(), value);
+        //             return result.list(x -> x.get("releases").asString());
+        //         }
+        //     });
+        //     res.getRepository().addReleases(releases);
+        // } catch (TransientException e) {
+        //     e.printStackTrace();
+        // } catch (Exception e) {
+        //     e.printStackTrace();
+        // }
+        // return res;
+    }    
 
     static final String CYPHER_COMMITS_MERGE = Utils.memoizedReadResource("usingIds/commits_merge.cql");
 
@@ -129,10 +130,6 @@ public class Neo4jSourcesStorage implements SourcesStorage {
             o.put("parents", commit.getParents().stream().map(x -> x.getId()).collect(Collectors.toList()));
         }
         new ChunckedUploadCommits(spec, fcommits);
-    }
-
-    private static String getCypher() {
-        return Utils.memoizedReadResource("jgit_cypher.cql");
     }
 
     private static String getMiner() {
