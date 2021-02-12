@@ -1,9 +1,7 @@
-package fr.quentin.coevolutionMiner.v2.impact;
+package fr.quentin.coevolutionMiner.v2.dependency;
 
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
-import fr.quentin.coevolutionMiner.v2.impact.miners.MyImpactsMiner;
-import fr.quentin.coevolutionMiner.v2.impact.storages.Neo4jImpactsStorage;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 
 import java.util.Map;
@@ -12,46 +10,48 @@ import java.util.concurrent.ConcurrentHashMap;
 import fr.quentin.coevolutionMiner.v2.Data;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
+import fr.quentin.coevolutionMiner.v2.dependency.miners.MyDependenciesMiner;
+import fr.quentin.coevolutionMiner.v2.dependency.storages.Neo4jDependenciesStorage;
 
-public class ImpactHandler implements AutoCloseable {
+public class DependencyHandler implements AutoCloseable {
 
-    private Neo4jImpactsStorage neo4jStore;
+    private Neo4jDependenciesStorage neo4jStore;
     private ProjectHandler astHandler;
     private EvolutionHandler evoHandler;
 
-    private Map<Impacts.Specifier, Data<Impacts>> memoizedImpacts = new ConcurrentHashMap<>();
+    private Map<Dependencies.Specifier, Data<Dependencies>> memoizedImpacts = new ConcurrentHashMap<>();
     private SourcesHandler sourcesHandler;
 
-    public ImpactHandler(SourcesHandler sourcesHandler, ProjectHandler astHandler, EvolutionHandler evoHandler) {
-        this.neo4jStore = new Neo4jImpactsStorage();
+    public DependencyHandler(SourcesHandler sourcesHandler, ProjectHandler astHandler, EvolutionHandler evoHandler) {
+        this.neo4jStore = new Neo4jDependenciesStorage();
         this.astHandler = astHandler;
         this.evoHandler = evoHandler;
         this.sourcesHandler = sourcesHandler;
     }
 
-    public Impacts.Specifier buildSpec(Project.Specifier ast_id, Evolutions.Specifier evo_id) {
+    public Dependencies.Specifier buildSpec(Project.Specifier ast_id, Evolutions.Specifier evo_id) {
         return buildSpec(ast_id, evo_id, "myMiner");
     }
 
-    public Impacts.Specifier buildSpec(Project.Specifier ast_id, Evolutions.Specifier evo_id, String miner) {
-        return new Impacts.Specifier(ast_id, evo_id, miner);
+    public Dependencies.Specifier buildSpec(Project.Specifier ast_id, Evolutions.Specifier evo_id, String miner) {
+        return new Dependencies.Specifier(ast_id, evo_id, miner);
     }
 
-    public Impacts handle(Impacts.Specifier spec) {
+    public Dependencies handle(Dependencies.Specifier spec) {
         return handle(spec, "");
     }
 
-    private Impacts handle(Impacts.Specifier spec, String storeName) {
-        Impacts res = null;
+    private Dependencies handle(Dependencies.Specifier spec, String storeName) {
+        Dependencies res = null;
         memoizedImpacts.putIfAbsent(spec, new Data<>());
-        Data<Impacts> tmp = memoizedImpacts.get(spec);
+        Data<Dependencies> tmp = memoizedImpacts.get(spec);
         tmp.lock.lock();
         try {
             res = tmp.get();
             if (res != null) {
                 return res;
             }
-            ImpactsStorage db = neo4jStore;
+            DependenciesStorage db = neo4jStore;
             switch (storeName) {
                 case "Neo4j":
                     db = neo4jStore;
@@ -67,10 +67,10 @@ public class ImpactHandler implements AutoCloseable {
             }
 
             // CAUTION miners should mind about circular deps of data given by handlers
-            ImpactsMiner minerInst = minerBuilder(spec, astHandler, evoHandler);
+            DependenciesMiner minerInst = minerBuilder(spec, astHandler, evoHandler);
 
             res = minerInst.compute();
-            populate((MyImpactsMiner.ImpactsExtension) res);
+            populate((MyDependenciesMiner.ImpactsExtension) res);
 
             if (db != null) {
                 db.put(res);
@@ -84,12 +84,12 @@ public class ImpactHandler implements AutoCloseable {
         }
     }
 
-    public static final ImpactsMiner minerBuilder(Impacts.Specifier spec, ProjectHandler astHandler,
+    public static final DependenciesMiner minerBuilder(Dependencies.Specifier spec, ProjectHandler astHandler,
             EvolutionHandler evoHandler) {
-        ImpactsMiner minerInst;
+        DependenciesMiner minerInst;
         switch (spec.miner) {
             case "myMiner":
-                minerInst = new MyImpactsMiner(spec, astHandler, evoHandler);
+                minerInst = new MyDependenciesMiner(spec, astHandler, evoHandler);
                 break;
             default:
                 throw new RuntimeException(spec.miner + " is not a registered impacts miner.");
@@ -97,10 +97,10 @@ public class ImpactHandler implements AutoCloseable {
         return minerInst;
     }
 
-    private void populate(MyImpactsMiner.ImpactsExtension impacts) {
-        for (MyImpactsMiner.ImpactsExtension x : impacts.getModules()) {
+    private void populate(MyDependenciesMiner.ImpactsExtension impacts) {
+        for (MyDependenciesMiner.ImpactsExtension x : impacts.getModules()) {
             memoizedImpacts.putIfAbsent(x.spec, new Data<>());
-            Data<Impacts> tmp = memoizedImpacts.get(x.spec);
+            Data<Dependencies> tmp = memoizedImpacts.get(x.spec);
             tmp.lock.lock();
             try {
                 tmp.set(x);

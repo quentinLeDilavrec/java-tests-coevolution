@@ -1,20 +1,27 @@
 package fr.quentin.coevolutionMiner.v2.utils;
 
-public class Tuple<T,R> {
+public class Tuple<T, R> {
     public final T first;
     public final R second;
 
     public Tuple(T first, R second) {
         this.first = first;
         this.second = second;
+
+        this.hashCode = hashCodeCompute();
     }
 
     @Override
     public int hashCode() {
-        final int prime = 31;
+        return hashCode;
+    }
+
+    private final int hashCode;
+
+    private int hashCodeCompute() {
         int result = 1;
-        result = prime * result + ((first == null) ? 0 : first.hashCode());
-        result = prime * result + ((second == null) ? 0 : second.hashCode());
+        result = 31 * result + ((first == null) ? 0 : first.hashCode());
+        result = 31 * result + ((second == null) ? 0 : second.hashCode());
         return result;
     }
 

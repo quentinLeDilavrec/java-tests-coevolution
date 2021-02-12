@@ -16,8 +16,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 import java.util.function.Function;
-import java.util.logging.Level;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import java.util.stream.Collectors;
@@ -50,9 +50,6 @@ import fr.quentin.coevolutionMiner.v2.evolution.miners.VersionCommit;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsAtCommit;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsAtCommit.EvolutionsAtProj;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsMany;
-import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
-import fr.quentin.coevolutionMiner.v2.impact.Impacts;
-import fr.quentin.coevolutionMiner.v2.impact.Impacts.Impact;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
@@ -64,6 +61,9 @@ import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsMiner;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsStorage;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.CoEvolution;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact.FailureReport;
+import fr.quentin.coevolutionMiner.v2.dependency.DependencyHandler;
+import fr.quentin.coevolutionMiner.v2.dependency.Dependencies;
+import fr.quentin.coevolutionMiner.v2.dependency.Dependencies.Dependency;
 import spoon.Launcher;
 import spoon.MavenLauncher;
 import spoon.compiler.Environment;
@@ -147,12 +147,12 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
     private CoEvolutionsStorage store;
 
-    private ImpactHandler impactHandler;
+    private DependencyHandler impactHandler;
 
     public static Spanning spanning = Spanning.PER_COMMIT;
 
     public MyCoEvolutionsMiner(CoEvolutions.Specifier spec, SourcesHandler srcHandler, ProjectHandler astHandler,
-            EvolutionHandler evoHandler, ImpactHandler impactHandler, CoEvolutionsStorage store) {
+            EvolutionHandler evoHandler, DependencyHandler impactHandler, CoEvolutionsStorage store) {
         this.spec = spec;
         this.srcHandler = srcHandler;
         this.astHandler = astHandler;
@@ -172,8 +172,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     Commit beforeCom = sourcesProvider.getCommit(spec.evoSpec.commitIdBefore);
                     Commit afterCom = sourcesProvider.getCommit(spec.evoSpec.commitIdAfter);
                     try {
-                        return computeDirectCoevolutions(sourcesProvider, beforeCom,
-                                afterCom);
+                        return computeDirectCoevolutions(sourcesProvider, beforeCom, afterCom);
                     } catch (SmallMiningException e) {
                         throw new RuntimeException(e);
                     }
@@ -188,16 +187,17 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     List<Sources.Commit> commits;
                     try {
                         commits = sourcesProvider.getCommitsBetween(initialCommitId, spec.evoSpec.commitIdAfter);
-                        logger.info(commits.size() > 2 ? "caution computation of coevolutions only between consecutive commits"
+                        logger.info(commits.size() > 2
+                                ? "caution computation of coevolutions only between consecutive commits"
                                 : "# of commits to analyze: " + commits.size());
                         logger.info(commits);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
-        
+
                     // final Evolutions global_evolutions = evoHandler.handle(spec.evoSpec);
                     // Set<Evolution> global_evolutions_set = global_evolutions.toSet();
-        
+
                     // GET COMMIT FROM ID
                     // // // NOTE GOING FORWARD in time
                     // for (Evolution evolution : evolutions) {
@@ -214,8 +214,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                             continue;
                         }
                         try {
-                            CoEvolutionsExtension currCoevolutions = computeDirectCoevolutions(sourcesProvider, beforeCommit,
-                                    afterCommit);
+                            CoEvolutionsExtension currCoevolutions = computeDirectCoevolutions(sourcesProvider,
+                                    beforeCommit, afterCommit);
                             globalResult.add(currCoevolutions);
                         } catch (SmallMiningException e) {
                             smallSuppressedExc.addSuppressed(e);
@@ -231,7 +231,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 }
             }
         }
-        
+
     }
 
     private CoEvolutionsExtension computeDirectCoevolutions(Sources sourcesProvider, Commit beforeCommit,
@@ -274,8 +274,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         printAtomised(atomizedRefactorings);
 
-        Impacts currentImpacts = impactHandler.handle(impactHandler.buildSpec(before_ast_id, currEvoMixedSpec));
-        Impacts afterImpacts = impactHandler.handle(impactHandler.buildSpec(after_ast_id, currEvoMixedSpec));
+        Dependencies currentImpacts = impactHandler.handle(impactHandler.buildSpec(before_ast_id, currEvoMixedSpec));
+        Dependencies afterImpacts = impactHandler.handle(impactHandler.buildSpec(after_ast_id, currEvoMixedSpec));
 
         CoEvolutions.Specifier coevoSpec = CoEvolutionHandler.buildSpec(sourcesProvider.spec, currEvoMixedSpec);
         CoEvolutionsExtension currCoevolutions = new CoEvolutionsExtension(coevoSpec, currEvoMixed, before_proj,
@@ -338,8 +338,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
-                EImpact eimpact = new EImpact();
-                eimpact.tests.put(initialTest, new ImmutablePair<>(initialTest, report));
+                EImpact eimpact = new EImpact(initialTest, report);
                 currCoevolutions.addInitialTestResult(initialTest, eimpact);
             }
 
@@ -359,17 +358,19 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     ah.setLeafsActionsLimit(5);
                     ah.applyEvolutions(c.evosForThisTest);
                     for (EImpact imp : consumer.resultingImpacts) {
-                        Set<Evolution> e = imp.evolutions.keySet();
+                        Set<Evolution> e = imp.getEvolutions();
                         try {
-                            logger.info(e.toString() + ";" + (imp.tests.get(c.testBefore).right == null ? "P" : "F"));
+                            logger.info(
+                                    e.toString() + ";" + (imp.getTests().get(c.testBefore).right == null ? "P" : "F"));
                         } catch (Exception ee) {
                             logger.info(c.testBefore.toString());
-                            logger.info(imp.tests.toString());
+                            logger.info(imp.getTests().toString());
                         }
                         functionalImpacts.putIfAbsent(e, new LinkedHashSet<>());
                         functionalImpacts.get(e).add(imp);
                     }
                 } catch (Exception e) {
+                    logger.catching(Level.ERROR, e);
                     throw new RuntimeException(e);
                 }
                 logger.info(evoState.getValidable().toString());
@@ -509,7 +510,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         public Set<ImmutablePair<Range, EImpact.FailureReport>> getInitialTests() {
             Set<ImmutablePair<Range, EImpact.FailureReport>> r = new LinkedHashSet<>();
             for (Entry<Range, EImpact> p : initialTestsStatus.entrySet()) {
-                r.add(p.getValue().tests.get(p.getKey()));
+                r.add(p.getValue().getTests().get(p.getKey()));
             }
             return r;
         }
@@ -519,8 +520,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             logger.info("precisely:  " + eImpacts.keySet());
             for (Entry<Set<Evolution>, Set<EImpact>> aaa : eImpacts.entrySet()) {
                 for (EImpact ei : aaa.getValue()) {
-                    for (Entry<Range, ImmutablePair<Range, EImpact.FailureReport>> bbb : ei.tests.entrySet()) {
-                        EImpact.FailureReport resInitial = initialTestsStatus.get(bbb.getKey()).tests
+                    for (Entry<Range, ImmutablePair<Range, EImpact.FailureReport>> bbb : ei.getTests().entrySet()) {
+                        EImpact.FailureReport resInitial = initialTestsStatus.get(bbb.getKey()).getTests()
                                 .get(bbb.getKey()).right;
                         ImmutablePair<Range, EImpact.FailureReport> ccc = bbb.getValue();
                         EImpact.FailureReport resAfter = ccc.getValue();
@@ -562,8 +563,8 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             // TODO extract it to unit test it
             for (EImpact eimpCauses : probableCoevoCauses) {
                 Set<EImpact> possibleReso = null;
-                for (Entry<Evolution, Fraction> causeEvos : eimpCauses.evolutions.entrySet()) {
-                    Set<EImpact> resos = probableResolutionsIndex.get(causeEvos.getKey());
+                for (Evolution causeEvos : eimpCauses.getEvolutions()) {
+                    Set<EImpact> resos = probableResolutionsIndex.get(causeEvos);
                     if (resos == null) {
                         break;
                     }
@@ -590,30 +591,30 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 // }
                 // remaining possibleReso are real reso
                 for (EImpact eimpReso : possibleReso) {
-                    Set<Evolution> resolutions = new LinkedHashSet<>(eimpReso.evolutions.keySet());
-                    resolutions.removeAll(eimpCauses.evolutions.keySet());
+                    Set<Evolution> resolutions = new LinkedHashSet<>(eimpReso.getEvolutions());
+                    resolutions.removeAll(eimpCauses.getEvolutions());
                     if (resolutions.size() == 0)
                         continue;
-                    for (Entry<Range, ImmutablePair<Range, FailureReport>> resoEntry : eimpReso.tests.entrySet()) {
+                    for (Entry<Range, ImmutablePair<Range, FailureReport>> resoEntry : eimpReso.getTests().entrySet()) {
                         Range testBefore = resoEntry.getKey();
-                        ImmutablePair<Range, FailureReport> causeThing = eimpCauses.tests.get(testBefore);
+                        ImmutablePair<Range, FailureReport> causeThing = eimpCauses.getTests().get(testBefore);
                         if (causeThing == null)
                             continue;
                         Range testAfterR = resoEntry.getValue().left;
                         Range testAfterC = causeThing.left;
                         CoEvolutionExtension res; // TODO to discus
                         if (testAfterR == testBefore && testAfterC == testBefore) {
-                            res = new CoEvolutionExtension(new LinkedHashSet<>(eimpCauses.evolutions.keySet()),
-                                    resolutions, Collections.singleton(testBefore), Collections.singleton(testBefore));
+                            res = new CoEvolutionExtension(new LinkedHashSet<>(eimpCauses.getEvolutions()), resolutions,
+                                    Collections.singleton(testBefore), Collections.singleton(testBefore));
                         } else if (testAfterR == testBefore) { // TODO can we really undershoot here?
-                            res = new CoEvolutionExtension(new LinkedHashSet<>(eimpCauses.evolutions.keySet()),
-                                    resolutions, Collections.singleton(testBefore), Collections.singleton(testAfterC));
+                            res = new CoEvolutionExtension(new LinkedHashSet<>(eimpCauses.getEvolutions()), resolutions,
+                                    Collections.singleton(testBefore), Collections.singleton(testAfterC));
                         } else if (testAfterC == testBefore) {
-                            res = new CoEvolutionExtension(new LinkedHashSet<>(eimpCauses.evolutions.keySet()),
-                                    resolutions, Collections.singleton(testBefore), Collections.singleton(testAfterR));
+                            res = new CoEvolutionExtension(new LinkedHashSet<>(eimpCauses.getEvolutions()), resolutions,
+                                    Collections.singleton(testBefore), Collections.singleton(testAfterR));
                         } else if (testAfterR == testAfterC) {
-                            res = new CoEvolutionExtension(new LinkedHashSet<>(eimpCauses.evolutions.keySet()),
-                                    resolutions, Collections.singleton(testBefore), Collections.singleton(testAfterR));
+                            res = new CoEvolutionExtension(new LinkedHashSet<>(eimpCauses.getEvolutions()), resolutions,
+                                    Collections.singleton(testBefore), Collections.singleton(testAfterR));
                         } else {
                             continue;
                         }
@@ -634,26 +635,6 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             }
         }
 
-        private Set<Project.AST.FileSnapshot.Range> adjustToTests(Impacts impacts, Evolution.DescRange desc) {
-            Set<Impact> tmp = impacts.getPerRootCause().get(desc);
-            Set<Project.AST.FileSnapshot.Range> r = new HashSet<>();
-            if (tmp != null) {
-                for (Impact impact : tmp) {
-                    for (Impacts.Impact.DescRange eff : impact.getEffects()) {
-                        if (impacts.getAst().getAst().isTest(eff.getTarget())) {
-                            r.add(eff.getTarget());
-                        }
-                    }
-                    for (Impacts.Impact.DescRange cau : impact.getCauses()) {
-                        if (impacts.getAst().getAst().isTest(cau.getTarget())) {
-                            r.add(cau.getTarget());
-                        }
-                    }
-                }
-            }
-            return r;
-        }
-
         @Override
         public Set<CoEvolution> getCoEvolutions() {
             return Collections.unmodifiableSet(coevolutions);
@@ -664,13 +645,13 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         Map<EvolutionsAtProj, Set<InterestingCase>> interestingCases = new LinkedHashMap<>();
         Map<EvolutionsAtProj, Set<Evolution>> evoPerProj = new HashMap<>();
         Map<EvolutionsAtProj, Set<Range>> impactedTestsPerProj = new HashMap<>();
-        private Impacts beforeImpacts;
-        private Impacts afterImpacts;
+        private Dependencies beforeImpacts;
+        private Dependencies afterImpacts;
         private Map<Evolution, Set<Evolution>> atomizedRefactorings;
         private Version beforeVersion;
         private Version afterVersion;
 
-        public InterestingCasesExtractor(Impacts beforeImpacts, Version beforeVersion, Impacts afterImpacts,
+        public InterestingCasesExtractor(Dependencies beforeImpacts, Version beforeVersion, Dependencies afterImpacts,
                 Version afterVersion, Map<Evolution, Set<Evolution>> atomizedRefactorings) {
             this.beforeImpacts = beforeImpacts;
             this.afterImpacts = afterImpacts;
@@ -686,11 +667,11 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
         private Map<Project, DPair> testNevosPerProjects() {
             Map<Project, DPair> r = new HashMap<>();
-            for (Entry<Range, Set<Evolution.DescRange>> impactedTests : beforeImpacts.getImpactedTests().entrySet()) {
+            for (Entry<Range, Set<Evolution.DescRange>> impactedTests : beforeImpacts.getDependentTests().entrySet()) {
                 r.putIfAbsent(impactedTests.getKey().getFile().getAST().getProject(), new DPair());
                 r.get(impactedTests.getKey().getFile().getAST().getProject()).before.add(impactedTests);
             }
-            for (Entry<Range, Set<Evolution.DescRange>> impactedTests : afterImpacts.getImpactedTests().entrySet()) {
+            for (Entry<Range, Set<Evolution.DescRange>> impactedTests : afterImpacts.getDependentTests().entrySet()) {
                 r.putIfAbsent(impactedTests.getKey().getFile().getAST().getProject(), new DPair());
                 r.get(impactedTests.getKey().getFile().getAST().getProject()).after.add(impactedTests);
             }

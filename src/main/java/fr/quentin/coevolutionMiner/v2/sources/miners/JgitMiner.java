@@ -24,7 +24,7 @@ public class JgitMiner implements SourcesMiner {
     public JgitMiner(Sources.Specifier spec) {
         this.spec = spec;
     }
-    
+
     @Override
     public Sources compute() {
         return new Sources(spec) {

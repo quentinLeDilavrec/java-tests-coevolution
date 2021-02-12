@@ -7,7 +7,7 @@ import java.util.function.Function;
 public class Iterators2 {
 
     public static <I> Iterable<I> createChainIterable(Iterable<Iterable<I>> input) {
-        return new Iterable<I>(){
+        return new Iterable<I>() {
             @Override
             public Iterator<I> iterator() {
                 return new Iterators2.ChainIterable<>(input);
@@ -25,7 +25,7 @@ public class Iterators2 {
 
         @Override
         public boolean hasNext() {
-            if (current!=null && current.hasNext()) {
+            if (current != null && current.hasNext()) {
                 return true;
             } else {
                 while (inputs.hasNext()) {

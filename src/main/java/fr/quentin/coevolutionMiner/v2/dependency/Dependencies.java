@@ -1,4 +1,4 @@
-package fr.quentin.coevolutionMiner.v2.impact;
+package fr.quentin.coevolutionMiner.v2.dependency;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -28,12 +28,12 @@ import fr.quentin.coevolutionMiner.v2.ast.Project.AST;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 
-public abstract class Impacts implements Iterable<Impacts.Impact> {
+public abstract class Dependencies implements Iterable<Dependencies.Dependency> {
 
     public final Specifier spec;
     protected final Project ast;
 
-    public Impacts(Specifier spec, Project ast) {
+    public Dependencies(Specifier spec, Project ast) {
         this.spec = spec;
         this.ast = ast;
     }
@@ -45,7 +45,7 @@ public abstract class Impacts implements Iterable<Impacts.Impact> {
         return ast;
     }
 
-    public Map<Object, Set<Impact>> getPerRootCause() {
+    public Map<Object, Set<Dependency>> getPerRootCause() {
         return perRoot;
     }
 
@@ -60,7 +60,7 @@ public abstract class Impacts implements Iterable<Impacts.Impact> {
 
     public final List<Map<String, Object>> asListofMaps() { // TODO SoftReference? memoize result?
         List<Map<String, Object>> res = new ArrayList<>();
-        for (Impact impact : impacts.values()) {
+        for (Dependency impact : impacts.values()) {
             Map<String, Object> map = impact.toMap(this);
             res.add(map);
         }
@@ -69,29 +69,29 @@ public abstract class Impacts implements Iterable<Impacts.Impact> {
 
     public final Map<String, Object> getValueCompressed() { // TODO SoftReference? memoize result?
         Map<String, Object> res = new HashMap<>();
-        List<Map<String, Object>> serializedImpacts = new ArrayList<>();
+        List<Map<String, Object>> serializedDependencies = new ArrayList<>();
         List<Map<String, Object>> serializedRanges = new ArrayList<>();
         Map<Project.AST.FileSnapshot.Range, Integer> serializedEvolutionsMap = new HashMap<>();
         res.put("ranges", serializedRanges);
-        res.put("impacts", serializedImpacts);
+        res.put("impacts", serializedDependencies);
         res.put("tool", spec.miner);
-        for (Impact impact : impacts.values()) {
-            Map<String, Object> content = makeImpactContent(ast.getAst().rootDir, impact);
+        for (Dependency impact : impacts.values()) {
+            Map<String, Object> content = makeDependencyContent(ast.getAst().rootDir, impact);
             content.put("type", impact.getType());
             List<Object> causes = new ArrayList<>();
-            for (Impact.DescRange aaa : impact.getCauses()) {
+            for (Dependency.DescRange aaa : impact.getCauses()) {
                 causes.add(compressRefToRange(aaa, serializedEvolutionsMap, serializedRanges));
             }
             List<Object> effects = new ArrayList<>();
-            for (Impact.DescRange aaa : impact.getEffects()) {
+            for (Dependency.DescRange aaa : impact.getEffects()) {
                 effects.add(compressRefToRange(aaa, serializedEvolutionsMap, serializedRanges));
             }
-            serializedImpacts.add(makeImpact(content, causes, effects));
+            serializedDependencies.add(makeDependency(content, causes, effects));
         }
         return res;
     }
 
-    private Integer compressRefToRange(Impact.DescRange aaa, Map<Range, Integer> map, List<Map<String, Object>> list) {
+    private Integer compressRefToRange(Dependency.DescRange aaa, Map<Range, Integer> map, List<Map<String, Object>> list) {
         Integer r = map.get(aaa.getTarget());
         if (r == null) {
             r = list.size();
@@ -102,14 +102,14 @@ public abstract class Impacts implements Iterable<Impacts.Impact> {
         return r;
     }
 
-    protected Map<String, Object> makeRange(Impact.DescRange descRange) {
+    protected Map<String, Object> makeRange(Dependency.DescRange descRange) {
         return descRange.toMap();
     }
 
-    private Map<String, Object> makeImpactContent(Path rootDir, Impact impact) {
+    private Map<String, Object> makeDependencyContent(Path rootDir, Dependency impact) {
         Map<String, Object> content = new HashMap<>();
         int i_cause = 0;
-        for (Impact.DescRange cause : impact.idCauses) {
+        for (Dependency.DescRange cause : impact.idCauses) {
             List<String> builder = new ArrayList<>();
             Range range = cause.getTarget();
             FileSnapshot file = range.getFile();
@@ -122,7 +122,7 @@ public abstract class Impacts implements Iterable<Impacts.Impact> {
             content.put("cause" + i_cause++, builder.toString());
         }
         int i_effect = 0;
-        for (Impact.DescRange cause : impact.idEffects) {
+        for (Dependency.DescRange cause : impact.idEffects) {
             List<String> builder = new ArrayList<>();
             Range range = cause.getTarget();
             FileSnapshot file = range.getFile();
@@ -137,16 +137,16 @@ public abstract class Impacts implements Iterable<Impacts.Impact> {
         return content;
     }
 
-    private final Map<String, Object> makeImpact(Map<String, Object> content, List<Object> causes,
+    private final Map<String, Object> makeDependency(Map<String, Object> content, List<Object> causes,
             List<Object> effects) {
-        Map<String, Object> callImpact = new HashMap<>();
+        Map<String, Object> res = new HashMap<>();
         // Content
-        callImpact.put("content", content);
+        res.put("content", content);
         // effects
-        callImpact.put("effects", effects);
+        res.put("effects", effects);
         // causes
-        callImpact.put("causes", causes);
-        return callImpact;
+        res.put("causes", causes);
+        return res;
     }
 
     public static class Specifier {
@@ -158,11 +158,18 @@ public abstract class Impacts implements Iterable<Impacts.Impact> {
             this.projSpec = projSpec;
             this.evoSpec = evoSpec;
             this.miner = miner;
+            this.hashCode = hashCodeCompute();
         }
         // TODO allow to specify Impacts more precisely with filters
 
         @Override
         public int hashCode() {
+            return hashCode;
+        }
+
+        private final int hashCode;
+
+        private int hashCodeCompute() {
             final int prime = 31;
             int result = 1;
             result = prime * result + ((miner == null) ? 0 : miner.hashCode());
@@ -199,33 +206,33 @@ public abstract class Impacts implements Iterable<Impacts.Impact> {
         }
     }
 
-    public Map<Range, Set<Evolution.DescRange>> getImpactedTests() {
+    public Map<Range, Set<Evolution.DescRange>> getDependentTests() {
         return Collections.unmodifiableMap(impactedTests);
     }
 
-    protected Map<Impact, Impact> impacts = new LinkedHashMap<>();
+    protected Map<Dependency, Dependency> impacts = new LinkedHashMap<>();
     protected Map<Range, Set<Evolution.DescRange>> impactedTests = new HashMap<>();
-    protected Map<Object, Set<Impact>> perRoot = new HashMap<>();
+    protected Map<Object, Set<Dependency>> perRoot = new HashMap<>();
 
-    protected Impact addImpact(String type, Set<Pair<Range, String>> idCauses, Set<Pair<Range, String>> idEffects) {
-        Impact x = new Impact(type, idCauses, idEffects);
+    protected Dependency addDependency(String type, Set<Pair<Range, String>> idCauses, Set<Pair<Range, String>> idEffects) {
+        Dependency x = new Dependency(type, idCauses, idEffects);
         x = impacts.getOrDefault(x, x);
         impacts.putIfAbsent(x, x);
         return x;
     }
 
-    protected void addCause(Impact imp, Range range, String description) {
+    protected void addCause(Dependency imp, Range range, String description) {
         imp.addCause(range, description);
     }
 
-    protected void addEffect(Impact imp, Range range, String description) {
+    protected void addEffect(Dependency imp, Range range, String description) {
         imp.addEffect(range, description);
     }
 
     // @uniq // (also put some relations as attributs (ease later fusions))
-    public class Impact {
+    public class Dependency {
 
-        Impact(String type, Set<Pair<Range, String>> idCauses, Set<Pair<Range, String>> idEffects) {
+        Dependency(String type, Set<Pair<Range, String>> idCauses, Set<Pair<Range, String>> idEffects) {
             this.type = type;
             this.idCauses = idCauses.stream().map(x -> new DescRange(x.getLeft(), x.getRight()))
                     .collect(Collectors.toSet());
@@ -250,12 +257,12 @@ public abstract class Impacts implements Iterable<Impacts.Impact> {
         }
 
         // @relations
-        public Set<Impact.DescRange> getCauses() {
+        public Set<Dependency.DescRange> getCauses() {
             return Collections.unmodifiableSet(causes);
         }
 
         // @relations
-        public Set<Impact.DescRange> getEffects() {
+        public Set<Dependency.DescRange> getEffects() {
             return Collections.unmodifiableSet(effects);
         }
 
@@ -296,8 +303,8 @@ public abstract class Impacts implements Iterable<Impacts.Impact> {
             }
 
             // @source
-            public Impact getSource() {
-                return Impact.this;
+            public Dependency getSource() {
+                return Dependency.this;
             }
 
             // @target
@@ -362,7 +369,7 @@ public abstract class Impacts implements Iterable<Impacts.Impact> {
                 return false;
             if (getClass() != obj.getClass())
                 return false;
-            Impact other = (Impact) obj;
+            Dependency other = (Dependency) obj;
             if (!getEnclosingInstance().equals(other.getEnclosingInstance()))
                 return false;
             if (idCauses == null) {
@@ -383,12 +390,12 @@ public abstract class Impacts implements Iterable<Impacts.Impact> {
             return true;
         }
 
-        private Impacts getEnclosingInstance() {
-            return Impacts.this;
+        private Dependencies getEnclosingInstance() {
+            return Dependencies.this;
         }
 
-        public Map<String, Object> toMap(Impacts impacts) {
-            Map<String, Object> content = impacts.makeImpactContent(impacts.ast.getAst().rootDir, this);
+        public Map<String, Object> toMap(Dependencies impacts) {
+            Map<String, Object> content = impacts.makeDependencyContent(impacts.ast.getAst().rootDir, this);
             content.put("type", getType());
             List<Object> causes = new ArrayList<>();
             for (DescRange aaa : getCauses()) {
@@ -402,13 +409,13 @@ public abstract class Impacts implements Iterable<Impacts.Impact> {
                 effects.add(o);
             }
             effects.sort((a, b) -> a.hashCode() - b.hashCode());
-            Map<String, Object> map = impacts.makeImpact(content, causes, effects);
+            Map<String, Object> map = impacts.makeDependency(content, causes, effects);
             return map;
         }
     }
 
     @Override
-    public Iterator<Impact> iterator() {
+    public Iterator<Dependency> iterator() {
         return impacts.keySet().iterator();
     }
 

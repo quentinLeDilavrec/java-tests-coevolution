@@ -3,7 +3,7 @@ MERGE (t:Tool {name:tool.name, version:tool.version})
 WITH data as data, t as t
 UNWIND data as e
 
-CREATE (wanted:Evolution {type:e.type})
+CREATE (wanted:Evolution {type:e.type, hash:e.hash})
 
 CREATE (wanted)-[:WAS_MINED_BY]->(t)
 

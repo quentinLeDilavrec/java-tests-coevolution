@@ -19,7 +19,7 @@ public class ProjectHandler implements AutoCloseable {
 	private Neo4jProjectStorage neo4jStore;
 
 	public ProjectHandler(SourcesHandler srcHandler) {
-        this.neo4jStore = new Neo4jProjectStorage();
+		this.neo4jStore = new Neo4jProjectStorage();
 		this.srcHandler = srcHandler;
 	}
 
@@ -27,7 +27,8 @@ public class ProjectHandler implements AutoCloseable {
 		return buildSpec(sources, commitId, SpoonMiner.class);
 	}
 
-	private <U,T extends ProjectMiner<U>> Project.Specifier<T> buildSpec(Sources.Specifier sources, String commitId, Class<T> miner) {
+	private <U, T extends ProjectMiner<U>> Project.Specifier<T> buildSpec(Sources.Specifier sources, String commitId,
+			Class<T> miner) {
 		return new Project.Specifier<>(sources, commitId, miner);
 	}
 
@@ -37,7 +38,7 @@ public class ProjectHandler implements AutoCloseable {
 
 	public static String storeName = "Neo4j";
 
-	public <U,T extends ProjectMiner<U>> Project<U> handle(Project.Specifier<T> spec) {
+	public <U, T extends ProjectMiner<U>> Project<U> handle(Project.Specifier<T> spec) {
 		Project<U> res = null;
 		memoizedAST.putIfAbsent(spec, new Data<>());
 		Data<Project<?>> tmp = memoizedAST.get(spec);
@@ -47,19 +48,19 @@ public class ProjectHandler implements AutoCloseable {
 			if (res != null) {
 				return res;
 			}
-            ProjectStorage db = null;
-            switch (storeName) {
-                case "Neo4j":
-                    res = neo4jStore.get(spec);
-                    db = neo4jStore;
-                    break;
-                default:
-                    break;
-            }
-            if (res != null) {
-                tmp.set(res);
-                return res;
-            }
+			ProjectStorage db = null;
+			switch (storeName) {
+				case "Neo4j":
+					res = neo4jStore.get(spec);
+					db = neo4jStore;
+					break;
+				default:
+					break;
+			}
+			if (res != null) {
+				tmp.set(res);
+				return res;
+			}
 			// CAUTION miners should mind about circular deps of data given by handlers
 			Miners z = Miners.valueOf(spec.miner.getSimpleName());
 			switch (z) {
@@ -71,9 +72,9 @@ public class ProjectHandler implements AutoCloseable {
 				default:
 					throw new RuntimeException(spec.miner + " is not a registered AST miner.");
 			}
-            if (db != null) {
-                db.put(spec, res);
-            }
+			if (db != null) {
+				db.put(spec, res);
+			}
 			tmp.set(res);
 			return res;
 		} catch (Exception e) {
@@ -82,7 +83,6 @@ public class ProjectHandler implements AutoCloseable {
 			tmp.lock.unlock();
 		}
 	}
-
 
 	private void populate(Project<?> evolutions) {
 		for (Project<?> x : evolutions.getModules()) {
@@ -97,8 +97,8 @@ public class ProjectHandler implements AutoCloseable {
 		}
 	}
 
-    @Override
-    public void close() throws Exception {
-        neo4jStore.close();
-    }
+	@Override
+	public void close() throws Exception {
+		neo4jStore.close();
+	}
 }

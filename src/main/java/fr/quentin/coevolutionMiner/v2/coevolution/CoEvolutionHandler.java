@@ -2,9 +2,9 @@ package fr.quentin.coevolutionMiner.v2.coevolution;
 
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
-import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner;
 import fr.quentin.coevolutionMiner.v2.coevolution.storages.Neo4jCoEvolutionsStorage;
+import fr.quentin.coevolutionMiner.v2.dependency.DependencyHandler;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 
@@ -22,21 +22,23 @@ public class CoEvolutionHandler implements AutoCloseable {
 
     private Map<CoEvolutions.Specifier, Data<CoEvolutions>> memoizedImpacts = new ConcurrentHashMap<>();
     private SourcesHandler sourcesHandler;
-    private ImpactHandler impactHandler;
+    private DependencyHandler impactHandler;
 
-    public CoEvolutionHandler(SourcesHandler sourcesHandler, ProjectHandler astHandler, EvolutionHandler evoHandler, ImpactHandler impactHandler) {
+    public CoEvolutionHandler(SourcesHandler sourcesHandler, ProjectHandler astHandler, EvolutionHandler evoHandler,
+            DependencyHandler impactHandler) {
         this.astHandler = astHandler;
         this.evoHandler = evoHandler;
         this.sourcesHandler = sourcesHandler;
         this.impactHandler = impactHandler;
-        this.neo4jStore = new Neo4jCoEvolutionsStorage(sourcesHandler,astHandler,evoHandler,impactHandler);
+        this.neo4jStore = new Neo4jCoEvolutionsStorage(sourcesHandler, astHandler, evoHandler, impactHandler);
     }
 
     public static CoEvolutions.Specifier buildSpec(Sources.Specifier src_id, Evolutions.Specifier evo_id) {
         return buildSpec(src_id, evo_id, "myMiner");
     }
 
-    public static CoEvolutions.Specifier buildSpec(Sources.Specifier src_id, Evolutions.Specifier evo_id, String miner) {
+    public static CoEvolutions.Specifier buildSpec(Sources.Specifier src_id, Evolutions.Specifier evo_id,
+            String miner) {
         return new CoEvolutions.Specifier(src_id, evo_id, miner);
     }
 
@@ -71,7 +73,8 @@ public class CoEvolutionHandler implements AutoCloseable {
             // CAUTION miners should mind about circular deps of data given by handlers
             switch (spec.miner) {
                 case "myMiner":
-                    MyCoEvolutionsMiner minerInst = new MyCoEvolutionsMiner(spec, sourcesHandler, astHandler, evoHandler, impactHandler, (CoEvolutionsStorage) neo4jStore);
+                    MyCoEvolutionsMiner minerInst = new MyCoEvolutionsMiner(spec, sourcesHandler, astHandler,
+                            evoHandler, impactHandler, (CoEvolutionsStorage) neo4jStore);
                     res = minerInst.compute();
                     break;
                 default:
@@ -83,8 +86,8 @@ public class CoEvolutionHandler implements AutoCloseable {
             tmp.set(res);
             return res;
         } catch (Exception e) {
-			throw e;
-		} finally {
+            throw e;
+        } finally {
             tmp.lock.unlock();
         }
     }

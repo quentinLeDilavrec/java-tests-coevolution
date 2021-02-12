@@ -11,7 +11,8 @@ public class ProjectRoute implements Route {
     private ProjectHandler astHandler;
     private Class<? extends ProjectMiner> minerId;
 
-    public ProjectRoute(SourcesHandler sourcesHandler, ProjectHandler astHandler, Class<? extends ProjectMiner> minerId) {
+    public ProjectRoute(SourcesHandler sourcesHandler, ProjectHandler astHandler,
+            Class<? extends ProjectMiner> minerId) {
         this.sourcesHandler = sourcesHandler;
         this.astHandler = astHandler;
         this.minerId = minerId;

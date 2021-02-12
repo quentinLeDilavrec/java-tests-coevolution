@@ -1,4 +1,4 @@
-package fr.quentin.coevolutionMiner.v2.impact;
+package fr.quentin.coevolutionMiner.v2.dependency;
 
 import java.util.Base64;
 import java.util.Map;
@@ -20,15 +20,15 @@ import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 
-public class ImpactRoute implements Route {
+public class DepedencyRoute implements Route {
 
-    private ImpactHandler impactsHandler;
+    private DependencyHandler impactsHandler;
     private EvolutionHandler evoHandler;
     private ProjectHandler astHandler;
     private SourcesHandler sourcesHandler;
     private String minerId;
 
-    public ImpactRoute(SourcesHandler srcH, ProjectHandler astH, EvolutionHandler evoH, ImpactHandler impactH,
+    public DepedencyRoute(SourcesHandler srcH, ProjectHandler astH, EvolutionHandler evoH, DependencyHandler impactH,
             String minerId) {
         this.sourcesHandler = srcH;
         this.astHandler = astH;
@@ -74,11 +74,11 @@ public class ImpactRoute implements Route {
         // res.raw().sendError(102);
         // res.raw().sendError(102); // TODO test if it works (maybe other codes also
         // work?)
-        if(body==null){
+        if (body == null) {
             JsonObject tmp = new JsonObject();
             tmp.addProperty("error", "wrong request");
             r = tmp;
-        }else if (body.before != null && body.after != null) {
+        } else if (body.before != null && body.after != null) {
             String before = new String(Base64.getDecoder().decode(body.before));
             String after = new String(Base64.getDecoder().decode(body.after));
             JsonObject tmp = new JsonObject();
@@ -87,7 +87,7 @@ public class ImpactRoute implements Route {
         } else if (body.repo != null && body.commitIdAfter != null) {
             Sources.Specifier srcSpec = sourcesHandler.buildSpec(body.repo);
             System.out.println(body.commitIdBefore);
-            if( body.commitIdBefore == null) {
+            if (body.commitIdBefore == null) {
                 try (SourcesHelper helper = sourcesHandler.handle(srcSpec).open();) {
                     body.commitIdBefore = helper.getBeforeCommit(body.commitIdAfter);
                 } catch (Exception e) {
@@ -96,7 +96,8 @@ public class ImpactRoute implements Route {
             }
             // TODO use body.cases to filter wanted evolutions
             r = impactsHandler.handle(impactsHandler.buildSpec(astHandler.buildSpec(srcSpec, body.commitIdBefore),
-                    evoHandler.buildSpec(srcSpec, body.commitIdBefore, body.commitIdAfter, MixedMiner.class), minerId)).toJson();
+                    evoHandler.buildSpec(srcSpec, body.commitIdBefore, body.commitIdAfter, MixedMiner.class), minerId))
+                    .toJson();
         } else if (body.repo != null && body.tagBefore != null && body.tagAfter != null) {
             JsonObject tmp = new JsonObject();
             tmp.addProperty("error", "tag impact handler not implemented yet");

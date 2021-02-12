@@ -91,6 +91,7 @@ public abstract class CoEvolutions {
             this.resolutions = resolutions;
             this.testsBefore = testsBefore;
             this.testsAfter = testsAfter;
+            this.hashCode = hashCodeCompute();
         }
 
         public final Set<Evolution> getCauses() {
@@ -111,6 +112,12 @@ public abstract class CoEvolutions {
 
         @Override
         public int hashCode() {
+            return hashCode;
+        }
+
+        private final int hashCode;
+
+        private int hashCodeCompute() {
             final int prime = 31;
             int result = 1;
             result = prime * result + ((causes == null) ? 0 : causes.hashCode());
@@ -142,7 +149,9 @@ public abstract class CoEvolutions {
     }
 
     public abstract Set<CoEvolution> getCoEvolutions();
+
     public abstract Set<EImpact> getEImpacts();
+
     public abstract Set<ImmutablePair<Range, EImpact.FailureReport>> getInitialTests();
 
     public JsonElement toJson() {

@@ -13,6 +13,7 @@ import java.util.SortedSet;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.refactoringminer.api.Refactoring;
@@ -108,16 +109,23 @@ public abstract class Evolutions implements Iterable<Evolutions.Evolution> {
     // @uniq // (also put relations as attributs)
     public class Evolution {
 
-        private Evolution(final Object original, final String type) {
+        Evolution(final Object original, final String type, final Sources.Commit commitBefore,
+                final Sources.Commit commitAfter, List<ImmutablePair<Range, String>> before,
+                List<ImmutablePair<Range, String>> after) {
+            if (before.size() == 0 && after.size() == 0) {
+                throw new RuntimeException("an evolution should point on at least one range");
+            }
             this.original = original;
             this.type = type;
-        }
-
-        protected Evolution(final Object original, final String type, final Sources.Commit commitBefore,
-                final Sources.Commit commitAfter) {
-            this(original, type);
             this.commitBefore = commitBefore;
             this.commitAfter = commitAfter;
+            for (ImmutablePair<Range, String> pair : before) {
+                addBefore(pair.left, pair.right);
+            }
+            for (ImmutablePair<Range, String> pair : after) {
+                addAfter(pair.left, pair.right);
+            }
+            this.hashCode = hashCodeCompute();
         }
 
         private final Object original;
@@ -125,8 +133,8 @@ public abstract class Evolutions implements Iterable<Evolutions.Evolution> {
         private final List<DescRange> after = new ArrayList<>();
         private final List<DescRange> before = new ArrayList<>();
 
-        private Sources.Commit commitBefore;
-        private Sources.Commit commitAfter;
+        private final Sources.Commit commitBefore;
+        private final Sources.Commit commitAfter;
 
         /**
          * @return the commitBefore
@@ -166,11 +174,11 @@ public abstract class Evolutions implements Iterable<Evolutions.Evolution> {
             return Collections.unmodifiableList(after);
         }
 
-        void addBefore(final Range range, final String description) {
+        private void addBefore(final Range range, final String description) {
             before.add(new DescRange(range, description));
         }
 
-        void addAfter(final Range range, final String description) {
+        private void addAfter(final Range range, final String description) {
             after.add(new DescRange(range, description));
         }
 
@@ -179,9 +187,10 @@ public abstract class Evolutions implements Iterable<Evolutions.Evolution> {
             private final String description;
             private final Range range;
 
-            DescRange(final Range range, final String description) {
+            private DescRange(final Range range, final String description) {
                 this.range = range;
                 this.description = description;
+                this.hashCode = hashCodeCompute();
             }
 
             public String getDescription() {
@@ -200,6 +209,12 @@ public abstract class Evolutions implements Iterable<Evolutions.Evolution> {
 
             @Override
             public int hashCode() {
+                return hashCode;
+            }
+
+            private final int hashCode;
+
+            private int hashCodeCompute() {
                 final int prime = 31;
                 int result = 1;
                 result = prime * result + ((description == null) ? 0 : description.hashCode());
@@ -232,6 +247,12 @@ public abstract class Evolutions implements Iterable<Evolutions.Evolution> {
 
         @Override
         public int hashCode() {
+            return hashCode;
+        }
+
+        private final int hashCode;
+
+        private int hashCodeCompute() {
             final int prime = 31;
             int result = 1;
             result = prime * result + ((after == null) ? 0 : after.hashCode());
@@ -297,7 +318,7 @@ public abstract class Evolutions implements Iterable<Evolutions.Evolution> {
         protected String abrv(String str) {
             StringBuilder strB = new StringBuilder();
             for (String word : str.split(" ")) {
-                if (word.length()>0) {
+                if (word.length() > 0) {
                     strB.append(word.substring(0, 1));
                 }
             }
@@ -305,48 +326,37 @@ public abstract class Evolutions implements Iterable<Evolutions.Evolution> {
         }
 
         public Map<String, Object> asMap() {
-            final Map<String, Object> res = new HashMap<>();
-            final Map<String, Object> evofields = new HashMap<>();
-            res.put("content", evofields);
-            evofields.put("repository", getEnclosingInstance().spec.sources.repository);
-            evofields.put("commitIdBefore", getCommitBefore().getId());
-            evofields.put("commitIdAfter", getCommitAfter().getId());
-            evofields.put("type", getType());
+            throw new UnsupportedOperationException("better solution to fix slow db, this is not needed anymore");
+            // final Map<String, Object> res = new HashMap<>();
+            // final Map<String, Object> evofields = new HashMap<>();
+            // res.put("content", evofields);
+            // evofields.put("repository", getEnclosingInstance().spec.sources.repository);
+            // evofields.put("commitIdBefore", getCommitBefore().getId());
+            // evofields.put("commitIdAfter", getCommitAfter().getId());
+            // evofields.put("type", getType());
 
-            final List<Object> leftSideLocations = new ArrayList<>();
-            res.put("leftSideLocations", leftSideLocations);
-            for (final DescRange descR : getBefore()) { // TODO sort list
-                Range targetR = descR.getTarget();
-                final Map<String, Object> rDescR = targetR.toMap();
-                leftSideLocations.add(rDescR);
-                final CtElement e_ori = (CtElement) targetR.getOriginal();
-                if (e_ori != null) {
-                    rDescR.put("type", Utils.formatedType(e_ori));
-                } else {
-                    rDescR.put("type", "evo null");
-                }
-                rDescR.put("description", descR.getDescription());
-                evofields.putIfAbsent("before_" + abrv(descR.getDescription()), new ArrayList<>());
-                ((List<String>) evofields.get("before_" + abrv(descR.getDescription()))).add(rangeToString(rDescR));
-            }
-            final List<Object> rightSideLocations = new ArrayList<>();
-            res.put("rightSideLocations", rightSideLocations);
-            for (final DescRange descR : getAfter()) { // TODO sort list
-                Range targetR = descR.getTarget();
-                final Map<String, Object> rDescR = targetR.toMap();
-                rightSideLocations.add(rDescR);
-                final CtElement e_ori = (CtElement) targetR.getOriginal();
-                if (e_ori != null) {
-                    rDescR.put("type", Utils.formatedType(e_ori));
-                } else {
-                    rDescR.put("type", "evo null");
-                }
-                rDescR.put("description", descR.getDescription());
-                evofields.putIfAbsent("after_" + abrv(descR.getDescription()), new ArrayList<>());
-                ((List<String>) evofields.get("after_" + abrv(descR.getDescription()))).add(rangeToString(rDescR));
-            }
-            addUrl(res);
-            return res;
+            // final List<Object> leftSideLocations = new ArrayList<>();
+            // res.put("leftSideLocations", leftSideLocations);
+            // for (final DescRange descR : getBefore()) { // TODO sort list
+            //     Range targetR = descR.getTarget();
+            //     final Map<String, Object> rDescR = Utils.formatRangeWithType(targetR);
+            //     leftSideLocations.add(rDescR);
+            //     rDescR.put("description", descR.getDescription());
+            //     evofields.putIfAbsent("before_" + abrv(descR.getDescription()), new ArrayList<>());
+            //     ((List<String>) evofields.get("before_" + abrv(descR.getDescription()))).add(rangeToString(rDescR));
+            // }
+            // final List<Object> rightSideLocations = new ArrayList<>();
+            // res.put("rightSideLocations", rightSideLocations);
+            // for (final DescRange descR : getAfter()) { // TODO sort list
+            //     Range targetR = descR.getTarget();
+            //     final Map<String, Object> rDescR = Utils.formatRangeWithType(targetR);
+            //     rightSideLocations.add(rDescR);
+            //     rDescR.put("description", descR.getDescription());
+            //     evofields.putIfAbsent("after_" + abrv(descR.getDescription()), new ArrayList<>());
+            //     ((List<String>) evofields.get("after_" + abrv(descR.getDescription()))).add(rangeToString(rDescR));
+            // }
+            // addUrl(res);
+            // return res;
         }
     }
 

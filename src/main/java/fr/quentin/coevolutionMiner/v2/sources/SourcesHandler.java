@@ -24,7 +24,7 @@ public class SourcesHandler implements AutoCloseable {
     private Sources.Specifier buildSpec(String repository, String miner) {
         return new Sources.Specifier(repository, miner);
     }
-    
+
     public Sources.Specifier buildSpec(String repository, Integer stars) {
         return new Sources.Specifier(repository, "JGit", stars);
     }
@@ -36,7 +36,7 @@ public class SourcesHandler implements AutoCloseable {
     public Sources handle(Sources.Specifier spec) {
         return handle(spec, "Neo4j");
     }
-    
+
     public Sources handle(Sources.Specifier spec, String storeName) {
         Sources res = null;
         memoizedSources.putIfAbsent(spec, new Data<>());

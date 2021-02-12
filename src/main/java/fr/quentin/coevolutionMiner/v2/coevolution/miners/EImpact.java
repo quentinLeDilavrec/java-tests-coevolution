@@ -3,7 +3,9 @@ package fr.quentin.coevolutionMiner.v2.coevolution.miners;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang3.math.Fraction;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -14,33 +16,104 @@ import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 public class EImpact {
 
     public static class FailureReport {
-	    public final String what;
-	    public final String where;
+        public final String what;
+        public final String where;
         public final String when;
 
         public FailureReport(String what, String where, String when) {
             this.what = what;
             this.where = where;
             this.when = when;
+            this.hashCode = hashCodeCompute();
         }
-        
-	}
 
-	final Map<Range, ImmutablePair<Range, EImpact.FailureReport>> tests = new HashMap<>();
-    final Map<Evolution, Fraction> evolutions = new LinkedHashMap<>();
-    public Map<Evolution, Fraction> getEvolutions() {
-        return Collections.unmodifiableMap(evolutions);
+        @Override
+        public int hashCode() {
+            return hashCode;
+        }
+
+        private final int hashCode;
+
+        private int hashCodeCompute() {
+            int result = 1;
+            result = 31 * result + ((what == null) ? 0 : what.hashCode());
+            result = 31 * result + ((when == null) ? 0 : when.hashCode());
+            result = 31 * result + ((where == null) ? 0 : where.hashCode());
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            FailureReport other = (FailureReport) obj;
+            if (what == null) {
+                if (other.what != null)
+                    return false;
+            } else if (!what.equals(other.what))
+                return false;
+            if (when == null) {
+                if (other.when != null)
+                    return false;
+            } else if (!when.equals(other.when))
+                return false;
+            if (where == null) {
+                if (other.where != null)
+                    return false;
+            } else if (!where.equals(other.where))
+                return false;
+            return true;
+        }
+
     }
+
+    // TODO a nested map would be more precise (such as when tests are duplicated)
+    private final Map<Range, ImmutablePair<Range, EImpact.FailureReport>> tests;
+    private final Set<Evolution> evolutions;
+    private final int hashCode;
+
+    public Set<Evolution> getEvolutions() {
+        return evolutions;
+    }
+
     public Map<Range, ImmutablePair<Range, EImpact.FailureReport>> getTests() {
-        return Collections.unmodifiableMap(tests);
+        return tests;
+    }
+
+    public EImpact(Map<Range, ImmutablePair<Range, EImpact.FailureReport>> tests, Set<Evolution> evolutions) {
+        this.tests = Collections.unmodifiableMap(new HashMap<>(tests));
+        this.evolutions = Collections.unmodifiableSet(new LinkedHashSet<>(evolutions));
+
+        this.hashCode = hashCodeCompute();
+    }
+
+    public EImpact(Range executed, EImpact.FailureReport report) {
+        this.tests = Collections.singletonMap(executed, new ImmutablePair<>(executed, report));
+        this.evolutions = Collections.emptySet();
+
+        this.hashCode = hashCodeCompute();
+    }
+
+    public EImpact(Range testBefore, Range executed, FailureReport report, Set<Evolution> evolutions) {
+        this.tests = Collections.singletonMap(testBefore, new ImmutablePair<>(executed, report));
+        this.evolutions = Collections.unmodifiableSet(new LinkedHashSet<>(evolutions));
+
+        this.hashCode = hashCodeCompute();
     }
 
     @Override
     public int hashCode() {
-        final int prime = 31;
+        return hashCode;
+    }
+
+    private int hashCodeCompute() {
         int result = 1;
-        result = prime * result + ((evolutions == null) ? 0 : evolutions.hashCode());
-        result = prime * result + ((tests == null) ? 0 : tests.hashCode());
+        result = 31 * result + ((evolutions == null) ? 0 : evolutions.hashCode());
+        result = 31 * result + ((tests == null) ? 0 : tests.hashCode());
         return result;
     }
 

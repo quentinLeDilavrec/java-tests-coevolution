@@ -6,8 +6,8 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.locks.Lock;
 
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
-import fr.quentin.coevolutionMiner.v2.impact.Impacts;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
+import fr.quentin.coevolutionMiner.v2.dependency.Dependencies;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 
 public class ResourcesManager {
@@ -21,12 +21,12 @@ public class ResourcesManager {
     }
 
     public static enum Status {
-        COMPUTING(),
-        DONE()
+        COMPUTING(), DONE()
     }
 
     public static interface Resource {
         Status getStatus();
+
         String getStdout();
     }
 
@@ -45,20 +45,20 @@ public class ResourcesManager {
         }
 
     }
-    
+
     public <T extends SourcesHandler> Resource getSources(T handler, String repository) throws Exception {
         return null;
     }
 
-    public Project getAST(Project.Specifier id){
+    public Project getAST(Project.Specifier id) {
         return null;
     }
 
-    public Set<Evolutions> getEvolutions(Evolutions.Specifier id){
+    public Set<Evolutions> getEvolutions(Evolutions.Specifier id) {
         return null;
     }
 
-    public Set<Impacts> getImpacts(Impacts.Specifier id){
+    public Set<Dependencies> getImpacts(Dependencies.Specifier id) {
         return null;
     }
 }

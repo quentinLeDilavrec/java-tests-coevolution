@@ -26,7 +26,7 @@ import org.neo4j.driver.Value;
 import org.neo4j.driver.exceptions.TransientException;
 
 import fr.quentin.coevolutionMiner.utils.MyProperties;
-import fr.quentin.coevolutionMiner.v2.impact.Impacts;
+import fr.quentin.coevolutionMiner.v2.dependency.Dependencies;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesMiner;
@@ -88,7 +88,7 @@ public class Neo4jSourcesStorage implements SourcesStorage {
         //     e.printStackTrace();
         // }
         // return res;
-    }    
+    }
 
     static final String CYPHER_COMMITS_MERGE = Utils.memoizedReadResource("usingIds/commits_merge.cql");
 

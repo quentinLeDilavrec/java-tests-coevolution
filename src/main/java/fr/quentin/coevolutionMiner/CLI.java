@@ -59,11 +59,11 @@ import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon.SpoonAST;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
+import fr.quentin.coevolutionMiner.v2.dependency.DependencyHandler;
+import fr.quentin.coevolutionMiner.v2.dependency.Dependencies;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner;
-import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
-import fr.quentin.coevolutionMiner.v2.impact.Impacts;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Specifier;
@@ -127,80 +127,81 @@ public class CLI {
         options.addOption("s", "start", true, "starting line 0-indexed");
         options.addOption("c", "commitsMax", true, "number of commits to compute impacts");
         options.addOption(null, "splitOut", false, "split outputs");
-        options.addOption(null, "once", false, "compute coevolutions between commit pairs, commits in between are ignored");
+        options.addOption(null, "once", false,
+                "compute coevolutions between commit pairs, commits in between are ignored");
         options.addOption(null, "greedy", false, "search for coevo even if there is no RM evolutions");
         options.addOption("f", "file", true,
                 "a file that contain per line <repo> <stars> <list of important commitId time ordered and starting with the most recent>");
 
-            if (args.length < 1) {
-                throw new UnsupportedOperationException("use batch, compare or ast");
-            }
-            CommandLine line;
-            try {
-                line = parser.parse(options, Arrays.copyOfRange(args, 1, args.length));
-            } catch (ParseException e) {
-                throw new RuntimeException(e);
-            }
-            if (line.hasOption("splitOut")) {
-                splitedOut = true;
-            }
-            if (line.hasOption("greedy")) {
-                SEARCH_ONLY_IF_RM_FOUND = false;
-            }
-            if (line.hasOption("once")) {
-                // TODO do something cleaner
-                fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner.spanning = fr.quentin.coevolutionMiner.v2.utils.Utils.Spanning.ONCE;
-                fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.spanning = fr.quentin.coevolutionMiner.v2.utils.Utils.Spanning.ONCE;
-                fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner.spanning = fr.quentin.coevolutionMiner.v2.utils.Utils.Spanning.ONCE;
-            }
-            if (Objects.equals(args[0], "batch")) {
-                if (line.getOptionValue("file") != null) {
-                    try (Stream<ImmutablePair<Integer, String>> lines = indexedLines(
-                            Files.newBufferedReader(Paths.get(line.getOptionValue("file"))));) {
-                        batch(lines.skip(Integer.parseInt(line.getOptionValue("start", "0")))
-                                .limit(Integer.parseInt(line.getOptionValue("limit", "1"))),
-                                Integer.parseInt(line.getOptionValue("thread", "1")),
-                                Integer.parseInt(line.getOptionValue("commitsMax", "1")));
-                    }
+        if (args.length < 1) {
+            throw new UnsupportedOperationException("use batch, compare or ast");
+        }
+        CommandLine line;
+        try {
+            line = parser.parse(options, Arrays.copyOfRange(args, 1, args.length));
+        } catch (ParseException e) {
+            throw new RuntimeException(e);
+        }
+        if (line.hasOption("splitOut")) {
+            splitedOut = true;
+        }
+        if (line.hasOption("greedy")) {
+            SEARCH_ONLY_IF_RM_FOUND = false;
+        }
+        if (line.hasOption("once")) {
+            // TODO do something cleaner
+            fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner.spanning = fr.quentin.coevolutionMiner.v2.utils.Utils.Spanning.ONCE;
+            fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.spanning = fr.quentin.coevolutionMiner.v2.utils.Utils.Spanning.ONCE;
+            fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner.spanning = fr.quentin.coevolutionMiner.v2.utils.Utils.Spanning.ONCE;
+        }
+        if (Objects.equals(args[0], "batch")) {
+            if (line.getOptionValue("file") != null) {
+                try (Stream<ImmutablePair<Integer, String>> lines = indexedLines(
+                        Files.newBufferedReader(Paths.get(line.getOptionValue("file"))));) {
+                    batch(lines.skip(Integer.parseInt(line.getOptionValue("start", "0")))
+                            .limit(Integer.parseInt(line.getOptionValue("limit", "1"))),
+                            Integer.parseInt(line.getOptionValue("thread", "1")),
+                            Integer.parseInt(line.getOptionValue("commitsMax", "1")));
                 }
-            } else if (Objects.equals(args[0], "simpleBatch")) {
-                if (line.getOptionValue("file") != null) {
-                    try (Stream<ImmutablePair<Integer, String>> lines = indexedLines(
-                            Files.newBufferedReader(Paths.get(line.getOptionValue("file"))));) {
-                        simpleBatch(
-                                lines.skip(Integer.parseInt(line.getOptionValue("start", "0")))
-                                        .limit(Integer.parseInt(line.getOptionValue("limit", "1"))),
-                                Integer.parseInt(line.getOptionValue("thread", "1")),
-                                Integer.parseInt(line.getOptionValue("commitsMax", "1")));
-                    }
+            }
+        } else if (Objects.equals(args[0], "simpleBatch")) {
+            if (line.getOptionValue("file") != null) {
+                try (Stream<ImmutablePair<Integer, String>> lines = indexedLines(
+                        Files.newBufferedReader(Paths.get(line.getOptionValue("file"))));) {
+                    simpleBatch(
+                            lines.skip(Integer.parseInt(line.getOptionValue("start", "0")))
+                                    .limit(Integer.parseInt(line.getOptionValue("limit", "1"))),
+                            Integer.parseInt(line.getOptionValue("thread", "1")),
+                            Integer.parseInt(line.getOptionValue("commitsMax", "1")));
                 }
-            } else if (Objects.equals(args[0], "batchPreEval")) {
-                if (line.getOptionValue("file") != null) {
-                    try (Stream<ImmutablePair<Integer, String>> lines = indexedLines(
-                            Files.newBufferedReader(Paths.get(line.getOptionValue("file"))));) {
-                        batchPreEval(
-                                lines.skip(Integer.parseInt(line.getOptionValue("start", "0")))
-                                        .limit(Integer.parseInt(line.getOptionValue("limit", "1"))),
-                                Integer.parseInt(line.getOptionValue("thread", "1")),
-                                Integer.parseInt(line.getOptionValue("commitsMax", "1")));
-                    }
+            }
+        } else if (Objects.equals(args[0], "batchPreEval")) {
+            if (line.getOptionValue("file") != null) {
+                try (Stream<ImmutablePair<Integer, String>> lines = indexedLines(
+                        Files.newBufferedReader(Paths.get(line.getOptionValue("file"))));) {
+                    batchPreEval(
+                            lines.skip(Integer.parseInt(line.getOptionValue("start", "0")))
+                                    .limit(Integer.parseInt(line.getOptionValue("limit", "1"))),
+                            Integer.parseInt(line.getOptionValue("thread", "1")),
+                            Integer.parseInt(line.getOptionValue("commitsMax", "1")));
                 }
-            } else if (Objects.equals(args[0], "ast")) {
-                if (line.hasOption("repo")) {
-                    System.out.println(ast(line.getOptionValue("repo"), line.getArgList().get(0)));
-                } else {
-                    System.out.println(ast(line.getArgList().get(0)));
-                }
-            } else if (Objects.equals(args[0], "compare")) {
-                if (line.hasOption("repo")) {
-                    System.out.println(
-                            compare(line.getOptionValue("repo"), line.getArgList().get(0), line.getArgList().get(1)));
-                } else {
-                    System.out.println(compare(line.getArgList().get(0), line.getArgList().get(1)));
-                }
+            }
+        } else if (Objects.equals(args[0], "ast")) {
+            if (line.hasOption("repo")) {
+                System.out.println(ast(line.getOptionValue("repo"), line.getArgList().get(0)));
             } else {
-                throw new UnsupportedOperationException("use compare or ast");
+                System.out.println(ast(line.getArgList().get(0)));
             }
+        } else if (Objects.equals(args[0], "compare")) {
+            if (line.hasOption("repo")) {
+                System.out.println(
+                        compare(line.getOptionValue("repo"), line.getArgList().get(0), line.getArgList().get(1)));
+            } else {
+                System.out.println(compare(line.getArgList().get(0), line.getArgList().get(1)));
+            }
+        } else {
+            throw new UnsupportedOperationException("use compare or ast");
+        }
         System.exit(0);
     }
 
@@ -337,7 +338,7 @@ public class CLI {
 
         protected ProjectHandler astH = new ProjectHandler(srcH);
         protected EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
-        protected ImpactHandler impactH = new ImpactHandler(srcH, astH, evoH);
+        protected DependencyHandler impactH = new DependencyHandler(srcH, astH, evoH);
         protected CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH);
 
         public BatchExecutor1(int pool_size, int max_commits_impacts) {
@@ -425,8 +426,8 @@ public class CLI {
                     } catch (Throwable e) {
                         final String cA = commitIdAfter;
                         final String cB = commitIdBefore;
-                        logger.error("failed to analyze the interval [" + cB + "," + cA + "] of "
-                                + srcSpec.repository, e);
+                        logger.error("failed to analyze the interval [" + cB + "," + cA + "] of " + srcSpec.repository,
+                                e);
                         // break;
                     } finally {
                         if (splitedOut) {
@@ -452,7 +453,7 @@ public class CLI {
 
             private void processImpacts(String commitIdAfter, String commitIdBefore) {
                 try {
-                    Impacts impacts = impactH.handle(impactH.buildSpec(astH.buildSpec(srcSpec, commitIdBefore),
+                    Dependencies impacts = impactH.handle(impactH.buildSpec(astH.buildSpec(srcSpec, commitIdBefore),
                             EvolutionHandler.buildSpec(srcSpec, commitIdBefore, commitIdAfter)));
                     logger.info(Integer.toString(impacts.getPerRootCause().size()) + " impacts found for "
                             + srcSpec.repository + " from " + commitIdBefore + " to " + commitIdAfter);
@@ -488,7 +489,7 @@ public class CLI {
 
         protected ProjectHandler astH = new ProjectHandler(srcH);
         protected EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
-        protected ImpactHandler impactH = new ImpactHandler(srcH, astH, evoH);
+        protected DependencyHandler impactH = new DependencyHandler(srcH, astH, evoH);
         protected CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH);
 
         public BatchExecutor2(int pool_size, int max_commits_impacts) {
@@ -568,7 +569,7 @@ public class CLI {
                                 processCoEvo(commitIdAfter, commitIdBefore);
                             }
                         } catch (Exception e) {
-                            logger.error("failed evolution analysis",e);
+                            logger.error("failed evolution analysis", e);
                             break;
                         }
 
@@ -600,7 +601,7 @@ public class CLI {
 
             private void processImpacts(String commitIdAfter, String commitIdBefore) {
                 try {
-                    Impacts impacts = impactH.handle(impactH.buildSpec(astH.buildSpec(srcSpec, commitIdBefore),
+                    Dependencies impacts = impactH.handle(impactH.buildSpec(astH.buildSpec(srcSpec, commitIdBefore),
                             EvolutionHandler.buildSpec(srcSpec, commitIdBefore, commitIdAfter)));
                     logger.info(Integer.toString(impacts.getPerRootCause().size()) + " impacts found for "
                             + srcSpec.repository + " from " + commitIdBefore + " to " + commitIdAfter);
@@ -646,7 +647,7 @@ public class CLI {
         try (SourcesHandler srcH = new SourcesHandler();
                 ProjectHandler astH = new ProjectHandler(srcH);
                 EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
-                ImpactHandler impactH = new ImpactHandler(srcH, astH, evoH);
+                DependencyHandler impactH = new DependencyHandler(srcH, astH, evoH);
                 CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH)) {
             System.out.println("Starting");
             stream.forEach(line -> {
@@ -716,7 +717,7 @@ public class CLI {
                                 logger.info(Integer.toString(evos.toSet().size()) + " evolutions found for " + s.get(0)
                                         + " from " + commitIdBefore + " to " + commitIdAfter);
                                 try {
-                                    Impacts impacts = impactH.handle(impactH.buildSpec(
+                                    Dependencies impacts = impactH.handle(impactH.buildSpec(
                                             astH.buildSpec(srcSpec, commitIdBefore), EvolutionHandler.buildSpec(srcSpec,
                                                     commitIdBefore, commitIdAfter, RefactoringMiner.class)));
                                     System.out.println(
@@ -768,7 +769,7 @@ public class CLI {
         try (SourcesHandler srcH = new SourcesHandler();
                 ProjectHandler astH = new ProjectHandler(srcH);
                 EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
-                ImpactHandler impactH = new ImpactHandler(srcH, astH, evoH);
+                DependencyHandler impactH = new DependencyHandler(srcH, astH, evoH);
                 CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH)) {
 
             System.out.println("Starting batch from bdd");
@@ -842,7 +843,7 @@ public class CLI {
                                 logger.info(Integer.toString(evos.toSet().size()) + " evolutions found for " + s.get(0)
                                         + " from " + commitIdBefore + " to " + commitIdAfter);
                                 try {
-                                    Impacts impacts = impactH.handle(impactH.buildSpec(
+                                    Dependencies impacts = impactH.handle(impactH.buildSpec(
                                             astH.buildSpec(srcSpec, commitIdBefore), EvolutionHandler.buildSpec(srcSpec,
                                                     commitIdBefore, commitIdAfter, RefactoringMiner.class)));
                                     System.out.println(

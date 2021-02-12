@@ -83,9 +83,13 @@ public class EvoStateMaintainerImpl extends EvoStateMaintainer<Evolution> {
                 return null;
         }
     }
-    static final Section APP_SECTION = new Section(){};
-    static final Section TEST_SECTION = new Section(){};
+
+    static final Section APP_SECTION = new Section() {
+    };
+    static final Section TEST_SECTION = new Section() {
+    };
     private static final float minReqConst = 1.0f;
+
     @Override
     protected Set<Section> sectionSpanning(CtElement element) {
         ImmutableTriple<?, ?, MavenLauncher.SOURCE_TYPE> tmp = getSourceTypeNRootDirectory(element);
@@ -125,5 +129,5 @@ public class EvoStateMaintainerImpl extends EvoStateMaintainer<Evolution> {
     @Override
     public Object getOriginal(Evolution evolution) {
         return evolution.getOriginal();
-    } 
+    }
 }

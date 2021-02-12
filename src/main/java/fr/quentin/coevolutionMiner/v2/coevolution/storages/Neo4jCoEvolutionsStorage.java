@@ -39,11 +39,11 @@ import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.Specifier;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsStorage;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact.FailureReport;
+import fr.quentin.coevolutionMiner.v2.dependency.DependencyHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 import fr.quentin.coevolutionMiner.v2.evolution.storages.Neo4jEvolutionsStorage;
-import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.v2.utils.Utils;
 
@@ -195,7 +195,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
             Map<Evolution, Integer> idsByEvo = new LinkedHashMap<>();
             Map<Range, Integer> idsByTest = new LinkedHashMap<>();
             for (EImpact eimpact : chunk) {
-                for (Evolution e : eimpact.getEvolutions().keySet()) {
+                for (Evolution e : eimpact.getEvolutions()) {
                     idsByEvo.put(e, -1);
                 }
                 for (Entry<Range, ImmutablePair<Range, FailureReport>> entry : eimpact.getTests().entrySet()) {
@@ -216,7 +216,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                 if (entry.getValue() == -1) {
                     Range r = entry.getKey();
                     keySet.add(r);
-                    formatedTests.add(r.toMap());
+                    formatedTests.add(Utils.formatRangeWithType(r));
                 }
             }
             try (Transaction tx = session.beginTransaction(config);) {
@@ -374,14 +374,14 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
     private ProjectHandler astHandler;
     private EvolutionHandler evoHandler;
     private SourcesHandler sourcesHandler;
-    private ImpactHandler impactHandler;
+    private DependencyHandler impactHandler;
 
     public Neo4jCoEvolutionsStorage(String uri, String user, String password) {
         driver = GraphDatabase.driver(uri, AuthTokens.basic(user, password));
     }
 
     public Neo4jCoEvolutionsStorage(SourcesHandler sourcesHandler, ProjectHandler astHandler,
-            EvolutionHandler evoHandler, ImpactHandler impactHandler) {
+            EvolutionHandler evoHandler, DependencyHandler impactHandler) {
         this(MyProperties.getPropValues().getProperty("neo4jAddress"),
                 MyProperties.getPropValues().getProperty("neo4jId"),
                 MyProperties.getPropValues().getProperty("neo4jPwd"));
@@ -561,6 +561,9 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
     public static Map<String, Object> formatCoEvolutionWithEvolutionsAsIds(Map<Evolution, Integer> idsByEvo,
             CoEvolution coevo) {
         final Map<String, Object> res = new HashMap<>();
+
+        res.put("hash", coevo.hashCode());
+
         // TODO compute a type
         final List<Map<String, Object>> causes = new ArrayList<>();
         for (final Evolution cause : coevo.getCauses()) {
@@ -587,11 +590,13 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
 
     public static Map<String, Object> formatImpactWithRangesAndEvolutionsAsIds(Map<Range, Integer> idsByRange,
             Map<Evolution, Integer> idsByEvo, EImpact imp) {
-        Map<String, Object> r = new HashMap<>();
+        Map<String, Object> res = new HashMap<>();
+        res.put("hash", imp.hashCode());
+
         List<Map<String, Object>> testsSame = new ArrayList<>();
-        r.put("testsSame", testsSame);
+        res.put("testsSame", testsSame);
         List<Map<String, Object>> testsChanged = new ArrayList<>();
-        r.put("testsChanged", testsChanged);
+        res.put("testsChanged", testsChanged);
         for (Entry<Range, ImmutablePair<Range, FailureReport>> t : imp.getTests().entrySet()) {
             final Map<String, Object> test = new HashMap<>();
             Integer id = idsByRange.get(t.getValue().left);
@@ -606,12 +611,12 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
             test.put("report", report);
         }
         List<Map<String, Object>> evolutions = new ArrayList<>();
-        r.put("evolutions", evolutions);
-        for (Evolution evo : imp.getEvolutions().keySet()) {
+        res.put("evolutions", evolutions);
+        for (Evolution evo : imp.getEvolutions()) {
             Integer id = idsByEvo.get(evo);
             evolutions.add(Utils.map("id", id));
         }
-        return r;
+        return res;
     }
 
     public static void matchAndGetRangeIds(Map<Range, Integer> idsByRange, List<Map<String, Object>> formatedRanges,
@@ -622,7 +627,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
 
             int i = 0;
             for (Range r : keySet) {
-                if (rangesId.get(i)==-1) {
+                if (rangesId.get(i) == -1) {
                     throw new RuntimeException("all needed ranges should already be there");
                 }
                 idsByRange.put(r, rangesId.get(i));

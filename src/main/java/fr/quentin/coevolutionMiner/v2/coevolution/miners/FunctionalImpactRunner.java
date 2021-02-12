@@ -247,12 +247,8 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
         return report;
     }
 
-    private EImpact saveReport(Set<Evolution> t, EImpact.FailureReport report) {
-        EImpact eimpact = new EImpact();
-        for (Evolution e : t) {
-            eimpact.evolutions.put(e, applierHelper.evoState.ratio(e));
-        }
-        eimpact.tests.put(testBefore, new ImmutablePair<>(testToExec, report));
+    private EImpact saveReport(Set<Evolution> applied, EImpact.FailureReport report) {
+        EImpact eimpact = new EImpact(testBefore, testToExec, report, applied);
         return eimpact;
     }
 
@@ -305,8 +301,8 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
                 if (!testAfterB.equals(testAfter)) {
                     logger.info("not sure about which method is the test after the evolutions are applied");
                     try {
-                    logger.info("testAfterB: "+testAfterB.getOriginal().toString());
-                    logger.info("testAfter: "+testAfter.getOriginal().toString());
+                        logger.info("testAfterB: " + testAfterB.getOriginal().toString());
+                        logger.info("testAfter: " + testAfter.getOriginal().toString());
                     } catch (Exception e) {
                     }
                 }

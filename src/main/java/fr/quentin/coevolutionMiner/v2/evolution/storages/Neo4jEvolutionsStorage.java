@@ -82,6 +82,7 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
             Map<Range, Integer> idsByRange = Neo4jEvolutionsStorage.idsByRangeFromEvos(chunk);
             List<Map<String, Object>> formatedRanges = new ArrayList<>();
             Set<Range> keySet = new LinkedHashSet<>();
+
             for (Entry<Range, Integer> entry : idsByRange.entrySet()) {
                 if (entry.getValue() == -1) {
                     Range r = entry.getKey();
@@ -89,9 +90,10 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
                     formatedRanges.add(Utils.formatRangeWithType(r));
                 }
             }
-            try (Transaction tx = session.beginTransaction(config);) {
-                mergeAndGetRangeIds(idsByRange, formatedRanges, keySet, tx);
 
+            try (Transaction tx = session.beginTransaction(config);) {
+
+                mergeAndGetRangeIds(idsByRange, formatedRanges, keySet, tx);
                 List<Map<String, Object>> toMatch = new ArrayList<>();
                 for (Evolution evo : chunk) {
                     toMatch.add(formatEvolutionWithRangesAsIds(idsByRange, evo));
@@ -103,13 +105,16 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
                 } else {
                     List<Map<String, Object>> toUpdate = new ArrayList<>();
                     matchEvolutions(tx, toMatch, toUpdate, toCreate);
+
                     if (toUpdate.size() > 0) {
                         tx.run(CYPHER_EVOLUTIONS_UPDATE, parameters("data", toUpdate, "tool", tool)).consume();
                     }
                 }
+
                 if (toCreate.size() > 0) {
                     tx.run(CYPHER_EVOLUTIONS_CREATE, parameters("data", toCreate, "tool", tool)).consume();
                 }
+
                 tx.commit();
                 return whatIsUploaded();
             } catch (TransientException e) {
@@ -128,8 +133,8 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
 
     }
 
-    public static void matchEvolutions(Transaction tx, List<Map<String, Object>> toMatch, List<Map<String, Object>> matched,
-            List<Map<String, Object>> notMatched) {
+    public static void matchEvolutions(Transaction tx, List<Map<String, Object>> toMatch,
+            List<Map<String, Object>> matched, List<Map<String, Object>> notMatched) {
         List<Integer> evolutionsId = tx.run(CYPHER_EVOLUTIONS_MATCH, parameters("data", toMatch))
                 .list(x -> x.get("id", -1));
         // List<Evolution> toId = new ArrayList<>();
@@ -149,20 +154,23 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
         }
     }
 
-    public static void matchExistingEvolutions(Transaction tx, List<Map<String, Object>> toMatch, List<Integer> matched) {
+    public static void matchExistingEvolutions(Transaction tx, List<Map<String, Object>> toMatch,
+            List<Integer> matched) {
         List<Integer> evolutionsId = tx.run(CYPHER_EVOLUTIONS_MATCH, parameters("data", toMatch))
                 .list(x -> x.get("id", -1));
         for (int i = 0; i < evolutionsId.size(); i++) {
             Integer id = evolutionsId.get(i);
             if (id == -1) {
-                throw new RuntimeException("all needed evolutions should already be there for:\n" + parameters("data", toMatch).toString());
+                throw new RuntimeException("all needed evolutions should already be there for:\n"
+                        + parameters("data", toMatch).toString());
             } else {
                 matched.add(id);
             }
         }
     }
 
-    public static void matchEvolutions(Transaction tx, List<Map<String, Object>> toMatch, List<Map<String, Object>> notMatched) {
+    public static void matchEvolutions(Transaction tx, List<Map<String, Object>> toMatch,
+            List<Map<String, Object>> notMatched) {
         List<Integer> evolutionsId = tx.run(CYPHER_EVOLUTIONS_MATCH, parameters("data", toMatch))
                 .list(x -> x.get("id", -1));
         for (int i = 0; i < evolutionsId.size(); i++) {
@@ -177,6 +185,7 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
     public static Map<String, Object> formatEvolutionWithRangesAsIds(Map<Range, Integer> idsByRange, Evolution evo) {
         final Map<String, Object> res = new HashMap<>();
         res.put("type", evo.getType());
+        res.put("hash", evo.hashCode());
 
         final List<Map<String, Object>> before = new ArrayList<>();
         for (final DescRange descR : evo.getBefore()) {

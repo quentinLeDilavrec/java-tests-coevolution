@@ -15,13 +15,13 @@ import fr.quentin.impactMiner.Evolution;
 import fr.quentin.coevolutionMiner.v2.Data;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner;
+import fr.quentin.coevolutionMiner.v2.dependency.DependenciesStorage;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.MixedMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.storages.Neo4jEvolutionsStorage;
-import fr.quentin.coevolutionMiner.v2.impact.ImpactsStorage;
 
 public class EvolutionHandler implements AutoCloseable {
 

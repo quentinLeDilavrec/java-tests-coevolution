@@ -8,7 +8,7 @@ public class App {
     public static void main(String[] args) throws Exception {
         if (args.length <= 1) {
             Server.main(args);
-        } else if(Objects.equals(args[0], "server")) {
+        } else if (Objects.equals(args[0], "server")) {
             Server.main(Arrays.copyOfRange(args, 1, args.length));
         } else if (Objects.equals(args[0], "cli")) {
             CLI.main(Arrays.copyOfRange(args, 1, args.length));
@@ -26,7 +26,6 @@ public class App {
     // response.status(400);
     // });
     // }
-
 
     // public static void original() throws IOException {
 

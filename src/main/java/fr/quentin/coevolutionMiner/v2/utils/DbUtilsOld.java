@@ -131,8 +131,8 @@ public class DbUtilsOld {
 		return res;
 	}
 
-	public static Collection<? extends Map<String, Object>> makeImpact(String repository, String commitIdBefore, Path rootDir,
-			ImpactElement cause, ImpactElement effect, String type, String uniqueness) {
+	public static Collection<? extends Map<String, Object>> makeImpact(String repository, String commitIdBefore,
+			Path rootDir, ImpactElement cause, ImpactElement effect, String type, String uniqueness) {
 
 		List<Map<String, Object>> res = new ArrayList<>();
 		Map<String, Object> callImpact = new HashMap<>();
@@ -239,8 +239,7 @@ public class DbUtilsOld {
 		return makeContent(repository, commitId, position);
 	}
 
-	public static Map<String, Object> makeContent(String repository, String commitId,
-			Position position) {
+	public static Map<String, Object> makeContent(String repository, String commitId, Position position) {
 		Map<String, Object> content = new HashMap<>();
 		content.put("repository", repository);
 		content.put("commitId", commitId);
@@ -251,79 +250,77 @@ public class DbUtilsOld {
 	}
 
 	public static List<Map<String, Object>> basifyImpact(String repository, String commitId, Path cause_rootDir,
-	        ImpactElement rootCause, Relations vertice) {
-	    List<Map<String, Object>> res = new ArrayList<>();
-	
-	    for (Entry<ImpactType, Set<ImpactElement>> entry : vertice.getEffects().entrySet()) {
-	        if (entry.getKey().equals(ImpactType.CALL)) {
-	
-	            Map<String, Object> content = makeContent(repository, commitId, cause_rootDir,
-	                    vertice.getVertice());
-	            content.put("type", "call impact");
-	
-	            List<Map<String, Object>> causes = new ArrayList<>();
-	            Map<String, Object> o_c = makeRange(repository, commitId, cause_rootDir,
-	                    vertice.getVertice());
-	            causes.add(o_c);
-	
-	            List<Map<String, Object>> effects = new ArrayList<>();
-	            for (ImpactElement e : entry.getValue()) {
-	                Map<String, Object> o = makeRange(repository, commitId, cause_rootDir, e);
-	                effects.add(o);
-	            }
-	            res.add(makeImpact(content, causes, effects));
-	        } else if (entry.getKey().equals(ImpactType.EXPAND)) {
-	            for (ImpactElement elem : entry.getValue()) {
-	                res.addAll(makeImpact(repository, commitId, cause_rootDir, vertice.getVertice(), elem,
-	                        "expand to executable", "effect"));
-	            }
-	        }
-	    }
-	    return res;
+			ImpactElement rootCause, Relations vertice) {
+		List<Map<String, Object>> res = new ArrayList<>();
+
+		for (Entry<ImpactType, Set<ImpactElement>> entry : vertice.getEffects().entrySet()) {
+			if (entry.getKey().equals(ImpactType.CALL)) {
+
+				Map<String, Object> content = makeContent(repository, commitId, cause_rootDir, vertice.getVertice());
+				content.put("type", "call impact");
+
+				List<Map<String, Object>> causes = new ArrayList<>();
+				Map<String, Object> o_c = makeRange(repository, commitId, cause_rootDir, vertice.getVertice());
+				causes.add(o_c);
+
+				List<Map<String, Object>> effects = new ArrayList<>();
+				for (ImpactElement e : entry.getValue()) {
+					Map<String, Object> o = makeRange(repository, commitId, cause_rootDir, e);
+					effects.add(o);
+				}
+				res.add(makeImpact(content, causes, effects));
+			} else if (entry.getKey().equals(ImpactType.EXPAND)) {
+				for (ImpactElement elem : entry.getValue()) {
+					res.addAll(makeImpact(repository, commitId, cause_rootDir, vertice.getVertice(), elem,
+							"expand to executable", "effect"));
+				}
+			}
+		}
+		return res;
 	}
 
-	public static List<Map<String, Object>> basifyRootCauseImpact(String repository, String commitId, Path cause_rootDir,
-	        ImpactElement rootCause, List<Map<String, Object>> ranges_to_type) {
-	    List<Map<String, Object>> res = new ArrayList<>();
-	    List<Map<String, Object>> causes = new ArrayList<>();
-	    Position effect_pos = Utils.temporaryFix(rootCause.getPosition(), cause_rootDir);
-	    // for (Entry<Evolution<Object>, Position> entry : rootCause.getEvolutionWithNonCorrectedPosition().entrySet()) {
-	    //     // TODO add evolution in graph? would need to pull-up helper from
-	    //     // Neo4jEvolutionStorage.java
-	    //     Position cause_pos = entry.getValue();
-	    //     for (Map<String, String> elem : computeRelationInfo(entry.getKey(), cause_pos,
-	    //             rootCause.getContent(), effect_pos)) {
-	
-	    //         Map<String, Object> o_c = makeRange(repository, commitId, cause_pos);
-	    //         o_c.put("relationInfo", elem);
-	    //         if (rootCause.getContent() instanceof CtMethod) {
-	    //             o_c.put("sig", ((CtMethod) rootCause.getContent()).getSignature());
-	    //         }
-	    //         if (Utils.isTest(rootCause.getContent())) {
-	    //             // o_c.put("isTest", "parent"); // TODO check it
-	    //         } else if (Utils.isParentTest(rootCause.getContent())) {
-	    //             o_c.put("isTest", "parent");
-	    //         }
-	    //         if (effect_pos.equals(cause_pos))
-	    //             ranges_to_type.add(o_c);
-	    //         else
-	    //             causes.add(o_c);
-	    //     }
-	
-	    // }
-	
-	    if (causes.size() <= 0)
-	        return res;
-	
-	    Map<String, Object> content = makeContent(repository, commitId, effect_pos);
-	    content.put("type", "rescope");
-	
-	    List<Map<String, Object>> effects = new ArrayList<>();
-	    effects.add(makeRange(repository, commitId, cause_rootDir, rootCause));
-	
-	    res.add(makeImpact(content, causes, effects));
-	
-	    return res;
+	public static List<Map<String, Object>> basifyRootCauseImpact(String repository, String commitId,
+			Path cause_rootDir, ImpactElement rootCause, List<Map<String, Object>> ranges_to_type) {
+		List<Map<String, Object>> res = new ArrayList<>();
+		List<Map<String, Object>> causes = new ArrayList<>();
+		Position effect_pos = Utils.temporaryFix(rootCause.getPosition(), cause_rootDir);
+		// for (Entry<Evolution<Object>, Position> entry : rootCause.getEvolutionWithNonCorrectedPosition().entrySet()) {
+		//     // TODO add evolution in graph? would need to pull-up helper from
+		//     // Neo4jEvolutionStorage.java
+		//     Position cause_pos = entry.getValue();
+		//     for (Map<String, String> elem : computeRelationInfo(entry.getKey(), cause_pos,
+		//             rootCause.getContent(), effect_pos)) {
+
+		//         Map<String, Object> o_c = makeRange(repository, commitId, cause_pos);
+		//         o_c.put("relationInfo", elem);
+		//         if (rootCause.getContent() instanceof CtMethod) {
+		//             o_c.put("sig", ((CtMethod) rootCause.getContent()).getSignature());
+		//         }
+		//         if (Utils.isTest(rootCause.getContent())) {
+		//             // o_c.put("isTest", "parent"); // TODO check it
+		//         } else if (Utils.isParentTest(rootCause.getContent())) {
+		//             o_c.put("isTest", "parent");
+		//         }
+		//         if (effect_pos.equals(cause_pos))
+		//             ranges_to_type.add(o_c);
+		//         else
+		//             causes.add(o_c);
+		//     }
+
+		// }
+
+		if (causes.size() <= 0)
+			return res;
+
+		Map<String, Object> content = makeContent(repository, commitId, effect_pos);
+		content.put("type", "rescope");
+
+		List<Map<String, Object>> effects = new ArrayList<>();
+		effects.add(makeRange(repository, commitId, cause_rootDir, rootCause));
+
+		res.add(makeImpact(content, causes, effects));
+
+		return res;
 	}
 
 }
