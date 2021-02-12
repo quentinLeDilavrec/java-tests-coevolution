@@ -20,13 +20,13 @@ import fr.quentin.coevolutionMiner.v1.parsers.SpoonHandler;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectRoute;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
+import fr.quentin.coevolutionMiner.v2.dependency.DependencyHandler;
+import fr.quentin.coevolutionMiner.v2.dependency.DepedencyRoute;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionRoute;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.MixedMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner;
-import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
-import fr.quentin.coevolutionMiner.v2.impact.ImpactRoute;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesRoute;
 import fr.quentin.coevolutionMiner.utils.DefaultDataHandler;
@@ -150,9 +150,9 @@ public class Server {
 				put("/default", evoR);
 			});
 
-			ImpactHandler impactH = new ImpactHandler(srcH, astH, evoH);
+			DependencyHandler impactH = new DependencyHandler(srcH, astH, evoH);
 			path("/impact", () -> {
-				ImpactRoute impactR = new ImpactRoute(srcH, astH, evoH, impactH, "myMiner");
+				DepedencyRoute impactR = new DepedencyRoute(srcH, astH, evoH, impactH, "myMiner");
 				put("/myMiner", impactR);
 				put("/default", impactR);
 			});

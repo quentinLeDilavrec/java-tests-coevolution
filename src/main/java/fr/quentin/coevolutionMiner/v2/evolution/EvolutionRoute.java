@@ -83,7 +83,8 @@ public class EvolutionRoute implements Route {
                     throw new RuntimeException(e);
                 }
             }
-            Evolutions evolutions = evoHandler.handle(evoHandler.buildSpec(srcSpec, body.commitIdBefore, body.commitIdAfter, minerId));
+            Evolutions evolutions = evoHandler
+                    .handle(evoHandler.buildSpec(srcSpec, body.commitIdBefore, body.commitIdAfter, minerId));
             JsonArray result = new JsonArray();
             for (Evolution evolution : evolutions) {
                 // TODO use body.cases to filter wanted evolutions

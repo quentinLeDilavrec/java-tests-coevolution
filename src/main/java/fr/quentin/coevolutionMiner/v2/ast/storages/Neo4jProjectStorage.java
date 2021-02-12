@@ -40,7 +40,6 @@ import fr.quentin.coevolutionMiner.v2.utils.Utils;
 public class Neo4jProjectStorage implements ProjectStorage {
     public static Logger logger = LogManager.getLogger();
 
-    
     static final String CYPHER_PROJECTS_MERGE = Utils.memoizedReadResource("usingIds/projects_merge.cql");
 
     class ChunckedUploadProjects extends Utils.SimpleChunckedUpload<Map<String, Object>> {
@@ -119,7 +118,7 @@ public class Neo4jProjectStorage implements ProjectStorage {
         srcs.add(Paths.get(project.spec.relPath.toString(), "src/main/java").toString());
         content.put("srcs", srcs);
         content.put("tests", ast.launcher.getPomFile().getTestDirectories().stream()
-        .map(x -> rootDir.relativize(x.toPath()).toString()).collect(Collectors.toList()));
+                .map(x -> rootDir.relativize(x.toPath()).toString()).collect(Collectors.toList()));
         Model pom = ast.launcher.getPomFile().getModel();
         content.put("groupId", pom.getGroupId());
         content.put("artifactId", pom.getArtifactId());

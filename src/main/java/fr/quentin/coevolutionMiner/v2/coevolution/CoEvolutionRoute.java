@@ -15,22 +15,22 @@ import spark.Route;
 
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.MixedMiner;
-import fr.quentin.coevolutionMiner.v2.impact.ImpactHandler;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
+import fr.quentin.coevolutionMiner.v2.dependency.DependencyHandler;
 
 public class CoEvolutionRoute implements Route {
 
     private CoEvolutionHandler coevoHandler;
-    private ImpactHandler impactsHandler;
+    private DependencyHandler impactsHandler;
     private EvolutionHandler evoHandler;
     private ProjectHandler astHandler;
     private SourcesHandler sourcesHandler;
     private String minerId;
 
-    public CoEvolutionRoute(SourcesHandler srcH, ProjectHandler astH, EvolutionHandler evoH, ImpactHandler impactH,
+    public CoEvolutionRoute(SourcesHandler srcH, ProjectHandler astH, EvolutionHandler evoH, DependencyHandler impactH,
             CoEvolutionHandler coevoH, String minerId) {
         this.sourcesHandler = srcH;
         this.astHandler = astH;
@@ -98,9 +98,8 @@ public class CoEvolutionRoute implements Route {
                 }
             }
             // TODO use body.cases to filter wanted evolutions
-            r = coevoHandler
-                    .handle(coevoHandler
-                            .buildSpec(srcSpec, evoHandler.buildSpec(srcSpec, body.commitIdBefore, body.commitIdAfter, MixedMiner.class), minerId))
+            r = coevoHandler.handle(coevoHandler.buildSpec(srcSpec,
+                    evoHandler.buildSpec(srcSpec, body.commitIdBefore, body.commitIdAfter, MixedMiner.class), minerId))
                     .toJson();
         } else if (body.repo != null && body.tagBefore != null && body.tagAfter != null) {
             JsonObject tmp = new JsonObject();

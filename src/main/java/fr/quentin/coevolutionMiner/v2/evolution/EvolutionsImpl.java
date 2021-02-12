@@ -32,37 +32,31 @@ public class EvolutionsImpl extends Evolutions {
     }
 
     protected final Set<Evolution> evolutions = new LinkedHashSet<>();
-    private final Map<ImmutablePair<String, List<ImmutablePair<Range, String>>>, Evolution> evoByBeforeList = new HashMap<>();
+    // private final Map<ImmutablePair<String, List<ImmutablePair<Range, String>>>, Evolution> evoByBeforeList = new HashMap<>();
 
     protected final Evolution addEvolution(final String type, final List<ImmutablePair<Range, String>> before,
             final List<ImmutablePair<Range, String>> after, final Commit commitBefore, final Commit commitAfter,
             final Object original) {
-        if (before.size()==0 && after.size()==0) {
-            throw new RuntimeException("an evolution should point on at least one range");
-        }
-        final Evolution evo = new Evolutions.Evolution(original, type, commitBefore, commitAfter);
-        for (final ImmutablePair<Range, String> immutablePair : before) {
-            evo.addBefore(immutablePair.getLeft(), immutablePair.getRight());
-        }
-        for (final ImmutablePair<Range, String> immutablePair : after) {
-            evo.addAfter(immutablePair.getLeft(), immutablePair.getRight());
-        }
+        final Evolution evo = new Evolutions.Evolution(original, type, commitBefore, commitAfter, before, after);
         evolutions.add(evo);
-        final Evolution old = evoByBeforeList.put(new ImmutablePair<>(type, before), evo);
-        if (old != null && evo.equals(old))
-            logger.info("evo sharing same type and before");
+        // final Evolution old = evoByBeforeList.put(new ImmutablePair<>(type, before), evo);
+        // if (old != null && evo.equals(old))
+        //     logger.warn("evo sharing same type and before");
         return evo;
     }
 
     @Override
     public Set<Evolution> getEvolution(String type, Project<?> source, List<ImmutablePair<Range, String>> before,
             Project<?> target, List<ImmutablePair<Range, String>> after) {
-        final Evolution tmp = evoByBeforeList.get(new ImmutablePair<>(type, before));
-        if (tmp == null) {
-            throw new RuntimeException("evo of type " + type + " and " + before + " is not in list");
-        }
-        // TODO do some checks on target
-        return Collections.singleton(tmp);
+        // TODO should be reimplemented late when I have a use for it again 
+        throw new UnsupportedOperationException();
+
+        // final Evolution tmp = evoByBeforeList.get(new ImmutablePair<>(type, before));
+        // if (tmp == null) {
+        //     throw new RuntimeException("evo of type " + type + " and " + before + " is not in list");
+        // }
+        // // TODO do some checks on target
+        // return Collections.singleton(tmp);
     }
 
     @Override

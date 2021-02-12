@@ -395,7 +395,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     if (rangeBef != null)
                         before.add(rangeBef);
                 }
-                if (before.size()==0 && after.size()==0) {
+                if (before.size() == 0 && after.size() == 0) {
                     logger.error("an evolution should point on at least one range");
                     return;
                 }
@@ -415,7 +415,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 List<ImmutablePair<Range, String>> after = new ArrayList<>();
 
                 addComposedEvolutionAux(op, astBefore, astAfter, before, after, null);
-                if (before.size()==0 && after.size()==0) {
+                if (before.size() == 0 && after.size() == 0) {
                     logger.error("an evolution should point on at least one range");
                     return;
                 }

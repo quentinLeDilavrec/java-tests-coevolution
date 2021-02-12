@@ -90,6 +90,7 @@ public abstract class Sources {
 
         Repository(String url) {
             this.url = url;
+            this.hashCode = hashCodeCompute();
         };
 
         private String url;
@@ -112,6 +113,12 @@ public abstract class Sources {
 
         @Override
         public int hashCode() {
+            return hashCode;
+        }
+
+        private final int hashCode;
+
+        private int hashCodeCompute() {
             final int prime = 31;
             int result = 1;
             result = prime * result + ((url == null) ? 0 : url.hashCode());
@@ -146,7 +153,7 @@ public abstract class Sources {
     private Set<Commit> updatedRelations = new HashSet<>();
 
     public final void uploadCommits() {
-        if (updatedRelations.size()>0) {
+        if (updatedRelations.size() > 0) {
             Set<Commit> r = Collections.unmodifiableSet(updatedRelations);
             updatedRelations = new HashSet<>();
             for (SourcesStorage storer : storers) {
@@ -157,7 +164,7 @@ public abstract class Sources {
 
     public final Commit getCommit(String id) {
         if (commits.containsKey(id)) {
-            return commits.get(id);   
+            return commits.get(id);
         } else {
             Commit commit = new Commit(id);
             VersionCommit.build(commit);
@@ -210,10 +217,17 @@ public abstract class Sources {
 
         Commit(String id) {
             this.id = id;
+            this.hashCode = hashCodeCompute();
         }
 
         @Override
         public int hashCode() {
+            return hashCode;
+        }
+
+        private final int hashCode;
+
+        private int hashCodeCompute() {
             final int prime = 31;
             int result = 1;
             result = prime * result + ((id == null) ? 0 : id.hashCode());

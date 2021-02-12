@@ -7,16 +7,16 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 class Chain<T> implements Collection<T> {
-	public final Chain<T> prev;
+    public final Chain<T> prev;
     public final T curr;
 
     public Chain(T curr) {
-		this.prev = null;
+        this.prev = null;
         this.curr = curr;
     }
 
     public Chain(T curr, Chain<T> prev) {
-		this.prev = prev;
+        this.prev = prev;
         this.curr = curr;
     }
 
@@ -69,14 +69,14 @@ class Chain<T> implements Collection<T> {
     @Override
     public Object[] toArray() {
         List<T> aaa = new ArrayList<>();
-        iterator().forEachRemaining(x->aaa.add((T) x));
+        iterator().forEachRemaining(x -> aaa.add((T) x));
         return aaa.toArray();
     }
 
     @Override
     public <T> T[] toArray(T[] a) {
         List<T> aaa = new ArrayList<>();
-        iterator().forEachRemaining(x->aaa.add((T) x));
+        iterator().forEachRemaining(x -> aaa.add((T) x));
         return aaa.toArray(a);
     }
 
@@ -93,10 +93,11 @@ class Chain<T> implements Collection<T> {
     @Override
     public boolean containsAll(Collection<?> c) {
         for (Object object : c) {
-            if(contains(object)){
+            if (contains(object)) {
                 return true;
             }
-        };
+        }
+        ;
         return false;
     }
 

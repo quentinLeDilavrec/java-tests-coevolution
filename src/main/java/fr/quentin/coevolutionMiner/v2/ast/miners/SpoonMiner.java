@@ -151,7 +151,8 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
     private ProjectSpoon extracted(Sources src, Path path, Path root, SpoonPom spoonPom)
             throws IOException, InterruptedException, Exception {
         MavenLauncher launcher = spoonPom != null ? new MavenLauncher(spoonPom, MavenLauncher.SOURCE_TYPE.ALL_SOURCE)
-                : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE, MyProperties.getPropValues().getProperty("mavenHome"));
+                : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE,
+                        MyProperties.getPropValues().getProperty("mavenHome"));
         // FilteringFolder resources = new FilteringFolder();
         // resources.addFolder(new FileSystemFolder(path.toString()));
         // for (String string : x) {
@@ -214,7 +215,8 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             // APP_SOURCE
             MavenLauncher launcherCode = spoonPom != null
                     ? new MavenLauncher(spoonPom, MavenLauncher.SOURCE_TYPE.APP_SOURCE)
-                    : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.APP_SOURCE, MyProperties.getPropValues().getProperty("mavenHome"));
+                    : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.APP_SOURCE,
+                            MyProperties.getPropValues().getProperty("mavenHome"));
             launcherCode.getEnvironment().setLevel("INFO");
             launcherCode.getFactory().getEnvironment().setLevel("INFO");
             launcherCode.getEnvironment().setCommentEnabled(false);
@@ -233,7 +235,8 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             // ALL_SOURCE
             MavenLauncher launcherAll = spoonPom != null
                     ? new MavenLauncher(spoonPom, MavenLauncher.SOURCE_TYPE.ALL_SOURCE)
-                    : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE, MyProperties.getPropValues().getProperty("mavenHome"));
+                    : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE,
+                            MyProperties.getPropValues().getProperty("mavenHome"));
             launcherAll.getEnvironment().setLevel("INFO");
             launcherAll.getFactory().getEnvironment().setLevel("INFO");
             launcherAll.getEnvironment().setCommentEnabled(false);
@@ -467,7 +470,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         }
         if (i >= 3) {
             logger.warn("fail all tries", ee);
-            return ;
+            return;
         }
         Gson gson = new Gson();
         try (JsonReader reader = new JsonReader(new InputStreamReader(process.getInputStream()))) {

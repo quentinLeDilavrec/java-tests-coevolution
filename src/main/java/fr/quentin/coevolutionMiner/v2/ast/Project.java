@@ -220,6 +220,7 @@ public class Project<T> implements Iterable<Project> {
 
             FileSnapshot(String path) {
                 this.path = path;
+                this.hashCode = hashCodeCompute();
             }
 
             /**
@@ -287,10 +288,17 @@ public class Project<T> implements Iterable<Project> {
                 Range(Integer start, Integer end) {
                     this.start = start;
                     this.end = end;
+                    this.hashCode = hashCodeCompute();
                 }
 
                 @Override
                 public int hashCode() {
+                    return hashCode;
+                }
+
+                private final int hashCode;
+
+                private int hashCodeCompute() {
                     final int prime = 31;
                     int result = 1;
                     result = prime * result + getFileSnapshot().hashCode();
@@ -417,6 +425,12 @@ public class Project<T> implements Iterable<Project> {
 
             @Override
             public int hashCode() {
+                return hashCode;
+            }
+
+            private final int hashCode;
+
+            private int hashCodeCompute() {
                 final int prime = 31;
                 int result = 1;
                 result = prime * result + ((this.getCommit() == null) ? 0 : this.getCommit().hashCode());

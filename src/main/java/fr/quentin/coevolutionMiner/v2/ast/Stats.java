@@ -16,8 +16,8 @@ public class Stats {
     public Integer classes;
     public Integer executables;
     public Integer tests;
-	public int codeAST;
-	public int testsAST;
+    public int codeAST;
+    public int testsAST;
 
     @Override
     public String toString() {

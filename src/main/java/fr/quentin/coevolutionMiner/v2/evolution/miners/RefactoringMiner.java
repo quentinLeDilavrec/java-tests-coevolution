@@ -174,7 +174,7 @@ public class RefactoringMiner implements EvolutionsMiner {
         void addEvolution(Refactoring refact, Project<?> astBefore, Project<?> astAfter) {
             List<ImmutablePair<Range, String>> before = aux(refact.leftSide(), astBefore);
             List<ImmutablePair<Range, String>> after = aux(refact.rightSide(), astAfter);
-            if (before.size()==0 && after.size()==0) {
+            if (before.size() == 0 && after.size() == 0) {
                 logger.error("an evolution should point on at least one range");
                 return;
             }

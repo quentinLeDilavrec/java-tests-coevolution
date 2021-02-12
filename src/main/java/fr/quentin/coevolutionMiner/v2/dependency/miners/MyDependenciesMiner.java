@@ -1,4 +1,4 @@
-package fr.quentin.coevolutionMiner.v2.impact.miners;
+package fr.quentin.coevolutionMiner.v2.dependency.miners;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -26,12 +26,12 @@ import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon.SpoonAST;
+import fr.quentin.coevolutionMiner.v2.dependency.Dependencies;
+import fr.quentin.coevolutionMiner.v2.dependency.DependenciesMiner;
+import fr.quentin.coevolutionMiner.v2.dependency.Dependencies.Dependency.DescRange;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
-import fr.quentin.coevolutionMiner.v2.impact.Impacts;
-import fr.quentin.coevolutionMiner.v2.impact.Impacts.Impact.DescRange;
-import fr.quentin.coevolutionMiner.v2.impact.ImpactsMiner;
 import fr.quentin.coevolutionMiner.v2.utils.MySLL;
 import fr.quentin.coevolutionMiner.v2.utils.Utils;
 import fr.quentin.impactMiner.Explorer;
@@ -51,21 +51,21 @@ import spoon.reflect.visitor.filter.TypeFilter;
 // CAUTION only handle correctly evolution in consecutive commits, 
 // reson impact only computer on first commit 
 // and no implementation of forwarding ranges of code through commits (making sure they were not modified)
-public class MyImpactsMiner implements ImpactsMiner {
+public class MyDependenciesMiner implements DependenciesMiner {
     static Logger logger = LogManager.getLogger();
 
     private ProjectHandler astHandler;
     private EvolutionHandler evoHandler;
-    private Impacts.Specifier spec;
+    private Dependencies.Specifier spec;
 
-    public MyImpactsMiner(Impacts.Specifier spec, ProjectHandler astHandler, EvolutionHandler evoHandler) {
+    public MyDependenciesMiner(Dependencies.Specifier spec, ProjectHandler astHandler, EvolutionHandler evoHandler) {
         this.spec = spec;
         this.astHandler = astHandler;
         this.evoHandler = evoHandler;
     }
 
     @Override
-    public Impacts compute() {
+    public Dependencies compute() {
         assert spec.evoSpec != null : spec;
         boolean isOnBefore = spec.projSpec.commitId.equals(spec.evoSpec.commitIdBefore);
         ProjectSpoon project = (ProjectSpoon) astHandler.handle(spec.projSpec);
@@ -74,7 +74,7 @@ public class MyImpactsMiner implements ImpactsMiner {
             return result;
         } catch (Exception e) {
             logger.warn(e.getMessage(), e);
-            return new ImpactsExtension(new Impacts.Specifier(project.spec, spec.evoSpec, spec.miner), project,
+            return new ImpactsExtension(new Dependencies.Specifier(project.spec, spec.evoSpec, spec.miner), project,
                     project.getAst().rootDir, null);
         }
     }
@@ -89,8 +89,8 @@ public class MyImpactsMiner implements ImpactsMiner {
             // return null;
         }
         ImpactAnalysis l = new ImpactAnalysis(ast.augmented, 20);
-        ImpactsExtension result = new ImpactsExtension(new Impacts.Specifier(project.spec, spec.evoSpec, spec.miner),
-                project, rootDir, l);
+        ImpactsExtension result = new ImpactsExtension(
+                new Dependencies.Specifier(project.spec, spec.evoSpec, spec.miner), project, rootDir, l);
 
         logger.info("computing Impacts of" + project.spec.relPath.toString());
         result.computeImpacts(isOnBefore, ast, evo);
@@ -106,7 +106,7 @@ public class MyImpactsMiner implements ImpactsMiner {
         return result;
     }
 
-    public class ImpactsExtension extends Impacts {
+    public class ImpactsExtension extends Dependencies {
         private final Path root;
         ImpactAnalysis analyzer;
         Map<Path, ImpactsExtension> modules = new HashMap<>();
@@ -134,7 +134,7 @@ public class MyImpactsMiner implements ImpactsMiner {
 
         public void addImpWithUniqEffect(Set<Object> roots, Set<Range> causes, Range effect, String type,
                 String causeDesc, String effectDesc) {
-            Impact imp = addImpact(type, Collections.emptySet(),
+            Dependency imp = addDependency(type, Collections.emptySet(),
                     Collections.singleton(new ImmutablePair<>(effect, effectDesc)));
             for (Object root : roots) {
                 perRoot.putIfAbsent(root, new HashSet<>());
@@ -147,7 +147,7 @@ public class MyImpactsMiner implements ImpactsMiner {
 
         public void addImpWithUniqCause(Set<Object> roots, Range cause, Set<Range> effects, String type,
                 String causeDesc, String effectDesc) {
-            Impact imp = addImpact(type, Collections.singleton(new ImmutablePair<>(cause, causeDesc)),
+            Dependency imp = addDependency(type, Collections.singleton(new ImmutablePair<>(cause, causeDesc)),
                     Collections.emptySet());
             perRoot.putIfAbsent(root, new HashSet<>());
             perRoot.get(root).add(imp);
@@ -157,7 +157,7 @@ public class MyImpactsMiner implements ImpactsMiner {
         }
 
         public void addAdjusment(Object root, Range cause, Range effect) {
-            Impact imp = addImpact("adjustment", Collections.singleton(new ImmutablePair<>(cause, "given")),
+            Dependency imp = addDependency("adjustment", Collections.singleton(new ImmutablePair<>(cause, "given")),
                     Collections.emptySet());
             perRoot.putIfAbsent(root, new HashSet<>());
             perRoot.get(root).add(imp);
@@ -302,17 +302,17 @@ public class MyImpactsMiner implements ImpactsMiner {
                     }
 
                     // make into an impact
-                    Impact imp;
+                    Dependency imp;
                     switch (type) {
                         case CALL:
-                            imp = addImpact(type.toString(), // TODO try to put more metadata here
+                            imp = addDependency(type.toString(), // TODO try to put more metadata here
                                     Collections.singleton(
                                             new ImmutablePair<>(ie2range(ast, prev.getLast()), "declaration")),
                                     Collections.emptySet());
                             addEffect(imp, ie2range(ast, last), "reference");
                             break;
                         default:
-                            imp = addImpact(type.toString(), // TODO try to put more metadata here
+                            imp = addDependency(type.toString(), // TODO try to put more metadata here
                                     Collections.singleton(new ImmutablePair<>(ie2range(ast, prev.getLast()), "cause")),
                                     Collections.singleton(new ImmutablePair<>(ie2range(ast, last), "effect")));
                             break;
@@ -404,17 +404,17 @@ public class MyImpactsMiner implements ImpactsMiner {
                             }
                             continue;
                         }
-                        Impact imp;
+                        Dependency imp;
                         switch (current.getType()) {
                             case CALL:
-                                imp = addImpact(current.getType().toString(), // TODO try to put more metadata here
+                                imp = addDependency(current.getType().toString(), // TODO try to put more metadata here
                                         Collections.singleton(
                                                 new ImmutablePair<>(ie2range(ast, prev.getLast()), "declaration")),
                                         Collections.emptySet());
                                 addEffect(imp, ie2range(ast, last), "reference");
                                 break;
                             default:
-                                imp = addImpact(current.getType().toString(), // TODO try to put more metadata here
+                                imp = addDependency(current.getType().toString(), // TODO try to put more metadata here
                                         Collections
                                                 .singleton(new ImmutablePair<>(ie2range(ast, prev.getLast()), "cause")),
                                         Collections.singleton(new ImmutablePair<>(ie2range(ast, last), "effect")));
@@ -424,7 +424,7 @@ public class MyImpactsMiner implements ImpactsMiner {
                         current = prev;
                     }
                 }
-                addImpactedTest(ie2range(ast, ic.getLast()), (Set)rootsDescsForTest);
+                addImpactedTest(ie2range(ast, ic.getLast()), (Set) rootsDescsForTest);
                 // continue;
                 // ImpactElement root = ic.getRoot();
                 // Set<Object> roots = new HashSet<>();

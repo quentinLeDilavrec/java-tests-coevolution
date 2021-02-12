@@ -14,6 +14,8 @@ import java.util.function.BiConsumer;
 
 import org.eclipse.jgit.api.CheckoutCommand;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.ListBranchCommand;
+import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffEntry.ChangeType;
 import org.eclipse.jgit.diff.RenameDetector;
@@ -46,14 +48,15 @@ public class GitHelper {
 	public static Repository cloneIfNotExists(String projectPath, String cloneUrl) throws Exception {
 		File folder = new File(projectPath);
 		Repository repository;
-		if((new File(folder, ".git")).exists()){
+		if ((new File(folder, ".git")).exists()) {
 			RepositoryBuilder builder = new RepositoryBuilder();
 			repository = builder.setGitDir(new File(folder, ".git")).setMustExist(true).readEnvironment().findGitDir()
 					.build();
-		}else if (folder.exists()) {
+		} else if (folder.exists()) {
 			// NOTE Safety purpose
-			if (projectPath.startsWith("/home/qledilav/resources/Repos")||projectPath.startsWith("/home/quentin/resources/Repos")) {
-				FileUtils.delete(folder,FileUtils.RECURSIVE);
+			if (projectPath.startsWith("/home/qledilav/resources/Repos")
+					|| projectPath.startsWith("/home/quentin/resources/Repos")) {
+				FileUtils.delete(folder, FileUtils.RECURSIVE);
 			}
 			Git git = Git.cloneRepository().setDirectory(folder).setURI(cloneUrl)
 					.setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.out))).setCloneAllBranches(true)
@@ -119,6 +122,24 @@ public class GitHelper {
 					break;
 			}
 		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	public static boolean isAncestor(Repository repo, String maybeAncestor, String maybeChildren) {
+		try (RevWalk revWalk = new RevWalk(repo)) {
+			RevCommit c = revWalk.parseCommit(repo.resolve(maybeChildren));
+			RevCommit a = revWalk.parseCommit(repo.resolve(maybeAncestor));
+			return revWalk.isMergedInto(a, c);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	public static List<Ref> isInBranches(Repository repo, String commitId) {
+		try (Git git = new Git(repo)){
+			return git.branchList().setContains(commitId).setListMode(ListBranchCommand.ListMode.ALL).call();
+		} catch (GitAPIException e) {
 			throw new RuntimeException(e);
 		}
 	}

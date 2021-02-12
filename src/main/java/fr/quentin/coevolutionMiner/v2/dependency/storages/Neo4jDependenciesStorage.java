@@ -1,4 +1,4 @@
-package fr.quentin.coevolutionMiner.v2.impact.storages;
+package fr.quentin.coevolutionMiner.v2.dependency.storages;
 
 import static org.neo4j.driver.Values.parameters;
 
@@ -35,25 +35,25 @@ import org.neo4j.driver.internal.DriverFactory;
 import fr.quentin.coevolutionMiner.utils.MyProperties;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
+import fr.quentin.coevolutionMiner.v2.dependency.Dependencies;
+import fr.quentin.coevolutionMiner.v2.dependency.DependenciesStorage;
+import fr.quentin.coevolutionMiner.v2.dependency.Dependencies.Dependency;
+import fr.quentin.coevolutionMiner.v2.dependency.Dependencies.Specifier;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.storages.Neo4jEvolutionsStorage;
-import fr.quentin.coevolutionMiner.v2.impact.Impacts;
-import fr.quentin.coevolutionMiner.v2.impact.Impacts.Impact;
-import fr.quentin.coevolutionMiner.v2.impact.Impacts.Specifier;
 import fr.quentin.coevolutionMiner.v2.utils.Utils;
 import spoon.support.util.internal.MapUtils;
-import fr.quentin.coevolutionMiner.v2.impact.ImpactsStorage;
 
-public class Neo4jImpactsStorage implements ImpactsStorage {
+public class Neo4jDependenciesStorage implements DependenciesStorage {
     static Logger logger = LogManager.getLogger();
     private static final boolean NO_UPDATE = true;
     static final int STEP = 512;
     static final int TIMEOUT = 10;
 
     @Override
-    public void put(Impacts impacts) {
+    public void put(Dependencies impacts) {
         // List<Map<String, Object>> processed = impacts.asListofMaps();
-        List<Impact> list = new ArrayList<Impact>();
+        List<Dependency> list = new ArrayList<Dependency>();
         impacts.forEach(list::add);
         new ChunckedUploadEvos(impacts.spec, list);
     }
@@ -63,11 +63,11 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
     static final String CYPHER_DEPENDENCIES_UPDATE = Utils.memoizedReadResource("usingIds/update.cql");
     static final String CYPHER_DEPENDENCIES_CREATE = Utils.memoizedReadResource("usingIds/dependencies_create.cql");
 
-    class ChunckedUploadEvos extends Utils.ChunckedUpload<Impact> {
+    class ChunckedUploadEvos extends Utils.ChunckedUpload<Dependency> {
         private final Specifier spec;
         private final Map<String, Object> tool;
 
-        public ChunckedUploadEvos(Specifier spec, List<Impact> processed) {
+        public ChunckedUploadEvos(Specifier spec, List<Dependency> processed) {
             super(driver, 10);
             this.spec = spec;
             tool = Utils.map("name", spec.miner, "version", 0);
@@ -75,7 +75,7 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
         }
 
         @Override
-        protected String put(Session session, List<Impact> chunk, Logger logger) {
+        protected String put(Session session, List<Dependency> chunk, Logger logger) {
             Map<Range, Integer> idsByRange = idsByRangeFromDependency(chunk);
             List<Map<String, Object>> formatedRanges = new ArrayList<>();
             Set<Range> keySet = new LinkedHashSet<>();
@@ -90,8 +90,8 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
                 Neo4jEvolutionsStorage.mergeAndGetRangeIds(idsByRange, formatedRanges, keySet, tx);
 
                 List<Map<String, Object>> toMatch = new ArrayList<>();
-                for (Impact evo : chunk) {
-                    toMatch.add(formatImpactWithRangesAsIds(idsByRange, evo));
+                for (Dependency evo : chunk) {
+                    toMatch.add(formatDependencyWithRangesAsIds(idsByRange, evo));
                 }
 
                 List<Integer> evolutionsId = tx.run(CYPHER_DEPENDENCIES_MATCH, parameters("data", toMatch))
@@ -113,7 +113,7 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
                         if (id == -1) {
                             toCreate.add(formatedDep);
                         } else {
-                            toUpdate.add(Utils.map("id",id,"more",formatedDep.get("more")));
+                            toUpdate.add(Utils.map("id", id, "more", formatedDep.get("more")));
                         }
                     }
                     if (toUpdate.size() > 0) {
@@ -143,18 +143,18 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
 
     private final Driver driver;
 
-    public Neo4jImpactsStorage(String uri, String user, String password) {
+    public Neo4jDependenciesStorage(String uri, String user, String password) {
         driver = GraphDatabase.driver(uri, AuthTokens.basic(user, password));
     }
 
-    public Neo4jImpactsStorage() {
+    public Neo4jDependenciesStorage() {
         this(MyProperties.getPropValues().getProperty("neo4jAddress"),
                 MyProperties.getPropValues().getProperty("neo4jId"),
                 MyProperties.getPropValues().getProperty("neo4jPwd"));
     }
 
     @Override
-    public Impacts get(Specifier impacts_spec, ProjectHandler astHandler, EvolutionHandler evoHandler) {
+    public Dependencies get(Specifier impacts_spec, ProjectHandler astHandler, EvolutionHandler evoHandler) {
         // TODO Auto-generated method stub
         // TODO need to add root cause to impacts to be able to retrieve them,
         // maybe as a list in impacts
@@ -170,14 +170,14 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
         driver.close();
     }
 
-    public static Map<Range, Integer> idsByRangeFromDependency(List<Impact> chunk) {
+    public static Map<Range, Integer> idsByRangeFromDependency(List<Dependency> chunk) {
         Map<Range, Integer> idsByRange = new LinkedHashMap<>();
-        for (Impact evolution : chunk) {
-            for (Impact.DescRange dr : evolution.getCauses()) {
+        for (Dependency evolution : chunk) {
+            for (Dependency.DescRange dr : evolution.getCauses()) {
                 Range target = dr.getTarget();
                 idsByRange.put(target, -1); // target.neo4jId
             }
-            for (Impact.DescRange dr : evolution.getEffects()) {
+            for (Dependency.DescRange dr : evolution.getEffects()) {
                 Range target = dr.getTarget();
                 idsByRange.put(target, -1); // target.neo4jId
             }
@@ -185,12 +185,13 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
         return idsByRange;
     }
 
-    public static Map<String, Object> formatImpactWithRangesAsIds(Map<Range, Integer> idsByRange, Impact evo) {
+    public static Map<String, Object> formatDependencyWithRangesAsIds(Map<Range, Integer> idsByRange, Dependency dep) {
         final Map<String, Object> res = new HashMap<>();
-        res.put("type", evo.getType());
+        res.put("type", dep.getType());
+        res.put("hash", dep.hashCode());
 
         final List<Map<String, Object>> before = new ArrayList<>();
-        for (final Impact.DescRange descR : evo.getCauses()) {
+        for (final Dependency.DescRange descR : dep.getCauses()) {
             Range targetR = descR.getTarget();
             // final Map<String, Object> rDescR = Utils.formatRangeWithType(targetR);
             final Map<String, Object> rDescR = new HashMap<>();
@@ -202,7 +203,7 @@ public class Neo4jImpactsStorage implements ImpactsStorage {
         res.put("sources", before);
 
         final List<Map<String, Object>> after = new ArrayList<>();
-        for (final Impact.DescRange descR : evo.getEffects()) {
+        for (final Dependency.DescRange descR : dep.getEffects()) {
             Range targetR = descR.getTarget();
             // final Map<String, Object> rDescR = Utils.formatRangeWithType(targetR);
             final Map<String, Object> rDescR = new HashMap<>();
