@@ -54,6 +54,17 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class SpoonMiner implements ProjectMiner<CtElement> {
+
+    public static boolean ALL_MODULES_FROM_PROFILES = false;
+    private static Logger logger = LogManager.getLogger();
+    private Specifier spec;
+    private SourcesHandler srcHandler;
+
+    public SpoonMiner(Specifier spec, SourcesHandler srcHandler) {
+        this.spec = spec;
+        this.srcHandler = srcHandler;
+    }
+    
     public class ProjectSpoon extends Project<CtElement> {
         private ProjectSpoon(Specifier spec, Set<Project<?>> modules, Commit commit, Path rootDir,
                 MavenLauncher launcher, Exception compilerException) {
@@ -111,18 +122,6 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             }
 
         }
-    }
-
-    private static final boolean ALL_MODULES_FROM_PROFILES = true;
-
-    private static Logger logger = LogManager.getLogger();
-
-    private Specifier spec;
-    private SourcesHandler srcHandler;
-
-    public SpoonMiner(Specifier spec, SourcesHandler srcHandler) {
-        this.spec = spec;
-        this.srcHandler = srcHandler;
     }
 
     public ProjectSpoon compute() {

@@ -56,6 +56,7 @@ import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.utils.ThreadPrintStream;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
+import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon.SpoonAST;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
@@ -130,6 +131,7 @@ public class CLI {
         options.addOption(null, "once", false,
                 "compute coevolutions between commit pairs, commits in between are ignored");
         options.addOption(null, "greedy", false, "search for coevo even if there is no RM evolutions");
+        options.addOption(null, "allModules", false, "also parse all modules present in profiles (by default only parse the modules in the default profile)");
         options.addOption("f", "file", true,
                 "a file that contain per line <repo> <stars> <list of important commitId time ordered and starting with the most recent>");
 
@@ -147,6 +149,9 @@ public class CLI {
         }
         if (line.hasOption("greedy")) {
             SEARCH_ONLY_IF_RM_FOUND = false;
+        }
+        if (line.hasOption("allModules")) {
+            SpoonMiner.ALL_MODULES_FROM_PROFILES = true;
         }
         if (line.hasOption("once")) {
             // TODO do something cleaner
