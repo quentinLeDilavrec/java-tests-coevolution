@@ -53,7 +53,7 @@ public class Neo4jSourcesStorage implements SourcesStorage {
                 public String execute(Transaction tx) {
                     Result result = tx.run(CYPHER_REPOSITORY_MERGE, value);
                     result.consume();
-                    return "repository of " + sources.spec.repository + "1/1";
+                    return "repository of " + sources.spec.repository + " 1/1";
                 }
             });
             logger.info(done);
