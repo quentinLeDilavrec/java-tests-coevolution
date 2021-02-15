@@ -72,7 +72,7 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
     private EvolutionsAtProj evolutionsAtProj;
     public Set<Path> initiallyPresent;
     private Factory middleFactory;
-    public Set<EImpact> resultingImpacts = new LinkedHashSet<>();
+    public Set<EImpact> resultingImpacts;
 
     private OutputDestinationHandlerImpl outDestHandler;
 
@@ -131,7 +131,7 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-
+            
             this.resultingImpacts.add(saveReport(t, report));
         }
     }
@@ -257,6 +257,7 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
     }
 
     public void prepareApply(ApplierHelper<Evolution> applierHelper, Range testBefore, Range testAfter) {
+        this.resultingImpacts = new LinkedHashSet<>();
         this.applierHelper = applierHelper;
         this.testBefore = testBefore;
         this.testAfter = testAfter;

@@ -360,9 +360,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     for (EImpact imp : consumer.resultingImpacts) {
                         Set<Evolution> e = imp.getEvolutions();
                         try {
-                            logger.info(
-                                    e.toString() + ";" + (imp.getTests().get(c.testBefore).right == null ? "P" : "F"));
+                            FailureReport report = imp.getTests().get(c.testBefore).right;
+                            logger.info(e.toString() + ";" + (report == null ? "P" : report.when));
                         } catch (Exception ee) {
+                            logger.warn("cannot log imp ", ee);
                             logger.info(c.testBefore.toString());
                             logger.info(imp.getTests().toString());
                         }
