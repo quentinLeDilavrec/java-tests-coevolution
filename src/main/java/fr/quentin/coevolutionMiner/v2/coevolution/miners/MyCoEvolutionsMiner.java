@@ -487,7 +487,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         // confirm
         private final Set<EImpact> partialResolutions = new LinkedHashSet<>(); // merge with other commits
         private final Set<EImpact> failfail = new LinkedHashSet<>(); // X X
-        private final Map<Evolution, Set<EImpact>> probableResolutionsIndex = new HashMap<>();
+        private final Map<ImmutablePair<Evolution, Range>, Set<EImpact>> probableResolutionsIndex = new HashMap<>();
         private final Map<Evolution, Set<EImpact>> probablyNothing = new HashMap<>();
 
         public CoEvolutionsExtension(Specifier spec, Evolutions evolutions, Project<?> astBefore, Project<?> astAfter) {
@@ -529,8 +529,9 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         if (resInitial == null && resAfter == null) { // V V
                             // probable resolution
                             for (Evolution ddd : aaa.getKey()) {
-                                probableResolutionsIndex.putIfAbsent(ddd, new LinkedHashSet<>());
-                                probableResolutionsIndex.get(ddd).add(ei);
+                                ImmutablePair<Evolution, Range> pair = new ImmutablePair<>(ddd, bbb.getKey());
+                                probableResolutionsIndex.putIfAbsent(pair, new LinkedHashSet<>());
+                                probableResolutionsIndex.get(pair).add(ei);
                             }
                             probableCoEvoResolutions.add(ei);
                         } else if (resInitial == null) { // V X
@@ -563,46 +564,48 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             // more efficient than probableCoEvoResolutions.iterator().next().evolutions.keySet().containsAll(eimpCauses.evolutions.keySet())
             // TODO extract it to unit test it
             for (EImpact eimpCauses : probableCoevoCauses) {
-                Set<EImpact> possibleReso = null;
-                for (Evolution causeEvos : eimpCauses.getEvolutions()) {
-                    Set<EImpact> resos = probableResolutionsIndex.get(causeEvos);
-                    if (resos == null) {
-                        break;
-                    }
-                    if (possibleReso == null) {
-                        possibleReso = new LinkedHashSet<>(resos);
-                    } else {
-                        possibleReso.retainAll(resos);
+                for (Entry<Range, ImmutablePair<Range, FailureReport>> causeEntry : eimpCauses.getTests().entrySet()) {
+                    Set<EImpact> possibleReso = null;
+                    for (Evolution causeEvo : eimpCauses.getEvolutions()) {
+                        Set<EImpact> resos = probableResolutionsIndex
+                                .get(new ImmutablePair<>(causeEvo, causeEntry.getKey()));
+                        if (resos == null) {
+                            break;
+                        }
+                        if (possibleReso == null) {
+                            possibleReso = new LinkedHashSet<>(resos);
+                        } else {
+                            possibleReso.retainAll(resos);
+                        }
+                        if (possibleReso == null || possibleReso.isEmpty()) {
+                            break;
+                        }
                     }
                     if (possibleReso == null || possibleReso.isEmpty()) {
-                        break;
-                    }
-                }
-                if (possibleReso == null || possibleReso.isEmpty()) {
-                    continue;
-                }
-                // Map<Range, Map<Range, FailureReport>> causeRevIndex = new LinkedHashMap<>();
-                // for (Entry<Range, ImmutablePair<Range, FailureReport>> entry : eimpCauses.tests.entrySet()) {
-                //     causeRevIndex.putIfAbsent(entry.getValue().left, new LinkedHashMap<>());
-                //     FailureReport old = causeRevIndex.get(entry.getValue().left).put(entry.getKey(),
-                //             entry.getValue().right);
-                //     if (old!=null) {
-                //         logger.warn("unclear impact status");
-                //     }
-                // }
-                // remaining possibleReso are real reso
-                for (EImpact eimpReso : possibleReso) {
-                    Set<Evolution> resolutions = new LinkedHashSet<>(eimpReso.getEvolutions());
-                    resolutions.removeAll(eimpCauses.getEvolutions());
-                    if (resolutions.size() == 0)
                         continue;
-                    for (Entry<Range, ImmutablePair<Range, FailureReport>> resoEntry : eimpReso.getTests().entrySet()) {
-                        Range testBefore = resoEntry.getKey();
-                        ImmutablePair<Range, FailureReport> causeThing = eimpCauses.getTests().get(testBefore);
-                        if (causeThing == null)
+                    }
+
+                    // Map<Range, Map<Range, FailureReport>> causeRevIndex = new LinkedHashMap<>();
+                    // for (Entry<Range, ImmutablePair<Range, FailureReport>> entry : eimpCauses.tests.entrySet()) {
+                    //     causeRevIndex.putIfAbsent(entry.getValue().left, new LinkedHashMap<>());
+                    //     FailureReport old = causeRevIndex.get(entry.getValue().left).put(entry.getKey(),
+                    //             entry.getValue().right);
+                    //     if (old!=null) {
+                    //         logger.warn("unclear impact status");
+                    //     }
+                    // }
+                    // remaining possibleReso are real reso
+                    for (EImpact eimpReso : possibleReso) {
+                        Set<Evolution> resolutions = new LinkedHashSet<>(eimpReso.getEvolutions());
+                        resolutions.removeAll(eimpCauses.getEvolutions());
+                        if (resolutions.size() == 0)
                             continue;
-                        Range testAfterR = resoEntry.getValue().left;
-                        Range testAfterC = causeThing.left;
+                        Range testBefore = causeEntry.getKey();
+                        ImmutablePair<Range, FailureReport> resoThing = eimpReso.getTests().get(testBefore);
+                        if (resoThing == null)
+                            continue;
+                        Range testAfterR = resoThing.left;
+                        Range testAfterC = causeEntry.getValue().left;
                         CoEvolutionExtension res; // TODO to discus
                         if (testAfterR == testBefore && testAfterC == testBefore) {
                             res = new CoEvolutionExtension(new LinkedHashSet<>(eimpCauses.getEvolutions()), resolutions,
