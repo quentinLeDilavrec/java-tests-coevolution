@@ -67,10 +67,20 @@ public class Iterators2 {
         }
 
         public boolean hasNext() {
-            if (input == null && currentIterator != null && !currentIterator.hasNext()) {
-                update();
+            if (input != null) {
+                return true;
+            } else if (currentIterator != null && currentIterator.hasNext()) {
+                return true;
+            } else {
+                while (inputs.hasNext()) {
+                    input = inputs.next();
+                    currentIterator = convertor.apply(input);
+                    if (currentIterator.hasNext()) {
+                        return true;
+                    }
+                }
             }
-            return input != null || currentIterator != null;
+            return false;
         }
 
         public I next() {
@@ -83,12 +93,6 @@ public class Iterators2 {
                 return tmp;
             }
             return currentIterator.next();
-        }
-
-        private void update() {
-            input = inputs.next();
-            currentIterator = convertor.apply(input);
-            currentIterator = null;
         }
     }
 
