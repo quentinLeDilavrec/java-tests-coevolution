@@ -13,6 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.Map.Entry;
 import java.util.function.Function;
@@ -720,7 +721,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     try {
                         testAfter = GumTreeSpoonMiner.toRange(projectAfter, treeTestAfter, afterVersion);
                     } catch (RangeMatchingException e1) {
-                        logger.warn("cannot format this evolution because the ast is not usable", e1);
+                        logger.warn("at" + projectAfter + " for " + Objects.toString(afterVersion) + " cannot format " + treeTestBefore, e1);
                     }
 
                     if (testBefore == null) {
@@ -768,7 +769,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         try {
                             testBefore = GumTreeSpoonMiner.toRange(projectBefore, treeTestBefore, afterVersion);
                         } catch (RangeMatchingException e) {
-                            logger.warn("cannot format this evolution because the ast is not usable", e);
+                            logger.warn("at" + projectBefore + " for " + Objects.toString(afterVersion) + " cannot format " + treeTestBefore, e);
                         }
                     }
                     if (testBefore == null) {
