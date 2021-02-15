@@ -13,6 +13,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -396,7 +397,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                         before.add(rangeBef);
                 }
                 if (before.size() == 0 && after.size() == 0) {
-                    logger.error("an evolution should point on at least one range");
+                    logger.error("following evolution should point on at least one range: " + Objects.toString(op));
                     return;
                 }
                 Evolution evo = super.addEvolution(op.getName(), before, after, astBefore.commit, astAfter.commit,
@@ -416,7 +417,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
 
                 addComposedEvolutionAux(op, astBefore, astAfter, before, after, null);
                 if (before.size() == 0 && after.size() == 0) {
-                    logger.error("an evolution should point on at least one range");
+                    logger.error("following evolution should point on at least one range: " + Objects.toString(op));
                     return;
                 }
                 Evolution evo = super.addEvolution(op.getName(), before, after, astBefore.commit, astAfter.commit,

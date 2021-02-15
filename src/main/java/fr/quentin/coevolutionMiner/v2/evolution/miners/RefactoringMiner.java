@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -175,7 +176,7 @@ public class RefactoringMiner implements EvolutionsMiner {
             List<ImmutablePair<Range, String>> before = aux(refact.leftSide(), astBefore);
             List<ImmutablePair<Range, String>> after = aux(refact.rightSide(), astAfter);
             if (before.size() == 0 && after.size() == 0) {
-                logger.error("an evolution should point on at least one range");
+                logger.error("following evolution should point on at least one range: " + Objects.toString(refact));
                 return;
             }
             addEvolution(refact.getName(), before, after, astBefore.commit, astAfter.commit, refact);
