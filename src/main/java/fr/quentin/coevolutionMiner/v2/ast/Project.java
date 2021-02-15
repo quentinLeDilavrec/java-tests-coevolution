@@ -163,7 +163,9 @@ public class Project<T> implements Iterable<Project> {
                 }
             }
             if (!b) {
-                throw exc;
+                if (exc != null) {
+                    throw exc;
+                }
             }
         }
         return null;
