@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -18,6 +19,7 @@ import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 import com.google.gson.stream.JsonReader;
 
+import org.apache.maven.model.Profile;
 import org.apache.maven.shared.invoker.InvocationResult;
 import org.apache.maven.shared.utils.cli.CommandLineException;
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
@@ -110,6 +112,8 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
 
         }
     }
+
+    private static final boolean ALL_MODULES_FROM_PROFILES = true;
 
     private static Logger logger = LogManager.getLogger();
 
@@ -296,9 +300,23 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
             r.getAst().getGlobalStats().codeCompile = preparedCode.getExitCode();
             r.getAst().getGlobalStats().testsCompile = preparedAll.getExitCode();
 
-            List<SpoonPom> modulesPoms = launcherCode.getPomFile().getModules();
+            SpoonPom pomFile = launcherCode.getPomFile();
+            List<SpoonPom> modulesPoms = pomFile.getModules();
             System.out.println(modulesPoms);
             for (SpoonPom pom : modulesPoms) {
+                modules.add(extractedPrecise(src, Paths.get(pom.getFileSystemParent().getAbsolutePath()), root, pom));
+            }
+            List<Profile> profiles = pomFile.getModel().getProfiles();
+            Set<String> additionalModules = new LinkedHashSet();
+            for (Profile profile : profiles) {
+                if (ALL_MODULES_FROM_PROFILES
+                        || (profile.getActivation() != null && profile.getActivation().isActiveByDefault())) {
+                    additionalModules.addAll(profile.getModules());
+                }
+            }
+            for (String moduleName : additionalModules) {
+                SpoonPom pom = new SpoonPom(Paths.get(pomFile.getPath(), moduleName).toString(), pomFile,
+                        MavenLauncher.SOURCE_TYPE.APP_SOURCE, launcherCode.getEnvironment());
                 modules.add(extractedPrecise(src, Paths.get(pom.getFileSystemParent().getAbsolutePath()), root, pom));
             }
             return r;
