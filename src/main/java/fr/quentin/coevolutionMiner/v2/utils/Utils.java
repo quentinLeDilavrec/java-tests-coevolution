@@ -89,6 +89,7 @@ public class Utils {
 			int index = 0;
 			int step = STEP;
 			try (Session session = driver.session()) {
+				logger.info("starting to upload " + processed.size() + " " + whatIsUploaded());
 				while (index < processed.size()) {
 					long start = System.nanoTime();
 					String done = put(session, processed.subList(index, Math.min(index + step, processed.size())),
