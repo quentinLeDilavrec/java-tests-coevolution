@@ -33,6 +33,7 @@ import fr.quentin.coevolutionMiner.utils.MyProperties;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
+import fr.quentin.coevolutionMiner.v2.ast.UnusableASTException;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.CoEvolution;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.Specifier;
@@ -550,7 +551,13 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
             return null;
         if (!commitId.equals(curr.get("commitId").asString()))
             return null;
-        Range range = ast.getRange(curr.get("path").asString(), curr.get("start").asInt(), curr.get("end").asInt());
+        Range range;
+        try {
+            range = ast.getRange(curr.get("path").asString(), curr.get("start").asInt(), curr.get("end").asInt());
+        } catch (UnusableASTException e) {
+            logger.fatal("", e);
+            return null;
+        }
         return new ImmutablePair<Project.AST.FileSnapshot.Range, String>(range, type);
     }
 

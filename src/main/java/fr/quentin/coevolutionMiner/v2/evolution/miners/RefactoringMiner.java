@@ -34,6 +34,7 @@ import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
+import fr.quentin.coevolutionMiner.v2.ast.UnusableASTException;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
@@ -173,16 +174,21 @@ public class RefactoringMiner implements EvolutionsMiner {
         }
 
         void addEvolution(Refactoring refact, Project<?> astBefore, Project<?> astAfter) {
-            List<ImmutablePair<Range, String>> before = aux(refact.leftSide(), astBefore);
-            List<ImmutablePair<Range, String>> after = aux(refact.rightSide(), astAfter);
-            if (before.size() == 0 && after.size() == 0) {
-                logger.error("following evolution should point on at least one range: " + Objects.toString(refact));
-                return;
+            try {
+                List<ImmutablePair<Range, String>> before = aux(refact.leftSide(), astBefore);
+                List<ImmutablePair<Range, String>> after = aux(refact.rightSide(), astAfter);
+                if (before.size() == 0 && after.size() == 0) {
+                    logger.error("following evolution should point on at least one range: " + Objects.toString(refact));
+                    return;
+                }
+                addEvolution(refact.getName(), before, after, astBefore.commit, astAfter.commit, refact);
+            } catch (UnusableASTException e) {
+                logger.warn("cannot format this evolution because the ast is not usable", e);
             }
-            addEvolution(refact.getName(), before, after, astBefore.commit, astAfter.commit, refact);
         }
 
-        private List<ImmutablePair<Range, String>> aux(List<CodeRange> list, Project<?> ast) {
+        private List<ImmutablePair<Range, String>> aux(List<CodeRange> list, Project<?> ast)
+                throws UnusableASTException {
             List<ImmutablePair<Range, String>> result = new ArrayList<>();
             for (CodeRange range : list) {
                 ImmutablePair<Range, String> rg = toRange(ast, range);
@@ -193,7 +199,7 @@ public class RefactoringMiner implements EvolutionsMiner {
             return result;
         }
 
-        private ImmutablePair<Range, String> toRange(Project proj, CodeRange range) {
+        private ImmutablePair<Range, String> toRange(Project proj, CodeRange range) throws UnusableASTException {
             Range tmp = proj.getRange(range.getFilePath().replaceAll("/", systemFileSeparator), range.getStartOffset(),
                     range.getEndOffset() - 1);
             if (tmp == null) {

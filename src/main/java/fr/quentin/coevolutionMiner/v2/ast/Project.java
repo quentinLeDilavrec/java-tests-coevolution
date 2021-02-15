@@ -123,11 +123,12 @@ public class Project<T> implements Iterable<Project> {
         return Collections.unmodifiableSet(modules);
     }
 
-    public AST.FileSnapshot.Range getRange(String path, Integer start, Integer end) {
+    public AST.FileSnapshot.Range getRange(String path, Integer start, Integer end) throws UnusableASTException {
         return getRange(path, start, end, null);
     }
 
-    public AST.FileSnapshot.Range getRange(String path, Integer start, Integer end, Object original) {
+    public AST.FileSnapshot.Range getRange(String path, Integer start, Integer end, Object original)
+            throws UnusableASTException {
         if (Paths.get(path).isAbsolute()) {
             System.err.println(path);
             return null;
@@ -135,20 +136,34 @@ public class Project<T> implements Iterable<Project> {
         return getRangeAux(path, start, end, original);
     }
 
-    private AST.FileSnapshot.Range getRangeAux(String path, Integer start, Integer end, Object original) {
+    private AST.FileSnapshot.Range getRangeAux(String path, Integer start, Integer end, Object original)
+            throws UnusableASTException {
         assert !Paths.get(path).isAbsolute() : path;
         assert ast != null;
         File parentDir = Paths.get(this.ast.rootDir.toString(), path).getParent().toFile();
-        if (!ast.isUsable()) {
-            return null;
-        } else if (ast.contains(parentDir)) {
+        if (ast.isUsable() && ast.contains(parentDir)) {
             return ((AST) ast).getRange(path, start, end, (T) original);
         } else {
+            boolean b = false;
+            UnusableASTException exc = ast.isUsable() ? null : new UnusableASTException();
             for (Project project : modules) {
-                Range tmp = project.getRangeAux(path, start, end, original);
-                if (tmp != null) {
-                    return tmp;
+                try {
+                    Range tmp = project.getRangeAux(path, start, end, original);
+                    if (tmp != null) {
+                        return tmp;
+                    } else {
+                        b = true;
+                    }
+                } catch (UnusableASTException e) {
+                    if (exc == null) {
+                        exc = e;
+                    } else {
+                        exc.addSuppressed(e);
+                    }
                 }
+            }
+            if (!b) {
+                throw exc;
             }
         }
         return null;

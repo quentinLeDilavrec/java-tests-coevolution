@@ -25,6 +25,7 @@ import org.apache.maven.shared.invoker.InvocationResult;
 import org.apache.maven.shared.utils.cli.CommandLineException;
 
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
+import fr.quentin.coevolutionMiner.v2.ast.UnusableASTException;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact.FailureReport;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
@@ -131,7 +132,7 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-            
+
             this.resultingImpacts.add(saveReport(t, report));
         }
     }
@@ -294,8 +295,13 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
                 elePath = evolutionsAtProj.getBeforeProj().getAst().rootDir.relativize(position.getFile().toPath())
                         .toString();
             }
-            Range testAfterB = evolutionsAtProj.getAfterProj().getRange(elePath, position.getSourceStart(),
-                    position.getSourceEnd());
+            Range testAfterB;
+            try {
+                testAfterB = evolutionsAtProj.getAfterProj().getRange(elePath, position.getSourceStart(),
+                        position.getSourceEnd());
+            } catch (UnusableASTException e1) {
+                throw new RuntimeException(e1);
+            }
             if (testAfterB == null)
                 throw new RuntimeException("missing match of test");
             if (testAfter != null) {
