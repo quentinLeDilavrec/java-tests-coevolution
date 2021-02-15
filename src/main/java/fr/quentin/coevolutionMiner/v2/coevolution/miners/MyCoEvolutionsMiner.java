@@ -93,7 +93,7 @@ import gumtree.spoon.diff.operations.UpdateOperation;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
-import fr.quentin.coevolutionMiner.v2.ast.UnusableASTException;
+import fr.quentin.coevolutionMiner.v2.ast.RangeMatchingException;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
@@ -719,7 +719,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     }
                     try {
                         testAfter = GumTreeSpoonMiner.toRange(projectAfter, treeTestAfter, afterVersion);
-                    } catch (UnusableASTException e1) {
+                    } catch (RangeMatchingException e1) {
                         logger.warn("cannot format this evolution because the ast is not usable", e1);
                     }
 
@@ -767,7 +767,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     if (treeTestBefore.getInsertVersion() != afterVersion) {
                         try {
                             testBefore = GumTreeSpoonMiner.toRange(projectBefore, treeTestBefore, afterVersion);
-                        } catch (UnusableASTException e) {
+                        } catch (RangeMatchingException e) {
                             logger.warn("cannot format this evolution because the ast is not usable", e);
                         }
                     }

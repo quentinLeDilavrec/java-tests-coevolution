@@ -34,7 +34,7 @@ import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
-import fr.quentin.coevolutionMiner.v2.ast.UnusableASTException;
+import fr.quentin.coevolutionMiner.v2.ast.RangeMatchingException;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
@@ -182,13 +182,13 @@ public class RefactoringMiner implements EvolutionsMiner {
                     return;
                 }
                 addEvolution(refact.getName(), before, after, astBefore.commit, astAfter.commit, refact);
-            } catch (UnusableASTException e) {
-                logger.warn("cannot format this evolution because the ast is not usable", e);
+            } catch (RangeMatchingException e) {
+                logger.warn("cannot format " + Objects.toString(refact), e);
             }
         }
 
         private List<ImmutablePair<Range, String>> aux(List<CodeRange> list, Project<?> ast)
-                throws UnusableASTException {
+                throws RangeMatchingException {
             List<ImmutablePair<Range, String>> result = new ArrayList<>();
             for (CodeRange range : list) {
                 ImmutablePair<Range, String> rg = toRange(ast, range);
@@ -199,7 +199,7 @@ public class RefactoringMiner implements EvolutionsMiner {
             return result;
         }
 
-        private ImmutablePair<Range, String> toRange(Project proj, CodeRange range) throws UnusableASTException {
+        private ImmutablePair<Range, String> toRange(Project proj, CodeRange range) throws RangeMatchingException {
             Range tmp = proj.getRange(range.getFilePath().replaceAll("/", systemFileSeparator), range.getStartOffset(),
                     range.getEndOffset() - 1);
             if (tmp == null) {

@@ -123,12 +123,12 @@ public class Project<T> implements Iterable<Project> {
         return Collections.unmodifiableSet(modules);
     }
 
-    public AST.FileSnapshot.Range getRange(String path, Integer start, Integer end) throws UnusableASTException {
+    public AST.FileSnapshot.Range getRange(String path, Integer start, Integer end) throws RangeMatchingException {
         return getRange(path, start, end, null);
     }
 
     public AST.FileSnapshot.Range getRange(String path, Integer start, Integer end, Object original)
-            throws UnusableASTException {
+            throws RangeMatchingException {
         if (Paths.get(path).isAbsolute()) {
             System.err.println(path);
             return null;
@@ -137,38 +137,33 @@ public class Project<T> implements Iterable<Project> {
     }
 
     private AST.FileSnapshot.Range getRangeAux(String path, Integer start, Integer end, Object original)
-            throws UnusableASTException {
+            throws RangeMatchingException {
         assert !Paths.get(path).isAbsolute() : path;
         assert ast != null;
-        File parentDir = Paths.get(this.ast.rootDir.toString(), path).getParent().toFile();
-        if (ast.isUsable() && ast.contains(parentDir)) {
-            return ((AST) ast).getRange(path, start, end, (T) original);
-        } else {
-            boolean b = false;
-            UnusableASTException exc = ast.isUsable() ? null : new UnusableASTException();
-            for (Project project : modules) {
-                try {
-                    Range tmp = project.getRangeAux(path, start, end, original);
-                    if (tmp != null) {
-                        return tmp;
-                    } else {
-                        b = true;
-                    }
-                } catch (UnusableASTException e) {
-                    if (exc == null) {
-                        exc = e;
-                    } else {
-                        exc.addSuppressed(e);
-                    }
+        boolean unusableAstFound = false;
+        boolean matchACompilationUnit = false;
+        for (Project project : this) {
+            Project.AST ast = project.ast;
+            File parentDir = Paths.get(ast.rootDir.toString(), path).getParent().toFile();
+            if (!ast.isUsable()) {
+                unusableAstFound = true;
+            } else if (ast.contains(parentDir)) {
+                Range r = ast.getRange(path, start, end, original);
+                if (r != null) {
+                    return r;
                 }
-            }
-            if (!b) {
-                if (exc != null) {
-                    throw exc;
-                }
+                matchACompilationUnit = true;
             }
         }
-        return null;
+        if (matchACompilationUnit) {
+            return null;
+        } else if (unusableAstFound) {
+            // Probably caused by failed parsing
+            throw new RangeMatchingException("unusable AST found while trying to match a cu");
+        } else {
+            // Probably caused by range being a resource and not functional source code
+            throw new RangeMatchingException("No cu corresponding to " + path.toString());
+        }
     }
 
     public class AST {

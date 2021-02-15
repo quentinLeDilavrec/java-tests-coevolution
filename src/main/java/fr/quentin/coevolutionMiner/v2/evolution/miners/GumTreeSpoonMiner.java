@@ -48,7 +48,7 @@ import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
-import fr.quentin.coevolutionMiner.v2.ast.UnusableASTException;
+import fr.quentin.coevolutionMiner.v2.ast.RangeMatchingException;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon.SpoonAST;
@@ -327,19 +327,23 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     ((DiffImpl) diff).getComposed().forEach(op -> {
                         try {
                             addComposedEvolution(op, beforeProj, afterProj);
-                            logger.info("O- " + op + "\n");
-                        } catch (UnusableASTException e) {
-                            logger.warn("cannot format this evolution because the ast is not usable", e);
-                        } catch (Exception e) {
+                        } catch (RangeMatchingException e) {
+                            try {
+                                logger.warn("cannot format " + Objects.toString(op), e);
+                            } catch (Exception ee) {
+                                logger.warn("cannot format evolution", e);
+                            }
                         }
                     });
                     ((DiffImpl) diff).getAtomic().forEach(op -> {
                         try {
                             addAtomicEvolution(op, beforeProj, afterProj);
-                            logger.info("O- " + op + "\n");
-                        } catch (UnusableASTException e) {
-                            logger.warn("cannot format this evolution because the ast is not usable", e);
-                        } catch (Exception e) {
+                        } catch (RangeMatchingException e) {
+                            try {
+                                logger.warn("cannot format " + Objects.toString(op), e);
+                            } catch (Exception ee) {
+                                logger.warn("cannot format evolution", e);
+                            }
                         }
 
                     });
@@ -379,7 +383,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             // }
 
             private <U extends Action & AtomicAction<AbstractVersionedTree>> void addAtomicEvolution(U op,
-                    Project<?> astBefore, Project<?> astAfter) throws UnusableASTException {
+                    Project<?> astBefore, Project<?> astAfter) throws RangeMatchingException {
                 AbstractVersionedTree target = op.getTarget();
 
                 List<ImmutablePair<Range, String>> before = new ArrayList<>();
@@ -415,7 +419,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             }
 
             private <U extends Action & ComposedAction<AbstractVersionedTree>> void addComposedEvolution(U op,
-                    Project<?> astBefore, Project<?> astAfter) throws UnusableASTException {
+                    Project<?> astBefore, Project<?> astAfter) throws RangeMatchingException {
                 List<ImmutablePair<Range, String>> before = new ArrayList<>();
                 List<ImmutablePair<Range, String>> after = new ArrayList<>();
 
@@ -436,7 +440,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
 
             private <U extends Action & ComposedAction<AbstractVersionedTree>> void addComposedEvolutionAux(U op,
                     Project<?> astBefore, Project<?> astAfter, List<ImmutablePair<Range, String>> before,
-                    List<ImmutablePair<Range, String>> after, String label) throws UnusableASTException {
+                    List<ImmutablePair<Range, String>> after, String label) throws RangeMatchingException {
                 for (MyAction<?> component : op.composed()) {
                     String desc = label == null ? component.getName() : label + "->" + component.getName();
                     if (component instanceof AtomicAction) {
@@ -487,8 +491,8 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             //     }
             // }
 
-            private <T> ImmutablePair<Range, String> toRange(Project<T> proj, ITree tree, String desc,
-                    Version version) throws UnusableASTException {
+            private <T> ImmutablePair<Range, String> toRange(Project<T> proj, ITree tree, String desc, Version version)
+                    throws RangeMatchingException {
                 Range range = GumTreeSpoonMiner.toRange(proj, tree, version);
                 if (range == null) {
                     return null;
@@ -518,7 +522,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             // }
 
             private <T> ImmutablePair<Range, String> toRange(Project<T> proj, CtElement ele, String desc)
-                    throws UnusableASTException {
+                    throws RangeMatchingException {
                 if (ele == null) {
                     return null;
                 }
@@ -580,7 +584,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 try {
                     return (Project<?>.AST.FileSnapshot.Range) outProj.getRange(position.getFile().getAbsolutePath(),
                             position.getSourceStart(), position.getSourceEnd());
-                } catch (UnusableASTException e) {
+                } catch (RangeMatchingException e) {
                     logger.warn("", e);
                     return null;
                 }
@@ -943,7 +947,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
     }
 
     // TODO extract functionality in utils
-    public static <T> Range toRange(Project<T> proj, ITree tree, Version version) throws UnusableASTException {
+    public static <T> Range toRange(Project<T> proj, ITree tree, Version version) throws RangeMatchingException {
         ImmutablePair<CtElement, SourcePosition> pair = gumtree.spoon.apply.MyUtils.toNormalizedPreciseSpoon(tree,
                 version);
         if (pair == null) {
@@ -955,20 +959,19 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             }
             while (e.isParentInitialized()) {
                 if (e instanceof CtPackage) {
-                    path = ((CtPackage)e).getSimpleName() + "/" + path;
+                    path = ((CtPackage) e).getSimpleName() + "/" + path;
                 }
                 e = e.getParent();
                 if (e instanceof CtModule) {
                     break;
                 }
             }
-            return proj.getRange(path,
-                    0, 0, pair.left);
+            return proj.getRange(path, 0, 0, pair.left);
         } else if (pair.left == null || pair.right == null) {
         } else if (pair.right.getFile() == null) {
         } else {
             return proj.getRange(proj.getAst().rootDir.relativize(pair.right.getFile().toPath()).toString(),
-                pair.right.getSourceStart(), pair.right.getSourceEnd(), pair.left);
+                    pair.right.getSourceStart(), pair.right.getSourceEnd(), pair.left);
         }
         return null;
     }

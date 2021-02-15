@@ -25,7 +25,7 @@ import org.apache.maven.shared.invoker.InvocationResult;
 import org.apache.maven.shared.utils.cli.CommandLineException;
 
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
-import fr.quentin.coevolutionMiner.v2.ast.UnusableASTException;
+import fr.quentin.coevolutionMiner.v2.ast.RangeMatchingException;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact.FailureReport;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
@@ -299,7 +299,7 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
             try {
                 testAfterB = evolutionsAtProj.getAfterProj().getRange(elePath, position.getSourceStart(),
                         position.getSourceEnd());
-            } catch (UnusableASTException e1) {
+            } catch (RangeMatchingException e1) {
                 throw new RuntimeException(e1);
             }
             if (testAfterB == null)
