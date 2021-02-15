@@ -84,7 +84,7 @@ import spoon.reflect.reference.CtPackageReference;
 import spoon.reflect.reference.CtReference;
 
 public class GumTreeSpoonMiner implements EvolutionsMiner {
-    Logger logger = LogManager.getLogger();
+    static Logger logger = LogManager.getLogger();
 
     private ProjectHandler astHandler;
     private SourcesHandler srcHandler;
@@ -970,7 +970,11 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         } else if (pair.left == null || pair.right == null) {
         } else if (pair.right.getFile() == null) {
         } else {
-            return proj.getRange(proj.getAst().rootDir.relativize(pair.right.getFile().toPath()).toString(),
+            String path = proj.getAst().rootDir.relativize(pair.right.getFile().toPath()).toString();
+            if (path.startsWith("../")) {
+                logger.warn("wrong project of " + proj + " for " + pair.right.getFile());
+            }
+            return proj.getRange(path,
                     pair.right.getSourceStart(), pair.right.getSourceEnd(), pair.left);
         }
         return null;
