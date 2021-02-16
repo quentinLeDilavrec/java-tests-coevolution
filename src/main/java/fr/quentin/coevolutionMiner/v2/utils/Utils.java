@@ -132,7 +132,7 @@ public class Utils {
 	public static CtElement matchExactChild(SpoonAST ast, String path, int start, int end) {
 		CtCompilationUnit cu = ast.getCu(path);
 		for (CtType<?> type : cu.getDeclaredTypes()) {
-			if (isContainingType(type, start, end)) {
+			if (fr.quentin.impactMiner.Utils.isContainingType(type, start, end)) {
 				return fr.quentin.impactMiner.Utils.matchExact(type, start, end);
 			}
 		}
@@ -149,33 +149,11 @@ public class Utils {
 			throw new RuntimeException("missing cu in " + ast.rootDir.toString() + " for path " + path.toString());
 		}
 		for (CtType<?> type : cu.getDeclaredTypes()) {
-			if (isContainingType(type, start, end)) {
+			if (fr.quentin.impactMiner.Utils.isContainingType(type, start, end)) {
 				return fr.quentin.impactMiner.Utils.matchApprox(type, start, end);
 			}
 		}
 		return null;
-	}
-
-	public static boolean isContainingType(CtType<?> ele, int start, int end) {
-		SourcePosition position = ele.getPosition();
-		if (position == null || !position.isValidPosition()) {
-			return false;
-		}
-		int sourceStart = position.getSourceStart();
-		int sourceEnd = position.getSourceEnd();
-		int ds = start - sourceStart;
-		int de = sourceEnd - end;
-		if (ds == 0 && de == 0) {
-			return true;
-		} else if (ds >= 0 && de >= 0) {
-			return true;
-		} else if (sourceEnd < start) {
-			return false;
-		} else if (end < sourceStart) {
-			return false;
-		} else {
-			return false;
-		}
 	}
 
 	public static List<String> getCommitIdBeforeAndAfter(ImpactElement rootCause) {
