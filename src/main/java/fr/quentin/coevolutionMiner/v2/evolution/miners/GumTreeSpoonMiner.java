@@ -71,6 +71,7 @@ import gumtree.spoon.diff.MultiDiffImpl;
 import gumtree.spoon.diff.operations.Operation;
 import gumtree.spoon.diff.support.SpoonSupport;
 import spoon.MavenLauncher;
+import spoon.reflect.CtModelImpl.CtRootPackage;
 import spoon.reflect.code.CtAbstractInvocation;
 import spoon.reflect.cu.CompilationUnit;
 import spoon.reflect.cu.SourcePosition;
@@ -962,7 +963,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     path = ((CtPackage) e).getSimpleName() + "/" + path;
                 }
                 e = e.getParent();
-                if (e instanceof CtModule) {
+                if (e instanceof CtModule || e instanceof CtRootPackage) {
                     break;
                 }
             }
