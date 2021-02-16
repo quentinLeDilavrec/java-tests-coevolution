@@ -767,9 +767,9 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     }
                     if (treeTestBefore.getInsertVersion() != afterVersion) {
                         try {
-                            testBefore = GumTreeSpoonMiner.toRange(projectBefore, treeTestBefore, afterVersion);
+                            testBefore = GumTreeSpoonMiner.toRange(projectBefore, treeTestBefore, beforeVersion);
                         } catch (RangeMatchingException e) {
-                            logger.warn("at" + projectBefore + " for " + Objects.toString(afterVersion) + " cannot format " + treeTestBefore, e);
+                            logger.warn("at" + projectBefore + " for " + Objects.toString(beforeVersion) + " cannot format " + treeTestBefore, e);
                         }
                     }
                     if (testBefore == null) {
