@@ -15,6 +15,7 @@ import java.util.Set;
 import com.sun.tools.javac.util.Iterators;
 
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
+import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon.SpoonAST;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.coevolutionMiner.v2.utils.Iterators2;
@@ -124,7 +125,7 @@ public class Project<T> implements Iterable<Project> {
     }
 
     public AST.FileSnapshot.Range getRange(String path, Integer start, Integer end) throws RangeMatchingException {
-        return getRange(path, start, end, null);
+        return getRangeAux(path, start, end, null);
     }
 
     public AST.FileSnapshot.Range getRange(String path, Integer start, Integer end, Object original)
@@ -133,7 +134,45 @@ public class Project<T> implements Iterable<Project> {
             System.err.println(path);
             return null;
         }
-        return getRangeAux(path, start, end, original);
+        if (path.endsWith("/")) {
+            if (path.startsWith(ast.rootDir.toString())) {
+                throw new RangeMatchingException("The following dir cannot be in " + ast.rootDir.toString() + ": " + path.toString());
+            }
+            return getRangeDir(path, start, end, original);
+        } else {
+            return getRangeAux(path, start, end, original);
+        }
+    }
+
+    private AST.FileSnapshot.Range getRangeDir(String path, Integer start, Integer end, Object original)
+            throws RangeMatchingException {
+        assert !Paths.get(path).isAbsolute() : path;
+        assert ast != null;
+        assert path != null;
+        boolean unusableAstFound = false;
+        boolean matchACompilationUnit = false;
+        for (Project project : this) {
+            Project.AST ast = project.ast;
+            File parentDir = Paths.get(ast.rootDir.toString(), path).getParent().toFile();
+            if (!ast.isUsable()) {
+                unusableAstFound = true;
+            } else if (((SpoonAST)ast).launcher.getModelBuilder().getInputSources().stream().anyMatch(x->x.getAbsolutePath().startsWith(path))) {
+                Range r = ast.getRange(path, start, end, original);
+                if (r != null) {
+                    return r;
+                }
+                matchACompilationUnit = true;
+            }
+        }
+        if (matchACompilationUnit) {
+            return null;
+        } else if (unusableAstFound) {
+            // Probably caused by failed parsing
+            throw new RangeMatchingException("unusable AST found while trying to match the cu at: " + path.toString());
+        } else {
+            // Probably caused by range being a resource and not functional source code
+            throw new RangeMatchingException("No cu corresponding to " + path.toString());
+        }
     }
 
     private AST.FileSnapshot.Range getRangeAux(String path, Integer start, Integer end, Object original)
