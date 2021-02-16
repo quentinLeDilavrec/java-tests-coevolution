@@ -140,6 +140,7 @@ public class Project<T> implements Iterable<Project> {
             throws RangeMatchingException {
         assert !Paths.get(path).isAbsolute() : path;
         assert ast != null;
+        assert path != null;
         boolean unusableAstFound = false;
         boolean matchACompilationUnit = false;
         for (Project project : this) {
@@ -159,7 +160,7 @@ public class Project<T> implements Iterable<Project> {
             return null;
         } else if (unusableAstFound) {
             // Probably caused by failed parsing
-            throw new RangeMatchingException("unusable AST found while trying to match a cu");
+            throw new RangeMatchingException("unusable AST found while trying to match the cu at: " + path.toString());
         } else {
             // Probably caused by range being a resource and not functional source code
             throw new RangeMatchingException("No cu corresponding to " + path.toString());
