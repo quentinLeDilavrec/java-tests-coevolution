@@ -35,6 +35,8 @@ import fr.quentin.impactMiner.ImpactAnalysis;
 import fr.quentin.impactMiner.ImpactElement;
 import fr.quentin.impactMiner.Position;
 import gumtree.spoon.builder.CtWrapper;
+import spoon.reflect.cu.SourcePosition;
+import spoon.reflect.declaration.CtCompilationUnit;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtExecutable;
 import spoon.reflect.declaration.CtMethod;
@@ -128,8 +130,13 @@ public class Utils {
 	}
 
 	public static CtElement matchExactChild(SpoonAST ast, String path, int start, int end) {
-		CtType<?> type = ast.getTop(path);
-		return fr.quentin.impactMiner.Utils.matchExact(type, start, end);
+		CtCompilationUnit cu = ast.getCu(path);
+		for (CtType<?> type : cu.getDeclaredTypes()) {
+			if (isContainingType(type, start, end)) {
+				return fr.quentin.impactMiner.Utils.matchExact(type, start, end);
+			}
+		}
+		return null;
 	}
 
 	public static CtElement matchApproxChild(CtElement parent, int start, int end) {
@@ -137,12 +144,38 @@ public class Utils {
 	}
 
 	public static CtElement matchApproxChild(SpoonAST ast, String path, int start, int end) {
-		CtType<?> type = ast.getTop(path);
-		if (type == null) {
-			throw new RuntimeException(
-					"missing topLevel in " + ast.rootDir.toString() + " for path " + path.toString());
+		CtCompilationUnit cu = ast.getCu(path);
+		if (cu == null) {
+			throw new RuntimeException("missing cu in " + ast.rootDir.toString() + " for path " + path.toString());
 		}
-		return fr.quentin.impactMiner.Utils.matchApprox(type, start, end);
+		for (CtType<?> type : cu.getDeclaredTypes()) {
+			if (isContainingType(type, start, end)) {
+				return fr.quentin.impactMiner.Utils.matchApprox(type, start, end);
+			}
+		}
+		return null;
+	}
+
+	public static boolean isContainingType(CtType<?> ele, int start, int end) {
+		SourcePosition position = ele.getPosition();
+		if (position == null || !position.isValidPosition()) {
+			return false;
+		}
+		int sourceStart = position.getSourceStart();
+		int sourceEnd = position.getSourceEnd();
+		int ds = start - sourceStart;
+		int de = sourceEnd - end;
+		if (ds == 0 && de == 0) {
+			return true;
+		} else if (ds >= 0 && de >= 0) {
+			return true;
+		} else if (sourceEnd < start) {
+			return false;
+		} else if (end < sourceStart) {
+			return false;
+		} else {
+			return false;
+		}
 	}
 
 	public static List<String> getCommitIdBeforeAndAfter(ImpactElement rootCause) {

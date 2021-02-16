@@ -40,6 +40,7 @@ import spoon.Launcher;
 import spoon.MavenLauncher;
 import spoon.SpoonException;
 import spoon.reflect.CtModel;
+import spoon.reflect.declaration.CtCompilationUnit;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtExecutable;
 import spoon.reflect.declaration.CtType;
@@ -92,8 +93,8 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                 return this.launcher != null && this.augmented != null;
             }
 
-            public CtType<?> getTop(String path) {
-                return augmented.getTop(path);
+            public CtCompilationUnit getCu(String path) {
+                return augmented.getCu(path);
             }
 
             @Override
