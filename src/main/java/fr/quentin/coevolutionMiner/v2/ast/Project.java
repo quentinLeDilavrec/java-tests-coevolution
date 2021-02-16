@@ -150,28 +150,28 @@ public class Project<T> implements Iterable<Project> {
         assert ast != null;
         assert path != null;
         boolean unusableAstFound = false;
-        boolean matchACompilationUnit = false;
+        boolean matchAnAst = false;
         for (Project project : this) {
             Project.AST ast = project.ast;
-            File parentDir = Paths.get(ast.rootDir.toString(), path).getParent().toFile();
+            String abs = Paths.get(ast.rootDir.toString(), path).toString();
             if (!ast.isUsable()) {
                 unusableAstFound = true;
-            } else if (((SpoonAST)ast).launcher.getModelBuilder().getInputSources().stream().anyMatch(x->x.getAbsolutePath().startsWith(path))) {
+            } else if (((SpoonAST)ast).launcher.getModelBuilder().getInputSources().stream().anyMatch(x->x.getAbsolutePath().startsWith(abs))) {
                 Range r = ast.getRange(path, start, end, original);
                 if (r != null) {
                     return r;
                 }
-                matchACompilationUnit = true;
+                matchAnAst = true;
             }
         }
-        if (matchACompilationUnit) {
+        if (matchAnAst) {
             return null;
         } else if (unusableAstFound) {
             // Probably caused by failed parsing
             throw new RangeMatchingException("unusable AST found while trying to match the cu at: " + path.toString());
         } else {
             // Probably caused by range being a resource and not functional source code
-            throw new RangeMatchingException("No cu corresponding to " + path.toString());
+            throw new RangeMatchingException("No ast corresponding to " + path.toString());
         }
     }
 

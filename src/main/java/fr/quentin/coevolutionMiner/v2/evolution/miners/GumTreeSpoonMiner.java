@@ -967,6 +967,8 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     break;
                 }
             }
+            String tmp = proj.spec.relPath.toString();
+            path = tmp.endsWith("/") ? tmp + path : tmp + "/" + path;
             return proj.getRange(path, 0, 0, pair.left);
         } else if (pair.left == null || pair.right == null) {
         } else if (pair.right.getFile() == null) {
