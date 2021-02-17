@@ -975,10 +975,10 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         } else {
             String path = proj.getAst().rootDir.relativize(pair.right.getFile().toPath()).toString();
             if (path.startsWith("../")) {
-                logger.warn("wrong project of " + proj + " for " + pair.right.getFile());
+                logger.warn("wrong project of " + proj + " for " + tree + " at " + pair.right.getFile() + " given the following spoon obj per version "
+                        + tree.getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION) + " and ele position " + pair.left.getPosition());
             }
-            return proj.getRange(path,
-                    pair.right.getSourceStart(), pair.right.getSourceEnd(), pair.left);
+            return proj.getRange(path, pair.right.getSourceStart(), pair.right.getSourceEnd(), pair.left);
         }
         return null;
     }
