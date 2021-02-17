@@ -136,7 +136,7 @@ public class Neo4jDependenciesStorage implements DependenciesStorage {
 
         @Override
         protected String whatIsUploaded() {
-            return "impacts of " + spec.evoSpec.sources.repository;
+            return "dependencies of " + spec.evoSpec.sources.repository;
         }
 
     }
