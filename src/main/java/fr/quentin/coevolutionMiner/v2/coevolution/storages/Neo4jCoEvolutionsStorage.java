@@ -183,7 +183,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
             super(driver, 10);
             this.spec = spec;
             tool = Utils.map("name", spec.miner, "version", 0);
-            execute(logger, 256, processed);
+            execute(logger, 128, processed);
         }
 
         @Override
