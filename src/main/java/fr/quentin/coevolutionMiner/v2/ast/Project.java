@@ -171,7 +171,7 @@ public class Project<T> implements Iterable<Project> {
             throw new RangeMatchingException("unusable AST found while trying to match the cu at: " + path.toString());
         } else {
             // Probably caused by range being a resource and not functional source code
-            throw new RangeMatchingException("No ast corresponding to " + path.toString());
+            throw new RangeMatchingException("No dir from ast corresponding to " + path.toString());
         }
     }
 
