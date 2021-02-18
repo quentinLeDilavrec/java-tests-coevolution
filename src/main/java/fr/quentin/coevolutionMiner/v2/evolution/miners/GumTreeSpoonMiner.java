@@ -175,8 +175,6 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         Map<SpecificifierAtProj, EvolutionsAtProj> modules = new LinkedHashMap<>();
         Map<Project.Specifier<?>, Project.Specifier<?>> projSpecMapping = new LinkedHashMap<>();
         private EvolutionsAtProj rootModule;
-        public final VersionCommit beforeVersion;
-        public final VersionCommit afterVersion;
 
         public Project.Specifier getProjectSpec(Project.Specifier spec) {
             return projSpecMapping.get(spec);
@@ -188,8 +186,6 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
 
         public EvolutionsAtCommit(Specifier spec, Sources sources) {
             super(spec, sources);
-            this.beforeVersion = VersionCommit.build(sources.getCommit(spec.commitIdBefore));
-            this.afterVersion = VersionCommit.build(sources.getCommit(spec.commitIdAfter));
         }
 
         private EvolutionsAtProj compute() {
@@ -216,6 +212,8 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             private Project<?> beforeProj;
             private Project<?> afterProj;
             private SpoonGumTreeBuilder scanner;
+            private Commit commitBefore = sources.getCommit(spec.commitIdBefore);
+            private Commit commitAfter = sources.getCommit(spec.commitIdAfter);
 
             public Diff getDiff() {
                 return diff;
@@ -317,9 +315,9 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     this.scanner = new SpoonGumTreeBuilder();
                     ITree srcTree;
                     srcTree = scanner.getTree(left);
-                    this.mdiff = new MultiDiffImpl(srcTree, beforeVersion);
+                    this.mdiff = new MultiDiffImpl(srcTree, commitBefore);
                     ITree dstTree = scanner.getTree(right);
-                    this.diff = mdiff.compute(dstTree, afterVersion);
+                    this.diff = mdiff.compute(dstTree, commitAfter);
                     // this.diff = comp.compare(
                     // ((ProjectSpoon.SpoonAST)
                     // beforeProj.getAst()).launcher.getModel().getRootPackage(),
@@ -390,18 +388,18 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                 List<ImmutablePair<Range, String>> before = new ArrayList<>();
                 List<ImmutablePair<Range, String>> after = new ArrayList<>();
 
-                if (target.getInsertVersion() == afterVersion) {
-                    ImmutablePair<Range, String> rangeAft = toRange(astAfter, target, "", afterVersion);
+                if (target.getInsertVersion() == commitAfter) {
+                    ImmutablePair<Range, String> rangeAft = toRange(astAfter, target, "", commitAfter);
                     if (rangeAft != null)
                         after.add(rangeAft);
                     if (op instanceof MyUpdate) {
                         ImmutablePair<Range, String> rangeBef = toRange(astBefore, ((MyUpdate) op).getNode(), "",
-                                beforeVersion);
+                                commitBefore);
                         if (rangeBef != null)
                             before.add(rangeBef);
                     }
                 } else {
-                    ImmutablePair<Range, String> rangeBef = toRange(astBefore, target, "", beforeVersion);
+                    ImmutablePair<Range, String> rangeBef = toRange(astBefore, target, "", commitBefore);
                     if (rangeBef != null)
                         before.add(rangeBef);
                 }
@@ -446,12 +444,12 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     String desc = label == null ? component.getName() : label + "->" + component.getName();
                     if (component instanceof AtomicAction) {
                         AbstractVersionedTree target = ((AtomicAction<AbstractVersionedTree>) component).getTarget();
-                        if (target.getInsertVersion() == afterVersion) {
-                            ImmutablePair<Range, String> rangeAft = toRange(astAfter, target, desc, afterVersion);
+                        if (target.getInsertVersion() == commitAfter) {
+                            ImmutablePair<Range, String> rangeAft = toRange(astAfter, target, desc, commitAfter);
                             if (rangeAft != null)
                                 after.add(rangeAft);
                         } else {
-                            ImmutablePair<Range, String> rangeBef = toRange(astBefore, target, desc, beforeVersion);
+                            ImmutablePair<Range, String> rangeBef = toRange(astBefore, target, desc, commitBefore);
                             if (rangeBef != null)
                                 before.add(rangeBef);
                         }
@@ -790,7 +788,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         public Map<Commit, Evolutions> perBeforeCommit() {
             EvolutionsAtCommit tmp = getPerCommit(spec.commitIdBefore, spec.commitIdAfter);
             Map<Commit, Evolutions> r = new LinkedHashMap<>();
-            r.put(tmp.beforeVersion.commit, tmp);
+            r.put(sources.getCommit(tmp.spec.commitIdBefore), tmp);
             return r;
         }
 
@@ -975,8 +973,10 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         } else {
             String path = proj.getAst().rootDir.relativize(pair.right.getFile().toPath()).toString();
             if (path.startsWith("../")) {
-                logger.warn("wrong project of " + proj + " for " + tree + " at " + pair.right.getFile() + " given the following spoon obj per version "
-                        + tree.getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION) + " and ele position " + pair.left.getPosition());
+                logger.warn("wrong project of " + proj + " for " + tree + " at " + pair.right.getFile()
+                        + " given the following spoon obj per version "
+                        + tree.getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION) + " and ele position "
+                        + pair.left.getPosition());
             }
             return proj.getRange(path, pair.right.getSourceStart(), pair.right.getSourceEnd(), pair.left);
         }

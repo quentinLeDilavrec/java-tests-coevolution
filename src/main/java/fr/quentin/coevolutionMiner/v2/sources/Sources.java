@@ -6,12 +6,14 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.github.gumtreediff.tree.Version;
+
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
-import fr.quentin.coevolutionMiner.v2.evolution.miners.VersionCommit;
 
 public abstract class Sources {
 
@@ -167,7 +169,6 @@ public abstract class Sources {
             return commits.get(id);
         } else {
             Commit commit = new Commit(id);
-            VersionCommit.build(commit);
             commits.put(id, commit);
             return commit;
         }
@@ -185,7 +186,7 @@ public abstract class Sources {
         }
     }
 
-    public class Commit {
+    public class Commit implements Version {
         final List<Commit> parents = new ArrayList<>();
         final List<Commit> childrens = new ArrayList<>();
         private final String id;
@@ -270,6 +271,39 @@ public abstract class Sources {
             return getRepository().getUrl() + "/" + id.substring(0, Math.min(id.length(), 16));
         }
 
+        LRU<Commit, Boolean> isAncestor = new LRU<>(1 << 3);
+
+        @Override
+        public COMP_RES partiallyCompareTo(Version other) {
+            if (other instanceof Commit) {
+                Commit o = (Commit) other;
+                if (this == o) {
+                    return COMP_RES.EQUAL;
+                } else if (isAncestor(o)) {
+                    return COMP_RES.SUPERIOR;
+                } else if (o.isAncestor(this)) {
+                    return COMP_RES.INFERIOR;
+                } else {
+                    return COMP_RES.PARALLEL;
+                }
+            } else {
+                return null;
+            }
+        }
+
+        private boolean isAncestor(Commit o) {
+            Boolean cached = isAncestor.get(o);
+            if (cached == null) {
+                try (SourcesHelper sh = open();) {
+                    cached = sh.isAncestor(o.getId(), this.getId());
+                    isAncestor.put(o, cached);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            return cached;
+        }
+
     }
 
     public abstract List<Commit> getCommitsBetween(String commitIdBefore, String commitIdAfter) throws Exception;
@@ -289,4 +323,19 @@ public abstract class Sources {
     // }
 
     // }
+}
+
+class LRU<K, V> extends LinkedHashMap<K, V> {
+    private static final long serialVersionUID = 1L;
+    private final int limit;
+
+    public LRU(int limit) {
+        super(limit, 1.0f, true);
+        this.limit = limit - 1;
+    }
+
+    @Override
+    protected boolean removeEldestEntry(java.util.Map.Entry<K, V> eldest) {
+        return (size() > this.limit);
+    }
 }

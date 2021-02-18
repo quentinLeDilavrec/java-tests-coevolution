@@ -93,6 +93,9 @@ public class SourcesHelper implements AutoCloseable {
 	static String REPOS_PATH = Paths.get(RESOURCES_PATH, "Repos").toString();
 
 	private Repository repo;
+	public Repository getRepository() {
+		return repo;
+	}
 	private String gitRepoAddress;
 	private String repoRawPath;
 
@@ -235,6 +238,10 @@ public class SourcesHelper implements AutoCloseable {
 				}
 			}
 		}
+	}
+
+	public boolean isAncestor(String maybeAncestor, String maybeChildren) {
+		return GitHelper.isAncestor(repo, maybeAncestor, maybeChildren);
 	}
 
 	public static void runCommand(Path directory, String... command) throws IOException, InterruptedException {

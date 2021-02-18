@@ -15,6 +15,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.github.gumtreediff.tree.AbstractVersionedTree;
+import com.github.gumtreediff.tree.Version;
 import com.github.gumtreediff.tree.VersionedTree;
 
 import org.apache.commons.io.FileUtils;
@@ -120,7 +121,9 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
     public void accept(Set<Evolution> t) {
         EImpact.FailureReport report = serializeChangedCode(outputProcessor, initiallyPresent, middleFactory);
 
-        CtMethod elementTestAfter = applierHelper.getUpdatedMethod(evolutionsAtProj.getEnclosingInstance().afterVersion,
+        CtMethod elementTestAfter = applierHelper.getUpdatedMethod(
+                evolutionsAtProj.getEnclosingInstance().getSources()
+                        .getCommit(evolutionsAtProj.getEnclosingInstance().spec.commitIdAfter),
                 (AbstractVersionedTree) ((CtElement) this.testBefore.getOriginal())
                         .getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE));
         if (elementTestAfter != null) {
@@ -264,9 +267,11 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
         this.testAfter = testAfter;
         AbstractVersionedTree treeTestBefore = (AbstractVersionedTree) ((CtElement) this.testBefore.getOriginal())
                 .getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
-        CtElement[] ttt = applierHelper.watchApply(evolutionsAtProj.getEnclosingInstance().beforeVersion,
+        Version commitBefore = evolutionsAtProj.getEnclosingInstance().getSources()
+                .getCommit(evolutionsAtProj.getEnclosingInstance().spec.commitIdBefore);
+        CtElement[] ttt = applierHelper.watchApply(commitBefore,
                 treeTestBefore,
-                treeTestBefore.getChildren(evolutionsAtProj.getEnclosingInstance().beforeVersion).get(0));
+                treeTestBefore.getChildren(commitBefore).get(0));
         if (ttt[0] != ttt[1].getParent()) {
             throw new RuntimeException();
         }

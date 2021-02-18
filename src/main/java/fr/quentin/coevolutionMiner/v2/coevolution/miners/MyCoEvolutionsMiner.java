@@ -47,7 +47,6 @@ import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution.DescRange;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.MixedMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner;
-import fr.quentin.coevolutionMiner.v2.evolution.miners.VersionCommit;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsAtCommit;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsAtCommit.EvolutionsAtProj;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsMany;
@@ -290,11 +289,9 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         //             "no evolutions here for this pair of commits: " + currentCommit.getId() + ", " + nextCommit.getId());
         //     return currCoevolutions;
         // }
-        Version beforeVersion = VersionCommit.build(beforeCommit);
-        Version afterVersion = VersionCommit.build(afterCommit);
 
-        InterestingCasesExtractor icExtractor = new InterestingCasesExtractor(currentImpacts, beforeVersion,
-                afterImpacts, afterVersion, atomizedRefactorings);
+        InterestingCasesExtractor icExtractor = new InterestingCasesExtractor(currentImpacts, beforeCommit,
+                afterImpacts, afterCommit, atomizedRefactorings);
         icExtractor.computeRelax();
 
         // Validation phase, by compiling and running tests
@@ -317,7 +314,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             throw new RuntimeException(e);
         }
         JavaOutputProcessor outputProcessor = new JavaOutputProcessor();
-        EvoStateMaintainerImpl evoState = new EvoStateMaintainerImpl(beforeVersion, //currEvoAtCommit.beforeVersion,
+        EvoStateMaintainerImpl evoState = new EvoStateMaintainerImpl(beforeCommit, //currEvoAtCommit.beforeCommit,
                 atomizedRefactorings);
 
         logger.info(
@@ -654,16 +651,16 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         private Dependencies beforeImpacts;
         private Dependencies afterImpacts;
         private Map<Evolution, Set<Evolution>> atomizedRefactorings;
-        private Version beforeVersion;
-        private Version afterVersion;
+        private Version beforeCommit;
+        private Version afterCommit;
 
-        public InterestingCasesExtractor(Dependencies beforeImpacts, Version beforeVersion, Dependencies afterImpacts,
-                Version afterVersion, Map<Evolution, Set<Evolution>> atomizedRefactorings) {
+        public InterestingCasesExtractor(Dependencies beforeImpacts, Version beforeCommit, Dependencies afterImpacts,
+                Version afterCommit, Map<Evolution, Set<Evolution>> atomizedRefactorings) {
             this.beforeImpacts = beforeImpacts;
             this.afterImpacts = afterImpacts;
             this.atomizedRefactorings = atomizedRefactorings;
-            this.beforeVersion = beforeVersion;
-            this.afterVersion = afterVersion;
+            this.beforeCommit = beforeCommit;
+            this.afterCommit = afterCommit;
         }
 
         class DPair {
@@ -719,9 +716,9 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         treeTestAfter = mov.getInsert().getTarget();
                     }
                     try {
-                        testAfter = GumTreeSpoonMiner.toRange(projectAfter, treeTestAfter, afterVersion);
+                        testAfter = GumTreeSpoonMiner.toRange(projectAfter, treeTestAfter, afterCommit);
                     } catch (RangeMatchingException e1) {
-                        logger.warn("at" + projectAfter + " for " + Objects.toString(afterVersion) + " cannot format " + treeTestBefore, e1);
+                        logger.warn("at" + projectAfter + " for " + Objects.toString(afterCommit) + " cannot format " + treeTestBefore, e1);
                     }
 
                     if (testBefore == null) {
@@ -765,11 +762,11 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     if (mov != null) {
                         treeTestAfter = mov.getInsert().getTarget();
                     }
-                    if (treeTestBefore.getInsertVersion() != afterVersion) {
+                    if (treeTestBefore.getInsertVersion() != afterCommit) {
                         try {
-                            testBefore = GumTreeSpoonMiner.toRange(projectBefore, treeTestBefore, beforeVersion);
+                            testBefore = GumTreeSpoonMiner.toRange(projectBefore, treeTestBefore, beforeCommit);
                         } catch (RangeMatchingException e) {
-                            logger.warn("at" + projectBefore + " for " + Objects.toString(beforeVersion) + " cannot format " + treeTestBefore, e);
+                            logger.warn("at" + projectBefore + " for " + Objects.toString(beforeCommit) + " cannot format " + treeTestBefore, e);
                         }
                     }
                     if (testBefore == null) {
