@@ -13,4 +13,4 @@ MERGE (parent:Commit {repository:e.repository, commitId:commitId})
 MERGE (parent)-[:IS_COMMIT_OF]->(repo)
 MERGE (parent)<-[:CONTAIN_COMMIT]-(repo)
 
-MERGE (parent)<-[:PARENT]-(commitC)
+MERGE (parent)<-[:PARENT]-(commit)
