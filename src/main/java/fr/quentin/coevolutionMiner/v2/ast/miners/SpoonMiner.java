@@ -7,6 +7,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -65,7 +67,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         this.spec = spec;
         this.srcHandler = srcHandler;
     }
-    
+
     public class ProjectSpoon extends Project<CtElement> {
         private ProjectSpoon(Specifier spec, Set<Project<?>> modules, Commit commit, Path rootDir,
                 MavenLauncher launcher, Exception compilerException) {
@@ -429,82 +431,97 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
      * @throws InterruptedException
      */
     public static synchronized void computeLOC2(Path path, Project<?> proj) throws IOException, InterruptedException {
-        ProcessBuilder processBuilder = new ProcessBuilder();
-        String[] command = new String[] { "scc", "-f", "json", "-c", path.toAbsolutePath().toString() };
-        processBuilder.command(command);
-        logger.info(" executing subprocess: " + Arrays.asList(command).stream().reduce("", (a, b) -> a + " " + b));
-        Process process = null;
-        int i = 0;
-        IOException ee = null;
-        while (i < 3) {
-            try {
-                process = processBuilder.start();
-                break;
-            } catch (IOException e) {
-                i++;
-                ee = e;
-                logger.warn("fail " + i);
-                try {
-                    logger.debug("try ls the directory");
-                    Process process2 = new ProcessBuilder()
-                            .command(new String[] { "ls", path.toAbsolutePath().toString() }).start();
-                    int exitCode = process2.waitFor();
-                    logger.info("ret code of try other dir " + exitCode);
-                } catch (IOException eee) {
-                    logger.debug("fail try other dir", eee);
-                }
-                try {
-                    logger.debug("try other dir");
-                    Process process2 = new ProcessBuilder()
-                            .command(new String[] { "scc", "-f", "json", "-c", "/home/qledilav/bin" }).start();
-                    int exitCode = process2.waitFor();
-                    logger.info("ret code of try other dir " + exitCode);
-                } catch (IOException eee) {
-                    logger.debug("fail try other dir", eee);
-                }
-                try {
-                    logger.debug("try abs exe");
-                    Process process2 = new ProcessBuilder().command(new String[] { "/home/qledilav/bin/scc", "-f",
-                            "json", "-c", path.toAbsolutePath().toString() }).start();
-                    int exitCode = process2.waitFor();
-                    logger.info("ret code of try abs exe " + exitCode);
-                } catch (IOException eee) {
-                    logger.debug("fail try abs exe", eee);
-                }
-                try {
-                    logger.debug("try both");
-                    Process process2 = new ProcessBuilder()
-                            .command(
+
+        AccessController.doPrivileged(new PrivilegedAction<Void>() {
+            public Void run() {
+                ProcessBuilder processBuilder = new ProcessBuilder();
+                String[] command = new String[] { "scc", "-f", "json", "-c", path.toAbsolutePath().toString() };
+                processBuilder.command(command);
+                logger.info(
+                        " executing subprocess: " + Arrays.asList(command).stream().reduce("", (a, b) -> a + " " + b));
+                Process process = null;
+                int i = 0;
+                IOException ee = null;
+                while (i < 3) {
+                    try {
+                        process = processBuilder.start();
+                        break;
+                    } catch (IOException e) {
+                        i++;
+                        ee = e;
+                        logger.warn("fail " + i);
+                        try {
+                            logger.debug("try ls the directory");
+                            Process process2 = new ProcessBuilder()
+                                    .command(new String[] { "ls", path.toAbsolutePath().toString() }).start();
+                            int exitCode = process2.waitFor();
+                            logger.info("ret code of try other dir " + exitCode);
+                        } catch (IOException | InterruptedException eee) {
+                            logger.debug("fail try other dir", eee);
+                        }
+                        try {
+                            logger.debug("try other dir");
+                            Process process2 = new ProcessBuilder()
+                                    .command(new String[] { "scc", "-f", "json", "-c", "/home/qledilav/bin" }).start();
+                            int exitCode = process2.waitFor();
+                            logger.info("ret code of try other dir " + exitCode);
+                        } catch (IOException | InterruptedException eee) {
+                            logger.debug("fail try other dir", eee);
+                        }
+                        try {
+                            logger.debug("try abs exe");
+                            Process process2 = new ProcessBuilder().command(new String[] { "/home/qledilav/bin/scc",
+                                    "-f", "json", "-c", path.toAbsolutePath().toString() }).start();
+                            int exitCode = process2.waitFor();
+                            logger.info("ret code of try abs exe " + exitCode);
+                        } catch (IOException | InterruptedException eee) {
+                            logger.debug("fail try abs exe", eee);
+                        }
+                        try {
+                            logger.debug("try both");
+                            Process process2 = new ProcessBuilder().command(
                                     new String[] { "/home/qledilav/bin/scc", "-f", "json", "-c", "/home/qledilav/bin" })
-                            .start();
-                    int exitCode = process2.waitFor();
-                    logger.info("ret code of try both " + exitCode);
-                } catch (IOException eee) {
-                    logger.debug("fail try both", eee);
+                                    .start();
+                            int exitCode = process2.waitFor();
+                            logger.info("ret code of try both " + exitCode);
+                        } catch (IOException | InterruptedException eee) {
+                            logger.debug("fail try both", eee);
+                        }
+                    }
+                    try {
+                        Thread.sleep(5000);
+                    } catch (InterruptedException e) {
+                        logger.debug("fail sleep", e);
+                    }
                 }
-            }
-            Thread.sleep(5000);
-            ;
-        }
-        if (i >= 3) {
-            logger.warn("fail all tries", ee);
-            return;
-        }
-        Gson gson = new Gson();
-        try (JsonReader reader = new JsonReader(new InputStreamReader(process.getInputStream()))) {
-            fr.quentin.coevolutionMiner.v2.ast.Stats g = proj.getAst().getGlobalStats();
-            g.loC = 0;
-            reader.beginArray();
-            while (reader.hasNext()) {
-                Line line = gson.fromJson(reader, Line.class);
-                if (line.name.equals("Java")) {
-                    g.javaLoC = line.loc;
-                } else {
-                    g.loC += line.loc;
+                if (i >= 3) {
+                    logger.warn("fail all tries", ee);
+                    return null;
                 }
+                Gson gson = new Gson();
+                try (JsonReader reader = new JsonReader(new InputStreamReader(process.getInputStream()))) {
+                    fr.quentin.coevolutionMiner.v2.ast.Stats g = proj.getAst().getGlobalStats();
+                    g.loC = 0;
+                    reader.beginArray();
+                    while (reader.hasNext()) {
+                        Line line = gson.fromJson(reader, Line.class);
+                        if (line.name.equals("Java")) {
+                            g.javaLoC = line.loc;
+                        } else {
+                            g.loC += line.loc;
+                        }
+                    }
+                } catch (IOException e) {
+                    logger.debug("fail reader close", e);
+                }
+                try {
+                    int exitCode = process.waitFor();
+                    logger.info("scc ended with exitCode " + exitCode);
+                } catch (InterruptedException e) {
+                    logger.info("scc interrupted");
+                }
+                return null;
             }
-        }
-        int exitCode = process.waitFor();
-        logger.info("scc ended with exitCode " + exitCode);
+        });
     }
 }
