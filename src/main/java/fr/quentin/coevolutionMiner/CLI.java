@@ -294,7 +294,7 @@ public class CLI {
             //     }
 
             // });
-            executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(pool_size);
+            executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(pool_size, Executors.privilegedThreadFactory());
         }
 
         public final void process(Stream<ImmutablePair<Integer, String>> stream) {
