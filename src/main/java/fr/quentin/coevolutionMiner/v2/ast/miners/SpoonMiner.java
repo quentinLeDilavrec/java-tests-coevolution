@@ -432,8 +432,8 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
      */
     public static synchronized void computeLOC2(Path path, Project<?> proj) throws IOException, InterruptedException {
 
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            public Void run() {
+        // AccessController.doPrivileged(new PrivilegedAction<Void>() {
+        //     public Void run() {
                 ProcessBuilder processBuilder = new ProcessBuilder();
                 String[] command = new String[] { "scc", "-f", "json", "-c", path.toAbsolutePath().toString() };
                 processBuilder.command(command);
@@ -496,7 +496,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                 }
                 if (i >= 3) {
                     logger.warn("fail all tries", ee);
-                    return null;
+                    return;
                 }
                 Gson gson = new Gson();
                 try (JsonReader reader = new JsonReader(new InputStreamReader(process.getInputStream()))) {
@@ -520,8 +520,8 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                 } catch (InterruptedException e) {
                     logger.info("scc interrupted");
                 }
-                return null;
-            }
-        });
+        //         return null;
+        //     }
+        // });
     }
 }
