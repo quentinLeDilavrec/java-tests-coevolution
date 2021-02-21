@@ -2,6 +2,7 @@ package fr.quentin.coevolutionMiner.v2.coevolution;
 
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
+import fr.quentin.coevolutionMiner.v2.coevolution.miners.MultiCoEvolutionsMiner;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner;
 import fr.quentin.coevolutionMiner.v2.coevolution.storages.Neo4jCoEvolutionsStorage;
 import fr.quentin.coevolutionMiner.v2.dependency.DependencyHandler;
@@ -34,12 +35,16 @@ public class CoEvolutionHandler implements AutoCloseable {
     }
 
     public static CoEvolutions.Specifier buildSpec(Sources.Specifier src_id, Evolutions.Specifier evo_id) {
-        return buildSpec(src_id, evo_id, "myMiner");
+        return buildSpec(src_id, evo_id, MultiCoEvolutionsMiner.class);
     }
 
     public static CoEvolutions.Specifier buildSpec(Sources.Specifier src_id, Evolutions.Specifier evo_id,
-            String miner) {
+            Class<? extends CoEvolutionsMiner> miner) {
         return new CoEvolutions.Specifier(src_id, evo_id, miner);
+    }
+
+    enum Miners {
+        MultiCoEvolutionsMiner, MyCoEvolutionsMiner
     }
 
     public CoEvolutions handle(CoEvolutions.Specifier spec) {
@@ -70,18 +75,29 @@ public class CoEvolutionHandler implements AutoCloseable {
                 return res;
             }
 
+            Miners z = Miners.valueOf(spec.miner.getSimpleName());
             // CAUTION miners should mind about circular deps of data given by handlers
-            switch (spec.miner) {
-                case "myMiner":
+            switch (z) {
+                case MyCoEvolutionsMiner: {
                     MyCoEvolutionsMiner minerInst = new MyCoEvolutionsMiner(spec, sourcesHandler, astHandler,
-                            evoHandler, impactHandler, (CoEvolutionsStorage) neo4jStore);
+                            evoHandler, impactHandler);
                     res = minerInst.compute();
+                    if (db != null) {
+                        db.put(res);
+                    }
                     break;
+                }
+                case MultiCoEvolutionsMiner: {
+                    MultiCoEvolutionsMiner minerInst = new MultiCoEvolutionsMiner(spec, sourcesHandler, astHandler,
+                            evoHandler, impactHandler, this);
+                    res = minerInst.compute();
+                    // if (db != null) { // TODO maybe use it later for spreaded coevolutions
+                    //     db.put(res);
+                    // }
+                    break;
+                }
                 default:
                     throw new RuntimeException(spec.miner + " is not a registered impacts miner.");
-            }
-            if (db != null) {
-                db.put(res);
             }
             tmp.set(res);
             return res;
@@ -90,6 +106,7 @@ public class CoEvolutionHandler implements AutoCloseable {
         } finally {
             tmp.lock.unlock();
         }
+
     }
 
     @Override

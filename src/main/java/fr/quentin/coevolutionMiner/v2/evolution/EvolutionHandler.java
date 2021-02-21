@@ -6,20 +6,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-
-import org.refactoringminer.api.Refactoring;
-
-import fr.quentin.impactMiner.Evolution;
 import fr.quentin.coevolutionMiner.v2.Data;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
-import fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner;
-import fr.quentin.coevolutionMiner.v2.dependency.DependenciesStorage;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.MixedMiner;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.MultiGTSMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.storages.Neo4jEvolutionsStorage;
 
@@ -52,7 +45,7 @@ public class EvolutionHandler implements AutoCloseable {
 	}
 
 	enum Miners {
-		RefactoringMiner, GumTreeSpoonMiner, MixedMiner
+		RefactoringMiner, GumTreeSpoonMiner, MixedMiner, MultiGTSMiner
 	}
 
 	private Evolutions handle(Evolutions.Specifier spec, String storeName) {
@@ -94,10 +87,14 @@ public class EvolutionHandler implements AutoCloseable {
 				case GumTreeSpoonMiner: {
 					GumTreeSpoonMiner minerInst = new GumTreeSpoonMiner(spec, srcHandler, astHandler);
 					res = minerInst.compute();
-					populate(res);
 					if (db != null) {
 						db.put(spec, res);
 					}
+					break;
+				}
+				case MultiGTSMiner: {
+					MultiGTSMiner minerInst = new MultiGTSMiner(spec, srcHandler, astHandler, this);
+					res = minerInst.compute();
 					break;
 				}
 				case MixedMiner: {

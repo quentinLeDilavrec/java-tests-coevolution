@@ -15,6 +15,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.github.gumtreediff.tree.ITree;
+import com.github.gumtreediff.tree.Version;
+
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.logging.log4j.Logger;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Result;
@@ -25,22 +29,34 @@ import org.neo4j.driver.TransactionWork;
 import org.neo4j.driver.Value;
 import org.neo4j.driver.exceptions.TransientException;
 
+import fr.quentin.coevolutionMiner.utils.SourcesHelper;
+import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
+import fr.quentin.coevolutionMiner.v2.ast.RangeMatchingException;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon.SpoonAST;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.CoEvolution;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.MultiGTSMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.storages.Neo4jEvolutionsStorage;
+import fr.quentin.coevolutionMiner.v2.sources.Sources;
+import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.impactMiner.Evolution;
 import fr.quentin.impactMiner.ImpactAnalysis;
 import fr.quentin.impactMiner.ImpactElement;
 import fr.quentin.impactMiner.Position;
+import gumtree.spoon.apply.MyUtils;
+import gumtree.spoon.apply.operations.MyScriptGenerator;
 import gumtree.spoon.builder.CtWrapper;
+import spoon.reflect.CtModelImpl.CtRootPackage;
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtCompilationUnit;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtExecutable;
 import spoon.reflect.declaration.CtMethod;
+import spoon.reflect.declaration.CtModule;
+import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;
+import spoon.reflect.reference.CtPackageReference;
 
 public class Utils {
 
@@ -262,5 +278,53 @@ public class Utils {
 			rDescR.put("type", formatedType(e_ori));
 		}
 		return rDescR;
+	}
+
+	// TODO extract functionality in utils
+	public static <T> Range toRange(Project<T> proj, ITree tree, Version version) throws RangeMatchingException {
+	    ImmutablePair<CtElement, SourcePosition> pair = gumtree.spoon.apply.MyUtils.toNormalizedPreciseSpoon(tree,
+	            version);
+	    if (pair == null) {
+	    } else if (pair.left != null && pair.right == null) {
+	        String path = "";
+	        CtElement e = pair.left;
+	        if (e instanceof CtPackageReference) {
+	            e = e.getParent();
+	        }
+	        while (e.isParentInitialized()) {
+	            if (e instanceof CtPackage) {
+	                path = ((CtPackage) e).getSimpleName() + "/" + path;
+	            }
+	            e = e.getParent();
+	            if (e instanceof CtModule || e instanceof CtRootPackage) {
+	                break;
+	            }
+	        }
+	        String tmp = proj.spec.relPath.toString();
+	        path = tmp.endsWith("/") ? tmp + path : tmp + "/" + path;
+	        return proj.getRange(path, 0, 0, pair.left);
+	    } else if (pair.left == null || pair.right == null) {
+	    } else if (pair.right.getFile() == null) {
+	    } else {
+	        String path = proj.getAst().rootDir.relativize(pair.right.getFile().toPath()).toString();
+	        if (path.startsWith("../")) {
+	            MultiGTSMiner.logger.warn("wrong project of " + proj + " for " + tree + " at " + pair.right.getFile()
+	                    + " given the following spoon obj per version "
+	                    + tree.getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION) + " and ele position "
+	                    + pair.left.getPosition());
+	        }
+	        return proj.getRange(path, pair.right.getSourceStart(), pair.right.getSourceEnd(), pair.left);
+	    }
+	    return null;
+	}
+
+	public static List<Commit> getCommitList(Sources sources , String before, String after) {
+	    List<Commit> commits;
+	    try (SourcesHelper helper = sources.open()) {
+	        commits = sources.getCommitsBetween(before, after);
+	    } catch (Exception e) {
+	        throw new RuntimeException(e);
+	    }
+	    return commits;
 	}
 }

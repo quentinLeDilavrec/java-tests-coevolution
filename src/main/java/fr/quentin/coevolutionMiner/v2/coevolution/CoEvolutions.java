@@ -34,12 +34,39 @@ public abstract class CoEvolutions {
         this.spec = spec;
     }
 
+    public static class FailedCoEvolutions extends CoEvolutions {
+
+        public Exception exception;
+
+        public FailedCoEvolutions(Specifier spec, Exception exc) {
+            super(spec);
+            this.exception = exc;
+        }
+
+        @Override
+        public Set<CoEvolution> getCoEvolutions() {
+            return Collections.emptySet();
+        }
+
+        @Override
+        public Set<EImpact> getEImpacts() {
+            return Collections.emptySet();
+        }
+
+        @Override
+        public Set<ImmutablePair<Range, FailureReport>> getInitialTests() {
+            return Collections.emptySet();
+        }
+        
+    }
+
     public static class Specifier {
         public final Evolutions.Specifier evoSpec;
-        public final String miner;
+        public final Class<? extends CoEvolutionsMiner> miner;
         public final Sources.Specifier srcSpec;
 
-        public Specifier(Sources.Specifier srcSpec, Evolutions.Specifier evoSpec, String miner) {
+        public Specifier(Sources.Specifier srcSpec, Evolutions.Specifier evoSpec, 
+                Class<? extends CoEvolutionsMiner> miner) {
             this.srcSpec = srcSpec;
             this.evoSpec = evoSpec;
             this.miner = miner;

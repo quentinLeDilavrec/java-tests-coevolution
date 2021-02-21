@@ -28,10 +28,10 @@ public class CoEvolutionRoute implements Route {
     private EvolutionHandler evoHandler;
     private ProjectHandler astHandler;
     private SourcesHandler sourcesHandler;
-    private String minerId;
+    private Class<? extends CoEvolutionsMiner> minerId;
 
     public CoEvolutionRoute(SourcesHandler srcH, ProjectHandler astH, EvolutionHandler evoH, DependencyHandler impactH,
-            CoEvolutionHandler coevoH, String minerId) {
+            CoEvolutionHandler coevoH, Class<? extends CoEvolutionsMiner> minerId) {
         this.sourcesHandler = srcH;
         this.astHandler = astH;
         this.evoHandler = evoH;

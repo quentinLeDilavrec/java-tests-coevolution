@@ -94,8 +94,6 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
     // TODO instanciate filters correctly and make use of them
     private List<Object> filters;
 
-    public static Utils.Spanning spanning = Utils.Spanning.PER_COMMIT;
-
     public GumTreeSpoonMiner(Evolutions.Specifier spec, SourcesHandler srcHandler, ProjectHandler astHandler) {
         this.spec = spec;
         this.astHandler = astHandler;
@@ -109,20 +107,21 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
     }
 
     @Override
-    public Evolutions compute() {
+    public EvolutionsAtCommit compute() {
         Sources src = srcHandler.handle(spec.sources);
 
-        switch (spanning) {
-            case ONCE: {
-                EvolutionsOnce result = new EvolutionsOnce(spec, src);
-                return result.compute();
-            }
-            case PER_COMMIT:
-            default: {
-                EvolutionsMany result = new EvolutionsMany(spec, src);
-                return result.compute();
-            }
+        Commit beforeCom = null;
+        Commit afterCom = null;
+        try (SourcesHelper helper = src.open()) {
+            beforeCom = src.getCommit(spec.commitIdBefore);
+            afterCom = src.getCommit(spec.commitIdAfter);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
+        EvolutionsAtCommit perCommit = new EvolutionsAtCommit(
+                new Evolutions.Specifier(spec.sources, beforeCom.getId(), afterCom.getId(), spec.miner), src);
+        perCommit.compute();
+        return perCommit;
     }
 
     public static class SpecificifierAtProj extends Evolutions.Specifier {
@@ -492,7 +491,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
 
             private <T> ImmutablePair<Range, String> toRange(Project<T> proj, ITree tree, String desc, Version version)
                     throws RangeMatchingException {
-                Range range = GumTreeSpoonMiner.toRange(proj, tree, version);
+                Range range = Utils.toRange(proj, tree, version);
                 if (range == null) {
                     return null;
                 }
@@ -674,312 +673,10 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         }
     }
 
-    public final class EvolutionsOnce extends EvolutionsImpl {
-
-        private EvolutionsOnce(Specifier spec, Sources sources) {
-            super(spec, sources);
-        }
-
-        public Diff getDiff(Project.Specifier<?> before, Project.Specifier<?> after, String relPath) {
-            EvolutionsAtCommit tmp = getPerCommit(before.commitId, after.commitId);
-            return tmp.getDiff(before, after);
-        }
-
-        public EvolutionsAtCommit getPerCommit(String before, String after) {
-            return perCommit.get(new ImmutablePair<>(before, after));
-        }
-
-        @Override
-        public Project<?>.AST.FileSnapshot.Range map(Project<?>.AST.FileSnapshot.Range range, Project<?> target) {
-            return getPerCommit(range.getFile().getCommit().getId(), target.spec.commitId).map(range, target);
-        }
-
-        EvolutionsOnce compute() {
-            Commit beforeCom = null;
-            Commit afterCom = null;
-            try (SourcesHelper helper = this.sources.open()) {
-                beforeCom = this.sources.getCommit(spec.commitIdBefore);
-                afterCom = this.sources.getCommit(spec.commitIdAfter);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-            EvolutionsAtCommit perCommit = new EvolutionsAtCommit(
-                    new Evolutions.Specifier(spec.sources, beforeCom.getId(), afterCom.getId(), spec.miner), sources);
-            perCommit.compute();
-            putPerCommit(beforeCom, afterCom, perCommit);
-            return this;
-        }
-
-        @Override
-        public Set<Evolution> getEvolution(String type, Project<?> source, List<ImmutablePair<Range, String>> before,
-                Project<?> target, List<ImmutablePair<Range, String>> after) {
-            // Project source = before.get(0).left.getFile().getAST().getProject();
-            return getPerCommit(source.spec.commitId, target.spec.commitId).getEvolution(type, source, before, target,
-                    after);
-        }
-
-        Map<ImmutablePair<String, String>, EvolutionsAtCommit> perCommit = new HashMap<>();
-
-        private EvolutionsAtCommit putPerCommit(Commit beforeCom, Commit commit, EvolutionsAtCommit perCommit) {
-            return this.perCommit.put(new ImmutablePair<>(beforeCom.getId(), commit.getId()), perCommit);
-        }
-
-        private boolean evoSetWasBuilt = false;
-
-        @Override
-        public Set<Evolution> toSet() {
-            if (evoSetWasBuilt) {
-                return evolutions;
-            }
-            for (Evolution e : this) {
-                evolutions.add(e);
-            }
-            evoSetWasBuilt = true;
-            return evolutions;
-        }
-
-        @Override
-        public Iterator<Evolution> iterator() {
-            if (evoSetWasBuilt) {
-                return evolutions.iterator();
-            }
-            return new Iterator<Evolutions.Evolution>() {
-
-                Iterator<EvolutionsAtCommit> commitIt = EvolutionsOnce.this.perCommit.values().iterator();
-                Iterator<Evolutions.Evolution> it = EvolutionsOnce.this.evolutions.iterator();
-
-                @Override
-                public boolean hasNext() {
-                    while (true) {
-                        if (it != null && it.hasNext()) {
-                            return true;
-                        } else if (commitIt.hasNext()) {
-                            it = commitIt.next().iterator();
-                        } else {
-                            return false;
-                        }
-                    }
-                }
-
-                @Override
-                public Evolution next() {
-                    if (hasNext()) {
-                        return it.next();
-                    } else {
-                        throw new NoSuchElementException();
-                    }
-                }
-
-            };
-        }
-
-        @Override
-        public JsonElement toJson() {
-            // TODO optimize (serializing then deserializing is a dirty hack)
-            Object diff = new Gson().fromJson(
-                    JSON(spec.sources.repository, spec.commitIdAfter,
-                            evolutions.stream().map(x -> (Action) x.getOriginal()).collect(Collectors.toList())),
-                    new TypeToken<Object>() {
-                    }.getType());
-            return new Gson().toJsonTree(diff);
-        }
-
-        @Override
-        public Map<Commit, Evolutions> perBeforeCommit() {
-            EvolutionsAtCommit tmp = getPerCommit(spec.commitIdBefore, spec.commitIdAfter);
-            Map<Commit, Evolutions> r = new LinkedHashMap<>();
-            r.put(sources.getCommit(tmp.spec.commitIdBefore), tmp);
-            return r;
-        }
-
-    }
-
-    public final class EvolutionsMany extends EvolutionsImpl {
-
-        private EvolutionsMany(Specifier spec, Sources sources) {
-            super(spec, sources);
-        }
-
-        private EvolutionsMany(Specifier spec, Sources sources, Set<Evolution> subSet) {
-            this(spec, sources);
-            evolutions.addAll(subSet);
-        }
-
-        public Diff getDiff(Project.Specifier<?> before, Project.Specifier<?> after, String relPath) {
-            EvolutionsAtCommit tmp = getPerCommit(before.commitId, after.commitId);
-            return tmp.getDiff(before, after);
-        }
-
-        public EvolutionsAtCommit getPerCommit(String before, String after) {
-            return perCommit.get(new ImmutablePair<>(before, after));
-        }
-
-        @Override
-        public Project<?>.AST.FileSnapshot.Range map(Project<?>.AST.FileSnapshot.Range range, Project<?> target) {
-            return getPerCommit(range.getFile().getCommit().getId(), target.spec.commitId).map(range, target);
-        }
-
-        EvolutionsMany compute() {
-            List<Commit> commits;
-            try (SourcesHelper helper = this.sources.open()) {
-                commits = this.sources.getCommitsBetween(spec.commitIdBefore, spec.commitIdAfter);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-            Commit beforeCom = null;
-            for (Commit commit : commits) {
-                if (beforeCom != null) {
-                    // per commit evolutions
-                    EvolutionsAtCommit perCommit = new EvolutionsAtCommit(
-                            new Evolutions.Specifier(spec.sources, beforeCom.getId(), commit.getId(), spec.miner),
-                            sources);
-                    perCommit.compute();
-                    putPerCommit(beforeCom, commit, perCommit);
-                }
-                beforeCom = commit;
-            }
-            return this;
-        }
-
-        @Override
-        public Set<Evolution> getEvolution(String type, Project<?> source, List<ImmutablePair<Range, String>> before,
-                Project<?> target, List<ImmutablePair<Range, String>> after) {
-            // Project source = before.get(0).left.getFile().getAST().getProject();
-            return getPerCommit(source.spec.commitId, target.spec.commitId).getEvolution(type, source, before, target,
-                    after);
-        }
-
-        Map<ImmutablePair<String, String>, EvolutionsAtCommit> perCommit = new HashMap<>();
-
-        private EvolutionsAtCommit putPerCommit(Commit beforeCom, Commit commit, EvolutionsAtCommit perCommit) {
-            return this.perCommit.put(new ImmutablePair<>(beforeCom.getId(), commit.getId()), perCommit);
-        }
-
-        private boolean evoSetWasBuilt = false;
-
-        @Override
-        public Set<Evolution> toSet() {
-            if (evoSetWasBuilt) {
-                return evolutions;
-            }
-            for (Evolution e : this) {
-                evolutions.add(e);
-            }
-            evoSetWasBuilt = true;
-            return evolutions;
-        }
-
-        @Override
-        public Iterator<Evolution> iterator() {
-            if (evoSetWasBuilt) {
-                return evolutions.iterator();
-            }
-            return new Iterator<Evolutions.Evolution>() {
-
-                Iterator<EvolutionsAtCommit> commitIt = EvolutionsMany.this.perCommit.values().iterator();
-                Iterator<Evolutions.Evolution> it = EvolutionsMany.this.evolutions.iterator();
-
-                @Override
-                public boolean hasNext() {
-                    while (true) {
-                        if (it != null && it.hasNext()) {
-                            return true;
-                        } else if (commitIt.hasNext()) {
-                            it = commitIt.next().iterator();
-                        } else {
-                            return false;
-                        }
-                    }
-                }
-
-                @Override
-                public Evolution next() {
-                    if (hasNext()) {
-                        return it.next();
-                    } else {
-                        throw new NoSuchElementException();
-                    }
-                }
-
-            };
-        }
-
-        @Override
-        public JsonElement toJson() {
-            // TODO optimize (serializing then deserializing is a dirty hack)
-            Object diff = new Gson().fromJson(
-                    JSON(spec.sources.repository, spec.commitIdAfter,
-                            evolutions.stream().map(x -> (Action) x.getOriginal()).collect(Collectors.toList())),
-                    new TypeToken<Object>() {
-                    }.getType());
-            return new Gson().toJsonTree(diff);
-        }
-
-        @Override
-        public Map<Commit, Evolutions> perBeforeCommit() {
-            Map<String, Set<Evolution>> tmp = new LinkedHashMap<>();
-            for (Evolution evolution : this) {
-                String cidb = evolution.getCommitBefore().getId();
-                tmp.putIfAbsent(cidb, new LinkedHashSet<>());
-                tmp.get(cidb).add(evolution);
-            }
-            Map<Commit, Evolutions> r = new LinkedHashMap<>();
-            for (Set<Evolution> evolutionsSubSet : tmp.values()) {
-                if (evolutionsSubSet.size() == 0) {
-                    continue;
-                }
-                Evolutions newEvo = new EvolutionsMany(
-                        new Evolutions.Specifier(spec.sources,
-                                evolutionsSubSet.iterator().next().getCommitBefore().getId(),
-                                evolutionsSubSet.iterator().next().getCommitAfter().getId(), spec.miner),
-                        getSources(), evolutionsSubSet);
-                r.put(evolutionsSubSet.iterator().next().getCommitBefore(), newEvo);
-            }
-            return r;
-        }
-    }
-
     public static String JSON(String gitURL, String currentCommitId, List<?> refactoringsAtRevision) {
         StringBuilder sb = new StringBuilder();
         // TODO
         return sb.toString();
     }
 
-    // TODO extract functionality in utils
-    public static <T> Range toRange(Project<T> proj, ITree tree, Version version) throws RangeMatchingException {
-        ImmutablePair<CtElement, SourcePosition> pair = gumtree.spoon.apply.MyUtils.toNormalizedPreciseSpoon(tree,
-                version);
-        if (pair == null) {
-        } else if (pair.left != null && pair.right == null) {
-            String path = "";
-            CtElement e = pair.left;
-            if (e instanceof CtPackageReference) {
-                e = e.getParent();
-            }
-            while (e.isParentInitialized()) {
-                if (e instanceof CtPackage) {
-                    path = ((CtPackage) e).getSimpleName() + "/" + path;
-                }
-                e = e.getParent();
-                if (e instanceof CtModule || e instanceof CtRootPackage) {
-                    break;
-                }
-            }
-            String tmp = proj.spec.relPath.toString();
-            path = tmp.endsWith("/") ? tmp + path : tmp + "/" + path;
-            return proj.getRange(path, 0, 0, pair.left);
-        } else if (pair.left == null || pair.right == null) {
-        } else if (pair.right.getFile() == null) {
-        } else {
-            String path = proj.getAst().rootDir.relativize(pair.right.getFile().toPath()).toString();
-            if (path.startsWith("../")) {
-                logger.warn("wrong project of " + proj + " for " + tree + " at " + pair.right.getFile()
-                        + " given the following spoon obj per version "
-                        + tree.getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION) + " and ele position "
-                        + pair.left.getPosition());
-            }
-            return proj.getRange(path, pair.right.getSourceStart(), pair.right.getSourceEnd(), pair.left);
-        }
-        return null;
-    }
 }

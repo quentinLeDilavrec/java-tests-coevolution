@@ -156,8 +156,8 @@ public class CLI {
         if (line.hasOption("once")) {
             // TODO do something cleaner
             fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner.spanning = fr.quentin.coevolutionMiner.v2.utils.Utils.Spanning.ONCE;
-            fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.spanning = fr.quentin.coevolutionMiner.v2.utils.Utils.Spanning.ONCE;
-            fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner.spanning = fr.quentin.coevolutionMiner.v2.utils.Utils.Spanning.ONCE;
+            fr.quentin.coevolutionMiner.v2.evolution.miners.MultiGTSMiner.spanning = fr.quentin.coevolutionMiner.v2.utils.Utils.Spanning.ONCE;
+            fr.quentin.coevolutionMiner.v2.coevolution.miners.MultiCoEvolutionsMiner.spanning = fr.quentin.coevolutionMiner.v2.utils.Utils.Spanning.ONCE;
         }
         if (Objects.equals(args[0], "batch")) {
             if (line.getOptionValue("file") != null) {

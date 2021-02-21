@@ -20,7 +20,7 @@ import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 
-public class DepedencyRoute implements Route {
+public class DependencyRoute implements Route {
 
     private DependencyHandler impactsHandler;
     private EvolutionHandler evoHandler;
@@ -28,7 +28,7 @@ public class DepedencyRoute implements Route {
     private SourcesHandler sourcesHandler;
     private String minerId;
 
-    public DepedencyRoute(SourcesHandler srcH, ProjectHandler astH, EvolutionHandler evoH, DependencyHandler impactH,
+    public DependencyRoute(SourcesHandler srcH, ProjectHandler astH, EvolutionHandler evoH, DependencyHandler impactH,
             String minerId) {
         this.sourcesHandler = srcH;
         this.astHandler = astH;

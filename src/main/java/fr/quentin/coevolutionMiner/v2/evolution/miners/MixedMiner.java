@@ -36,7 +36,6 @@ import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionsMiner;
-import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsMany;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution.DescRange;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
@@ -111,23 +110,6 @@ public class MixedMiner implements EvolutionsMiner {
     }
 
     Logger logger = LogManager.getLogger();
-    // public static List<Class<? extends EvolutionsMiner>> slaves = Collections
-    // .unmodifiableList(Arrays.asList(RefactoringMiner.class,
-    // GumTreeSpoonMiner.class));
-
-    // public static class MixedSpecifier extends Evolutions.Specifier {
-
-    // public final List<Evolutions.Specifier> specs;
-
-    // public MixedSpecifier(Specifier sources, String commitIdBefore, String
-    // commitIdAfter) {
-    // super(sources, commitIdBefore, commitIdAfter, Mixed_Miner.class);
-    // this.specs = slaves.stream().map(x -> new Evolutions.Specifier(sources,
-    // commitIdBefore, commitIdAfter, x))
-    // .collect(Collectors.toUnmodifiableList());
-    // }
-
-    // }
 
     private SourcesHandler srcHandler;
     private ProjectHandler astHandler;
@@ -156,7 +138,7 @@ public class MixedMiner implements EvolutionsMiner {
         this.rmMinerSpec = new Evolutions.Specifier(spec.sources, spec.commitIdBefore, spec.commitIdAfter,
                 RefactoringMiner.class);
         this.gtsMinerSpec = new Evolutions.Specifier(spec.sources, spec.commitIdBefore, spec.commitIdAfter,
-                GumTreeSpoonMiner.class);
+                MultiGTSMiner.class);
     }
 
     @Override

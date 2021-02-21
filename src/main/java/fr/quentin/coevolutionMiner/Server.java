@@ -20,12 +20,16 @@ import fr.quentin.coevolutionMiner.v1.parsers.SpoonHandler;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectRoute;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
+import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionHandler;
+import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionRoute;
+import fr.quentin.coevolutionMiner.v2.coevolution.miners.MultiCoEvolutionsMiner;
 import fr.quentin.coevolutionMiner.v2.dependency.DependencyHandler;
-import fr.quentin.coevolutionMiner.v2.dependency.DepedencyRoute;
+import fr.quentin.coevolutionMiner.v2.dependency.DependencyRoute;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionRoute;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.MixedMiner;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.MultiGTSMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesRoute;
@@ -141,20 +145,27 @@ public class Server {
 
 			EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
 			path("/evolution", () -> {
-				EvolutionRoute evoG = new EvolutionRoute(srcH, astH, evoH, GumTreeSpoonMiner.class);
-				put("/GumtreeSpoon", evoG);
-				EvolutionRoute evoR = new EvolutionRoute(srcH, astH, evoH, RefactoringMiner.class);
-				put("/RefactoringMiner", evoR);
-				EvolutionRoute evoM = new EvolutionRoute(srcH, astH, evoH, MixedMiner.class);
-				put("/Mixed", evoM);
-				put("/default", evoR);
+				EvolutionRoute evoGtsR = new EvolutionRoute(srcH, astH, evoH, MultiGTSMiner.class);
+				put("/GumtreeSpoon", evoGtsR);
+				EvolutionRoute evoRmR = new EvolutionRoute(srcH, astH, evoH, RefactoringMiner.class);
+				put("/RefactoringMiner", evoRmR);
+				EvolutionRoute evoMR = new EvolutionRoute(srcH, astH, evoH, MixedMiner.class);
+				put("/Mixed", evoMR);
+				put("/default", evoRmR);
 			});
 
 			DependencyHandler impactH = new DependencyHandler(srcH, astH, evoH);
 			path("/impact", () -> {
-				DepedencyRoute impactR = new DepedencyRoute(srcH, astH, evoH, impactH, "myMiner");
+				DependencyRoute impactR = new DependencyRoute(srcH, astH, evoH, impactH, "myMiner");
 				put("/myMiner", impactR);
 				put("/default", impactR);
+			});
+
+			CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH);
+			path("/coevolution", () -> {
+				CoEvolutionRoute coevoR = new CoEvolutionRoute(srcH, astH, evoH, impactH, coevoH, MultiCoEvolutionsMiner.class);
+				put("/myMiner", coevoR);
+				put("/default", coevoR);
 			});
 
 			options("/*", (req, res) -> {

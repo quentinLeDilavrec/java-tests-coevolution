@@ -96,7 +96,47 @@ public class Iterators2 {
         }
     }
 
-    @SuppressWarnings("rawtypes")
+    public static abstract class IteratorPairCustom<U, T> implements Iterator<T> {
+	    U prev = null;
+	    Iterator<U> rootIt;
+	    Iterator<T> it;
+	    {
+	        prev = rootIt.next();
+	        it = null;
+	    }
+	
+	    public IteratorPairCustom(Iterator<U> iterator) {
+	        this.rootIt = iterator;
+	    }
+	
+	    public abstract Iterator<T> makeIt(U prev, U next);
+	
+	    @Override
+	    public boolean hasNext() {
+	        while (true) {
+	            if (it != null && it.hasNext()) {
+	                return true;
+	            } else if (rootIt.hasNext()) {
+	                U tmp = rootIt.next();
+	                it = makeIt(prev, tmp);
+	                prev = tmp;
+	            } else {
+	                return false;
+	            }
+	        }
+	    }
+	
+	    @Override
+	    public T next() {
+	        if (hasNext()) {
+	            return it.next();
+	        } else {
+	            throw new NoSuchElementException();
+	        }
+	    }
+	}
+
+	@SuppressWarnings("rawtypes")
     private final static Iterator EMPTY = new Iterator() {
         public boolean hasNext() {
             return false;

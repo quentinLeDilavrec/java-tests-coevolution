@@ -46,14 +46,15 @@ import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution.DescRange;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.MixedMiner;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.MultiGTSMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsAtCommit;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsAtCommit.EvolutionsAtProj;
-import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsMany;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.coevolutionMiner.v2.utils.Iterators2;
+import fr.quentin.coevolutionMiner.v2.utils.Utils;
 import fr.quentin.coevolutionMiner.v2.utils.Utils.Spanning;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
@@ -104,135 +105,37 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
     static Logger logger = LogManager.getLogger();
 
-    private final class CoEvolutionsManyCommit extends CoEvolutions {
-        private final Set<CoEvolution> coevolutions = new LinkedHashSet<>();
-        private final Set<EImpact> eImpacts = new LinkedHashSet<>();
-        private final Set<ImmutablePair<Range, EImpact.FailureReport>> initialTests = new LinkedHashSet<>();
+    private final ProjectHandler astHandler;
+    private final EvolutionHandler evoHandler;
+    private final CoEvolutions.Specifier spec;
 
-        CoEvolutionsManyCommit(Specifier spec) {
-            super(spec);
-        }
+    private final SourcesHandler srcHandler;
 
-        @Override
-        public JsonElement toJson() {
-            return new JsonObject();
-        }
-
-        @Override
-        public Set<CoEvolution> getCoEvolutions() {
-            return Collections.unmodifiableSet(coevolutions);
-        }
-
-        public void add(CoEvolutionsExtension currCoevolutions) {
-            coevolutions.addAll(currCoevolutions.getCoEvolutions());
-            eImpacts.addAll(currCoevolutions.getEImpacts());
-            initialTests.addAll(currCoevolutions.getInitialTests());
-        }
-
-        @Override
-        public Set<EImpact> getEImpacts() {
-            return eImpacts;
-        }
-
-        @Override
-        public Set<ImmutablePair<Range, EImpact.FailureReport>> getInitialTests() {
-            return initialTests;
-        }
-    }
-
-    private ProjectHandler astHandler;
-    private EvolutionHandler evoHandler;
-    private CoEvolutions.Specifier spec;
-
-    private SourcesHandler srcHandler;
-
-    private CoEvolutionsStorage store;
-
-    private DependencyHandler impactHandler;
-
-    public static Spanning spanning = Spanning.PER_COMMIT;
+    private final DependencyHandler impactHandler;
 
     public MyCoEvolutionsMiner(CoEvolutions.Specifier spec, SourcesHandler srcHandler, ProjectHandler astHandler,
-            EvolutionHandler evoHandler, DependencyHandler impactHandler, CoEvolutionsStorage store) {
+            EvolutionHandler evoHandler, DependencyHandler impactHandler) {
         this.spec = spec;
         this.srcHandler = srcHandler;
         this.astHandler = astHandler;
         this.evoHandler = evoHandler;
         this.impactHandler = impactHandler;
-        this.store = store;
     }
 
     @Override
     public CoEvolutions compute() {
         assert spec.evoSpec != null : spec;
         Sources sourcesProvider = srcHandler.handle(spec.evoSpec.sources);
-        String initialCommitId = spec.evoSpec.commitIdBefore;
-        switch (spanning) {
-            case ONCE: {
-                try {
-                    Commit beforeCom = sourcesProvider.getCommit(spec.evoSpec.commitIdBefore);
-                    Commit afterCom = sourcesProvider.getCommit(spec.evoSpec.commitIdAfter);
-                    try {
-                        return computeDirectCoevolutions(sourcesProvider, beforeCom, afterCom);
-                    } catch (SmallMiningException e) {
-                        throw new RuntimeException(e);
-                    }
-                } catch (SeverMiningException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            case PER_COMMIT:
-            default: {
-                try {
-                    CoEvolutionsManyCommit globalResult = new CoEvolutionsManyCommit(spec);
-                    List<Sources.Commit> commits;
-                    try {
-                        commits = sourcesProvider.getCommitsBetween(initialCommitId, spec.evoSpec.commitIdAfter);
-                        logger.info(commits.size() > 2
-                                ? "caution computation of coevolutions only between consecutive commits"
-                                : "# of commits to analyze: " + commits.size());
-                        logger.info(commits);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-
-                    // final Evolutions global_evolutions = evoHandler.handle(spec.evoSpec);
-                    // Set<Evolution> global_evolutions_set = global_evolutions.toSet();
-
-                    // GET COMMIT FROM ID
-                    // // // NOTE GOING FORWARD in time
-                    // for (Evolution evolution : evolutions) {
-                    // String commitIdBefore = evolution.getCommitBefore().getId();
-                    // perBeforeCommit.get(sourcesProvider.temporaryCreateCommit(commitIdBefore)).add(evolution);
-                    // // String commitIdAfter = evolution.getCommitIdAfter();
-                    // }
-                    SmallMiningException smallSuppressedExc = new SmallMiningException(
-                            "Small errors occured during consecutive commits analysis");
-                    Commit beforeCommit = null;
-                    for (Commit afterCommit : commits) {
-                        if (beforeCommit == null) {
-                            beforeCommit = afterCommit;
-                            continue;
-                        }
-                        try {
-                            CoEvolutionsExtension currCoevolutions = computeDirectCoevolutions(sourcesProvider,
-                                    beforeCommit, afterCommit);
-                            globalResult.add(currCoevolutions);
-                        } catch (SmallMiningException e) {
-                            smallSuppressedExc.addSuppressed(e);
-                        }
-                    }
-                    if (smallSuppressedExc.getSuppressed().length > 0) {
-                        logger.info("Small exceptions", smallSuppressedExc);
-                    }
-                    // depr(global_evolutions_set);
-                    return globalResult;
-                } catch (SeverMiningException e) {
-                    throw new RuntimeException(e);
-                }
-            }
+        Commit beforeCom = sourcesProvider.getCommit(spec.evoSpec.commitIdBefore);
+        Commit afterCom = sourcesProvider.getCommit(spec.evoSpec.commitIdAfter);
+        try {
+            return computeDirectCoevolutions(sourcesProvider, beforeCom, afterCom);
+        } catch (SmallMiningException e) {
+            logger.warn("small mining exception while searching for coevolutions", e);
+            return new CoEvolutions.FailedCoEvolutions(spec, e);
+        } catch (SeverMiningException e) {
+            throw new RuntimeException(e);
         }
-
     }
 
     private CoEvolutionsExtension computeDirectCoevolutions(Sources sourcesProvider, Commit beforeCommit,
@@ -716,9 +619,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         treeTestAfter = mov.getInsert().getTarget();
                     }
                     try {
-                        testAfter = GumTreeSpoonMiner.toRange(projectAfter, treeTestAfter, afterCommit);
+                        testAfter = Utils.toRange(projectAfter, treeTestAfter, afterCommit);
                     } catch (RangeMatchingException e1) {
-                        logger.warn("at" + projectAfter + " for " + Objects.toString(afterCommit) + " cannot format " + treeTestBefore, e1);
+                        logger.warn("at" + projectAfter + " for " + Objects.toString(afterCommit) + " cannot format "
+                                + treeTestBefore, e1);
                     }
 
                     if (testBefore == null) {
@@ -764,9 +668,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     }
                     if (treeTestBefore.getInsertVersion() != afterCommit) {
                         try {
-                            testBefore = GumTreeSpoonMiner.toRange(projectBefore, treeTestBefore, beforeCommit);
+                            testBefore = Utils.toRange(projectBefore, treeTestBefore, beforeCommit);
                         } catch (RangeMatchingException e) {
-                            logger.warn("at" + projectBefore + " for " + Objects.toString(beforeCommit) + " cannot format " + treeTestBefore, e);
+                            logger.warn("at" + projectBefore + " for " + Objects.toString(beforeCommit)
+                                    + " cannot format " + treeTestBefore, e);
                         }
                     }
                     if (testBefore == null) {
@@ -878,27 +783,4 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
     }
 
-    public class SmallMiningException extends Exception {
-
-        public SmallMiningException(String string, Exception compilerException) {
-            super(string, compilerException);
-        }
-
-        public SmallMiningException(String string) {
-            super(string);
-        }
-
-        private static final long serialVersionUID = 6192596956456010689L;
-
-    }
-
-    public class SeverMiningException extends Exception {
-
-        public SeverMiningException(String string) {
-            super(string);
-        }
-
-        private static final long serialVersionUID = 6192596956456010689L;
-
-    }
 }
