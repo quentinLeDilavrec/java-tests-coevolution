@@ -1,5 +1,8 @@
 package fr.quentin.coevolutionMiner.v2.evolution.miners;
 
+import java.util.AbstractMap;
+import java.util.AbstractSet;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -78,15 +81,12 @@ public class MultiGTSMiner implements EvolutionsMiner {
         }
     }
 
-    public final class EvolutionsMany extends EvolutionsImpl {
+    public final class EvolutionsMany extends Evolutions {
+
+        private Set<Evolution> evolutions;
 
         private EvolutionsMany(Specifier spec, Sources sources) {
             super(spec, sources);
-        }
-
-        private EvolutionsMany(Specifier spec, Sources sources, Set<Evolution> subSet) {
-            this(spec, sources);
-            evolutions.addAll(subSet);
         }
 
         public Diff getDiff(Project.Specifier<?> before, Project.Specifier<?> after, String relPath) {
@@ -107,6 +107,7 @@ public class MultiGTSMiner implements EvolutionsMiner {
         Evolutions compute() {
             List<Commit> commits = Utils.getCommitList(this.sources, spec.commitIdBefore, spec.commitIdAfter);
             Commit beforeCom = null;
+            int count = 0;
             if (commits.size() <= 2) {
                 handler.handle(handler.buildSpec(spec.sources, spec.commitIdBefore, spec.commitIdAfter,
                         GumTreeSpoonMiner.class));
@@ -117,10 +118,34 @@ public class MultiGTSMiner implements EvolutionsMiner {
                     GumTreeSpoonMiner.EvolutionsAtCommit perCommit = (GumTreeSpoonMiner.EvolutionsAtCommit) handler
                             .handle(handler.buildSpec(spec.sources, beforeCom.getId(), commit.getId(),
                                     GumTreeSpoonMiner.class));
+                    count += perCommit.toSet().size();
                     // putPerCommit(beforeCom, commit, perCommit); // TODO necessary for spreaded coevolution detection
                 }
                 beforeCom = commit;
             }
+
+            final int evoSize = count;
+            this.evolutions = Collections.unmodifiableSet(new AbstractSet<Evolution>() {
+
+                @Override
+                public Iterator<Evolution> iterator() {
+
+                    return new Iterators2.IteratorPairCustom<Commit, Evolutions.Evolution>(commits.iterator()) {
+
+                        @Override
+                        public Iterator<Evolution> makeIt(Commit prev, Commit next) {
+                            return getPerCommit(prev.getId(), next.getId()).iterator();
+                        }
+
+                    };
+                }
+
+                @Override
+                public int size() {
+                    return evoSize;
+                }
+
+            });
             return this;
         }
 
@@ -136,30 +161,12 @@ public class MultiGTSMiner implements EvolutionsMiner {
 
         @Override
         public Set<Evolution> toSet() {
-            if (evoSetWasBuilt) {
-                return evolutions;
-            }
-            for (Evolution e : this) {
-                evolutions.add(e);
-            }
-            evoSetWasBuilt = true;
             return evolutions;
         }
 
         @Override
         public Iterator<Evolution> iterator() {
-            if (evoSetWasBuilt) {
-                return evolutions.iterator();
-            }
-            return new Iterators2.IteratorPairCustom<Commit, Evolutions.Evolution>(
-                    Utils.getCommitList(sources, spec.commitIdBefore, spec.commitIdAfter).iterator()) {
-
-                @Override
-                public Iterator<Evolution> makeIt(Commit prev, Commit next) {
-                    return getPerCommit(prev.getId(), next.getId()).iterator();
-                }
-
-            };
+            return toSet().iterator();
         }
 
         @Override
@@ -175,25 +182,45 @@ public class MultiGTSMiner implements EvolutionsMiner {
 
         @Override
         public Map<Commit, Evolutions> perBeforeCommit() {
-            Map<String, Set<Evolution>> tmp = new LinkedHashMap<>();
-            for (Evolution evolution : this) {
-                String cidb = evolution.getCommitBefore().getId();
-                tmp.putIfAbsent(cidb, new LinkedHashSet<>());
-                tmp.get(cidb).add(evolution);
-            }
-            Map<Commit, Evolutions> r = new LinkedHashMap<>();
-            for (Set<Evolution> evolutionsSubSet : tmp.values()) {
-                if (evolutionsSubSet.size() == 0) {
-                    continue;
+            List<Commit> commits = Utils.getCommitList(this.sources, spec.commitIdBefore, spec.commitIdAfter);
+
+            return Collections.unmodifiableMap(new AbstractMap<Commit, Evolutions>() {
+
+                @Override
+                public int size() {
+                    return entrySet().size();
                 }
-                Evolutions newEvo = new EvolutionsMany(
-                        new Evolutions.Specifier(spec.sources,
-                                evolutionsSubSet.iterator().next().getCommitBefore().getId(),
-                                evolutionsSubSet.iterator().next().getCommitAfter().getId(), spec.miner),
-                        getSources(), evolutionsSubSet);
-                r.put(evolutionsSubSet.iterator().next().getCommitBefore(), newEvo);
-            }
-            return r;
+
+                @Override
+                public Set<Entry<Commit, Evolutions>> entrySet() {
+
+                    return Collections.unmodifiableSet(new AbstractSet<Entry<Commit, Evolutions>>() {
+
+                        @Override
+                        public Iterator<Entry<Commit, Evolutions>> iterator() {
+                            return new Iterators2.IteratorPairCustom<Commit, Entry<Commit, Evolutions>>(
+                                    commits.iterator()) {
+
+                                @Override
+                                public Iterator<Entry<Commit, Evolutions>> makeIt(Commit prev, Commit next) {
+                                    Map.Entry<Commit, Evolutions> tmp = new AbstractMap.SimpleImmutableEntry<>(prev,
+                                            getPerCommit(prev.getId(), next.getId()));
+                                    return Collections.singletonList(tmp).iterator();
+                                }
+
+                            };
+
+                        }
+
+                        @Override
+                        public int size() {
+                            return commits.size();
+                        }
+
+                    });
+
+                }
+            });
         }
     }
 

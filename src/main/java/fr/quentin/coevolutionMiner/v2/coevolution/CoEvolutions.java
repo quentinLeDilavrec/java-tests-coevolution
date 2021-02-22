@@ -24,6 +24,7 @@ import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact.FailureReport;
+import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact.ImpactedRange;
 
 // TODO try to extends Evolutions or make an interface for inner class Evolution and implement it with CoEvolution
 public abstract class CoEvolutions {
@@ -54,7 +55,7 @@ public abstract class CoEvolutions {
         }
 
         @Override
-        public Set<ImmutablePair<Range, FailureReport>> getInitialTests() {
+        public Set<ImpactedRange> getInitialTests() {
             return Collections.emptySet();
         }
         
@@ -179,7 +180,7 @@ public abstract class CoEvolutions {
 
     public abstract Set<EImpact> getEImpacts();
 
-    public abstract Set<ImmutablePair<Range, EImpact.FailureReport>> getInitialTests();
+    public abstract Set<EImpact.ImpactedRange> getInitialTests();
 
     public JsonElement toJson() {
         return new JsonObject();

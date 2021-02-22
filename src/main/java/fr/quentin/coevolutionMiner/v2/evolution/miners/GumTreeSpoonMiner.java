@@ -624,7 +624,6 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
         private boolean evoSetWasBuilt = false;
 
         @Override
-        @Deprecated
         public Set<Evolution> toSet() {
             if (evoSetWasBuilt) {
                 return evolutions;

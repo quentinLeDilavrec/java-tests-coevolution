@@ -62,6 +62,7 @@ import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsMiner;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsStorage;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.CoEvolution;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact.FailureReport;
+import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact.ImpactedRange;
 import fr.quentin.coevolutionMiner.v2.dependency.DependencyHandler;
 import fr.quentin.coevolutionMiner.v2.dependency.Dependencies;
 import fr.quentin.coevolutionMiner.v2.dependency.Dependencies.Dependency;
@@ -262,12 +263,12 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     for (EImpact imp : consumer.resultingImpacts) {
                         Set<Evolution> e = imp.getEvolutions();
                         try {
-                            FailureReport report = imp.getTests().get(c.testBefore).right;
+                            FailureReport report = imp.getSharingTest(c.testBefore).report;
                             logger.info(e.toString() + ";" + (report == null ? "P" : report.when));
                         } catch (Exception ee) {
                             logger.warn("cannot log imp ", ee);
                             logger.info(c.testBefore.toString());
-                            logger.info(imp.getTests().toString());
+                            logger.info(imp.getSharingTest(c.testBefore).toString());
                         }
                         functionalImpacts.putIfAbsent(e, new LinkedHashSet<>());
                         functionalImpacts.get(e).add(imp);
@@ -410,10 +411,10 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
         }
 
         @Override
-        public Set<ImmutablePair<Range, EImpact.FailureReport>> getInitialTests() {
-            Set<ImmutablePair<Range, EImpact.FailureReport>> r = new LinkedHashSet<>();
+        public Set<EImpact.ImpactedRange> getInitialTests() {
+            Set<EImpact.ImpactedRange> r = new LinkedHashSet<>();
             for (Entry<Range, EImpact> p : initialTestsStatus.entrySet()) {
-                r.add(p.getValue().getTests().get(p.getKey()));
+                r.add(p.getValue().getSharingTest(p.getKey()));
             }
             return r;
         }
@@ -423,15 +424,14 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             logger.info("precisely:  " + eImpacts.keySet());
             for (Entry<Set<Evolution>, Set<EImpact>> aaa : eImpacts.entrySet()) {
                 for (EImpact ei : aaa.getValue()) {
-                    for (Entry<Range, ImmutablePair<Range, EImpact.FailureReport>> bbb : ei.getTests().entrySet()) {
-                        EImpact.FailureReport resInitial = initialTestsStatus.get(bbb.getKey()).getTests()
-                                .get(bbb.getKey()).right;
-                        ImmutablePair<Range, EImpact.FailureReport> ccc = bbb.getValue();
-                        EImpact.FailureReport resAfter = ccc.getValue();
+                    for (Range bbb : ei.getSharedTests()) {
+                        EImpact.FailureReport resInitial = initialTestsStatus.get(bbb).getSharingTest(bbb).report;
+                        ImpactedRange ccc = ei.getSharingTest(bbb);
+                        EImpact.FailureReport resAfter = ccc.report;
                         if (resInitial == null && resAfter == null) { // V V
                             // probable resolution
                             for (Evolution ddd : aaa.getKey()) {
-                                ImmutablePair<Evolution, Range> pair = new ImmutablePair<>(ddd, bbb.getKey());
+                                ImmutablePair<Evolution, Range> pair = new ImmutablePair<>(ddd, bbb);
                                 probableResolutionsIndex.putIfAbsent(pair, new LinkedHashSet<>());
                                 probableResolutionsIndex.get(pair).add(ei);
                             }
@@ -466,11 +466,11 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             // more efficient than probableCoEvoResolutions.iterator().next().evolutions.keySet().containsAll(eimpCauses.evolutions.keySet())
             // TODO extract it to unit test it
             for (EImpact eimpCauses : probableCoevoCauses) {
-                for (Entry<Range, ImmutablePair<Range, FailureReport>> causeEntry : eimpCauses.getTests().entrySet()) {
+                for (Range causeEntry : eimpCauses.getSharedTests()) {
                     Set<EImpact> possibleReso = null;
                     for (Evolution causeEvo : eimpCauses.getEvolutions()) {
                         Set<EImpact> resos = probableResolutionsIndex
-                                .get(new ImmutablePair<>(causeEvo, causeEntry.getKey()));
+                                .get(new ImmutablePair<>(causeEvo, causeEntry));
                         if (resos == null) {
                             break;
                         }
@@ -502,12 +502,12 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                         resolutions.removeAll(eimpCauses.getEvolutions());
                         if (resolutions.size() == 0)
                             continue;
-                        Range testBefore = causeEntry.getKey();
-                        ImmutablePair<Range, FailureReport> resoThing = eimpReso.getTests().get(testBefore);
+                        Range testBefore = causeEntry;
+                        ImpactedRange resoThing = eimpReso.getSharingTest(testBefore);
                         if (resoThing == null)
                             continue;
-                        Range testAfterR = resoThing.left;
-                        Range testAfterC = causeEntry.getValue().left;
+                        Range testAfterR = resoThing.range;
+                        Range testAfterC = eimpCauses.getSharingTest(causeEntry).range;
                         CoEvolutionExtension res; // TODO to discus
                         if (testAfterR == testBefore && testAfterC == testBefore) {
                             res = new CoEvolutionExtension(new LinkedHashSet<>(eimpCauses.getEvolutions()), resolutions,

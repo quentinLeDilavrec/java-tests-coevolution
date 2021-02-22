@@ -40,6 +40,7 @@ import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.Specifier;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsStorage;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact.FailureReport;
+import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact.ImpactedRange;
 import fr.quentin.coevolutionMiner.v2.dependency.DependencyHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
@@ -199,9 +200,9 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
                 for (Evolution e : eimpact.getEvolutions()) {
                     idsByEvo.put(e, -1);
                 }
-                for (Entry<Range, ImmutablePair<Range, FailureReport>> entry : eimpact.getTests().entrySet()) {
-                    idsByTest.put(entry.getKey(), -1);
-                    idsByTest.put(entry.getValue().left, -1);
+                for (Range entry : eimpact.getSharedTests()) {
+                    idsByTest.put(entry, -1);
+                    idsByTest.put(eimpact.getSharingTest(entry).range, -1);
                 }
             }
             Set<Evolution> evoKeySet = new LinkedHashSet<>();
@@ -337,7 +338,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
     @Override
     public synchronized void put(CoEvolutions value) {
         List<Map<String, Object>> initTests = new ArrayList<>();
-        for (ImmutablePair<Range, FailureReport> initTest : value.getInitialTests()) {
+        for (ImpactedRange initTest : value.getInitialTests()) {
             initTests.add(basifyInitTests(initTest));
         }
         new ChunckedUploadInitTests(value.spec, initTests);
@@ -354,9 +355,9 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         new ChunckedUploadImpacts(value.spec, new ArrayList<>(value.getEImpacts()));
     }
 
-    private Map<String, Object> basifyInitTests(ImmutablePair<Range, FailureReport> initialTest) {
-        Map<String, Object> r = initialTest.left.toMap();
-        Map<String, Object> report = basifyReport(initialTest.right);
+    private Map<String, Object> basifyInitTests(ImpactedRange initialTest) {
+        Map<String, Object> r = initialTest.range.toMap();
+        Map<String, Object> report = basifyReport(initialTest.report);
         report.put("report", report);
         return r;
     }
@@ -604,17 +605,18 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         res.put("testsSame", testsSame);
         List<Map<String, Object>> testsChanged = new ArrayList<>();
         res.put("testsChanged", testsChanged);
-        for (Entry<Range, ImmutablePair<Range, FailureReport>> t : imp.getTests().entrySet()) {
+        for (Range t : imp.getSharedTests()) {
             final Map<String, Object> test = new HashMap<>();
-            Integer id = idsByRange.get(t.getValue().left);
+            EImpact.ImpactedRange impacted = imp.getSharingTest(t);
+            Integer id = idsByRange.get(impacted.range);
             test.put("id", id);
-            if (t.getKey() != t.getValue().left) {
+            if (t != impacted.range) {
                 testsChanged.add(test);
-                test.put("before", idsByRange.get(t.getKey()));
+                test.put("before", idsByRange.get(t));
             } else {
                 testsSame.add(test);
             }
-            Map<String, Object> report = basifyReport(t.getValue().right);
+            Map<String, Object> report = basifyReport(impacted.report);
             test.put("report", report);
         }
         List<Map<String, Object>> evolutions = new ArrayList<>();

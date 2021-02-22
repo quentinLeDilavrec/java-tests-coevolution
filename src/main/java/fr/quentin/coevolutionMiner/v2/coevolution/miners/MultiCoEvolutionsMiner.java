@@ -20,6 +20,7 @@ import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutionsMiner;
+import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact.ImpactedRange;
 import fr.quentin.coevolutionMiner.v2.dependency.DependencyHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
@@ -85,7 +86,7 @@ public class MultiCoEvolutionsMiner implements CoEvolutionsMiner {
         }
 
         @Override
-        public Set<ImmutablePair<Range, EImpact.FailureReport>> getInitialTests() {
+        public Set<ImpactedRange> getInitialTests() {
             return null;
             // TODO when needed
         }

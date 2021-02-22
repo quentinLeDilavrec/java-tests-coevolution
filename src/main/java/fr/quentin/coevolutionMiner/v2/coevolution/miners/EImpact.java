@@ -71,8 +71,49 @@ public class EImpact {
 
     }
 
+    public static class ImpactedRange {
+        public final Range range;
+        public final EImpact.FailureReport report;
+
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + ((range == null) ? 0 : range.hashCode());
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            ImpactedRange other = (ImpactedRange) obj;
+            if (range == null) {
+                if (other.range != null)
+                    return false;
+            } else if (!range.equals(other.range))
+                return false;
+            return true;
+        }
+
+        public ImpactedRange(Range range, FailureReport report) {
+            this.range = range;
+            this.report = report;
+        }
+
+        @Override
+        public String toString() {
+            return "ImpactedRange [range=" + range + ", report=" + report + "]";
+        }
+
+    }
+
     // TODO a nested map would be more precise (such as when tests are duplicated)
-    private final Map<Range, ImmutablePair<Range, EImpact.FailureReport>> tests;
+    private final Map<Range, ImpactedRange> tests;
     private final Set<Evolution> evolutions;
     private final int hashCode;
 
@@ -80,26 +121,30 @@ public class EImpact {
         return evolutions;
     }
 
-    public Map<Range, ImmutablePair<Range, EImpact.FailureReport>> getTests() {
-        return tests;
+    public Set<Range> getSharedTests() {
+        return tests.keySet();
     }
 
-    public EImpact(Map<Range, ImmutablePair<Range, EImpact.FailureReport>> tests, Set<Evolution> evolutions) {
-        this.tests = Collections.unmodifiableMap(new HashMap<>(tests));
+    public ImpactedRange getSharingTest(Range test) {
+        return tests.get(test);
+    }
+
+    public EImpact(Map<Range, ImpactedRange> tests, Set<Evolution> evolutions) {
+        this.tests = new HashMap<>(tests);
         this.evolutions = Collections.unmodifiableSet(new LinkedHashSet<>(evolutions));
 
         this.hashCode = hashCodeCompute();
     }
 
     public EImpact(Range executed, EImpact.FailureReport report) {
-        this.tests = Collections.singletonMap(executed, new ImmutablePair<>(executed, report));
+        this.tests = Collections.singletonMap(executed, new ImpactedRange(executed, report));
         this.evolutions = Collections.emptySet();
 
         this.hashCode = hashCodeCompute();
     }
 
     public EImpact(Range testBefore, Range executed, FailureReport report, Set<Evolution> evolutions) {
-        this.tests = Collections.singletonMap(testBefore, new ImmutablePair<>(executed, report));
+        this.tests = Collections.singletonMap(testBefore, new ImpactedRange(executed, report));
         this.evolutions = Collections.unmodifiableSet(new LinkedHashSet<>(evolutions));
 
         this.hashCode = hashCodeCompute();

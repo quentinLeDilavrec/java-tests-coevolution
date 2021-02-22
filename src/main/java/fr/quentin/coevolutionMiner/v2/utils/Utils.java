@@ -8,6 +8,7 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -324,7 +325,10 @@ public class Utils {
 	        commits = sources.getCommitsBetween(before, after);
 	    } catch (Exception e) {
 	        throw new RuntimeException(e);
-	    }
+		}
+		if (commits == null) {
+			return Collections.emptyList();
+		}
 	    return commits;
 	}
 }
