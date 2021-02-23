@@ -99,14 +99,11 @@ public class Iterators2 {
     public static abstract class IteratorPairCustom<U, T> implements Iterator<T> {
 	    U prev = null;
 	    Iterator<U> rootIt;
-	    Iterator<T> it;
-	    {
-	        prev = rootIt.next();
-	        it = null;
-	    }
+	    Iterator<T> it = null;
 	
 	    public IteratorPairCustom(Iterator<U> iterator) {
 	        this.rootIt = iterator;
+            prev = rootIt.next();
 	    }
 	
 	    public abstract Iterator<T> makeIt(U prev, U next);
