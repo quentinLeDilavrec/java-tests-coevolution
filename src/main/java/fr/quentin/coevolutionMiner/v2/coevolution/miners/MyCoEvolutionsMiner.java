@@ -711,7 +711,13 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
             for (Evolutions.Evolution.DescRange dr : evosInGame) {
                 Evolution evolution = dr.getSource();
                 evosForThisTest.add(evolution);
-                evosForThisTest.addAll(atomizedRefactorings.get(evolution)); // TODO eval of imp. on precision
+
+                Set<Evolution> c = atomizedRefactorings.get(evolution);
+                if (c == null) {
+                    logger.warn("following evolution not atomized " + evolution);
+                } else {
+                    evosForThisTest.addAll(c); // TODO eval of imp. on precision
+                }
             }
             for (Evolution evolution : evosForThisTest) {
                 if (evolution.getEnclosingInstance() instanceof EvolutionsAtProj) {
