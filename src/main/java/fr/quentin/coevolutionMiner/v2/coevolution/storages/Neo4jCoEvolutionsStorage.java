@@ -65,7 +65,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         public ChunckedUploadCoEvos(Specifier spec, List<CoEvolution> processed) {
             super(driver, 10);
             this.spec = spec;
-            tool = Utils.map("name", spec.miner, "version", 0);
+            tool = Utils.map("name", spec.miner.getSimpleName(), "version", 0);
             execute(logger, 256, processed);
         }
 
@@ -183,7 +183,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         public ChunckedUploadImpacts(Specifier spec, List<EImpact> processed) {
             super(driver, 10);
             this.spec = spec;
-            tool = Utils.map("name", spec.miner, "version", 0);
+            tool = Utils.map("name", spec.miner.getSimpleName(), "version", 0);
             execute(logger, 128, processed);
         }
 
