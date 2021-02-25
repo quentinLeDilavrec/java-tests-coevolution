@@ -470,8 +470,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 for (Range causeEntry : eimpCauses.getSharedTests()) {
                     Set<EImpact> possibleReso = null;
                     for (Evolution causeEvo : eimpCauses.getEvolutions()) {
-                        Set<EImpact> resos = probableResolutionsIndex
-                                .get(new ImmutablePair<>(causeEvo, causeEntry));
+                        Set<EImpact> resos = probableResolutionsIndex.get(new ImmutablePair<>(causeEvo, causeEntry));
                         if (resos == null) {
                             break;
                         }
@@ -612,7 +611,13 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     Range testBefore = impactedTest.getKey();
 
                     // TODO extract functionality
-                    AbstractVersionedTree treeTestBefore = evolutionsAtProj.getAVT(testBefore);
+                    AbstractVersionedTree treeTestBefore;
+                    try {
+                        treeTestBefore = evolutionsAtProj.getAVT(testBefore);
+                    } catch (Exception e) {
+                        logger.error("pb while getting avt when " + beforeCommit + " and " + afterCommit, e);
+                        continue;
+                    }
                     AbstractVersionedTree treeTestAfter = treeTestBefore;
                     MyMove mov = (MyMove) treeTestBefore.getMetadata(MyScriptGenerator.MOVE_SRC_ACTION);
                     if (mov != null) {
@@ -711,9 +716,22 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                 Evolution evolution = dr.getSource();
                 evosForThisTest.add(evolution);
 
+                if (!evolution.getCommitBefore().equals(beforeCommit)) {
+                    logger.warn("following evolution not in right interval when " + beforeCommit + " and " + afterCommit
+                            + " for " + evolution.getCommitBefore() + " and " + evolution.getCommitAfter() + " "
+                            + Objects.toString(evolution.getOriginal()));
+                }
+                if (!evolution.getCommitAfter().equals(afterCommit)) {
+                    logger.warn("following evolution not in right interval when " + beforeCommit + " and " + afterCommit
+                            + " for " + evolution.getCommitBefore() + " and " + evolution.getCommitAfter() + " "
+                            + Objects.toString(evolution.getOriginal()));
+                }
+
                 Set<Evolution> c = atomizedRefactorings.get(evolution);
                 if (c == null) {
-                    logger.warn("following evolution not atomized " + Objects.toString(evolution.getOriginal()));
+                    logger.warn("following evolution not atomized when " + beforeCommit + " and " + afterCommit
+                            + " for " + evolution.getCommitBefore() + " and " + evolution.getCommitAfter() + " "
+                            + Objects.toString(evolution.getOriginal()));
                 } else {
                     evosForThisTest.addAll(c); // TODO eval of imp. on precision
                 }

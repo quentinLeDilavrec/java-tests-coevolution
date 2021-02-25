@@ -92,7 +92,7 @@ public class MyDependenciesMiner implements DependenciesMiner {
         ImpactsExtension result = new ImpactsExtension(
                 new Dependencies.Specifier(project.spec, spec.evoSpec, spec.miner), project, rootDir, l);
 
-        logger.info("computing Impacts of" + project.spec.relPath.toString());
+        logger.info("computing Impacts of " + project.spec.relPath.toString());
         result.computeImpacts(isOnBefore, ast, evo);
 
         for (Project<?> childProj : project.getModules()) {
