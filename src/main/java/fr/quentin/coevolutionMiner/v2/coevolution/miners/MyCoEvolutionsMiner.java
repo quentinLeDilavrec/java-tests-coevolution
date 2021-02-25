@@ -85,6 +85,7 @@ import spoon.support.OutputDestinationHandler;
 import fr.quentin.impactMiner.Position;
 import gumtree.spoon.apply.ApplierHelper;
 import gumtree.spoon.apply.operations.MyScriptGenerator;
+import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.Diff;
 import gumtree.spoon.diff.DiffImpl;
 import gumtree.spoon.diff.operations.DeleteOperation;
@@ -611,8 +612,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     Range testBefore = impactedTest.getKey();
 
                     // TODO extract functionality
-                    AbstractVersionedTree treeTestBefore = (AbstractVersionedTree) ((CtElement) testBefore
-                            .getOriginal()).getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
+                    AbstractVersionedTree treeTestBefore = evolutionsAtProj.getAVT(testBefore);
                     AbstractVersionedTree treeTestAfter = treeTestBefore;
                     MyMove mov = (MyMove) treeTestBefore.getMetadata(MyScriptGenerator.MOVE_SRC_ACTION);
                     if (mov != null) {
@@ -659,8 +659,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                     Range testAfter = impactedTest.getKey();
                     Range testBefore = null;
 
-                    AbstractVersionedTree treeTestAfter = (AbstractVersionedTree) ((CtElement) testAfter.getOriginal())
-                            .getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
+                    AbstractVersionedTree treeTestAfter = evolutionsAtProj.getAVT(testAfter);
                     AbstractVersionedTree treeTestBefore = treeTestAfter;
                     MyMove mov = (MyMove) treeTestAfter.getMetadata(MyScriptGenerator.MOVE_DST_ACTION);
                     if (mov != null) {
@@ -714,7 +713,7 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
 
                 Set<Evolution> c = atomizedRefactorings.get(evolution);
                 if (c == null) {
-                    logger.warn("following evolution not atomized " + evolution);
+                    logger.warn("following evolution not atomized " + Objects.toString(evolution.getOriginal()));
                 } else {
                     evosForThisTest.addAll(c); // TODO eval of imp. on precision
                 }

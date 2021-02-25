@@ -46,9 +46,9 @@ import gr.uom.java.xmi.diff.CodeRange;
 import spoon.reflect.declaration.CtElement;
 
 public class MixedMiner implements EvolutionsMiner {
-    private final class EvolutionsExtension extends Evolutions {
-        private final Evolutions rmEvos;
-        private final Evolutions gtsEvos;
+    public class EvolutionsExtension extends Evolutions {
+        public final Evolutions rmEvos;
+        public final Evolutions gtsEvos;
 
         private EvolutionsExtension(Evolutions.Specifier spec, Sources sources, Evolutions rmEvos, Evolutions gtsEvos) {
             super(spec, sources);

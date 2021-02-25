@@ -31,6 +31,7 @@ import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.EImpact.FailureReport;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsAtCommit.EvolutionsAtProj;
+import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import gumtree.spoon.apply.ApplierHelper;
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtElement;
@@ -121,11 +122,10 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
     public void accept(Set<Evolution> t) {
         EImpact.FailureReport report = serializeChangedCode(outputProcessor, initiallyPresent, middleFactory);
 
+        Sources src = evolutionsAtProj.getEnclosingInstance().getSources();
         CtMethod elementTestAfter = applierHelper.getUpdatedMethod(
-                evolutionsAtProj.getEnclosingInstance().getSources()
-                        .getCommit(evolutionsAtProj.getEnclosingInstance().spec.commitIdAfter),
-                (AbstractVersionedTree) ((CtElement) this.testBefore.getOriginal())
-                        .getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE));
+                src.getCommit(evolutionsAtProj.getEnclosingInstance().spec.commitIdAfter),
+                evolutionsAtProj.getAVT(this.testBefore));
         if (elementTestAfter != null) {
             prepareCheck(elementTestAfter);
 
@@ -265,12 +265,11 @@ class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
         this.applierHelper = applierHelper;
         this.testBefore = testBefore;
         this.testAfter = testAfter;
-        AbstractVersionedTree treeTestBefore = (AbstractVersionedTree) ((CtElement) this.testBefore.getOriginal())
-                .getMetadata(VersionedTree.MIDDLE_GUMTREE_NODE);
+        AbstractVersionedTree treeTestBefore = evolutionsAtProj.getAVT(this.testBefore);
+
         Version commitBefore = evolutionsAtProj.getEnclosingInstance().getSources()
                 .getCommit(evolutionsAtProj.getEnclosingInstance().spec.commitIdBefore);
-        CtElement[] ttt = applierHelper.watchApply(commitBefore,
-                treeTestBefore,
+        CtElement[] ttt = applierHelper.watchApply(commitBefore, treeTestBefore,
                 treeTestBefore.getChildren(commitBefore).get(0));
         if (ttt[0] != ttt[1].getParent()) {
             throw new RuntimeException();

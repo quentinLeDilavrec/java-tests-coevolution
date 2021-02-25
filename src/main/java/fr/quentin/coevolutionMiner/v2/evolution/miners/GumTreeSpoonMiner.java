@@ -266,9 +266,10 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     modulesPairs.get(p.spec.relPath.toString()).setRight(p);
                 }
 
+                // TODO do it in SpoonMiner
                 if (beforeProj.getAst().isUsable() && afterProj.getAst().isUsable()) {
                     CtPackage left = ((ProjectSpoon.SpoonAST) beforeProj.getAst()).launcher.getModel().getRootPackage();
-                    // TODO make a checkable API, to access use :
+                    // TODO make a statically checkable API, for now to access, use:
                     // (ImmutableTriple<Path,Path,MavenLauncher.SOURCE_TYPE>())cu.getMetadata("SourceTypeNRootDirectory");
                     for (CompilationUnit cu : left.getFactory().CompilationUnit().getMap().values()) {
                         for (File root : ((ProjectSpoon.SpoonAST) beforeProj.getAst()).launcher.getPomFile()
@@ -312,8 +313,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                         }
                     }
                     this.scanner = new SpoonGumTreeBuilder();
-                    ITree srcTree;
-                    srcTree = scanner.getTree(left);
+                    ITree srcTree = scanner.getTree(left);
                     this.mdiff = new MultiDiffImpl(srcTree, commitBefore);
                     ITree dstTree = scanner.getTree(right);
                     this.diff = mdiff.compute(dstTree, commitAfter);
@@ -361,6 +361,11 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     linkProjSpecs(value.left.spec, value.right.spec);
                 }
                 return this;
+            }
+
+            public AbstractVersionedTree getAVT(Range range) {
+                return this.mdiff.getMapping(range.getFile().getCommit()).get((AbstractVersionedTree) ((CtElement) range.getOriginal())
+                        .getMetadata(SpoonGumTreeBuilder.GUMTREE_NODE));
             }
 
             // private boolean isComposed(Action op) {
