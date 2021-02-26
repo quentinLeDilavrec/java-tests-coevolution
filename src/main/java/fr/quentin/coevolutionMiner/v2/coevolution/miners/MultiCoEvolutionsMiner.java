@@ -143,14 +143,13 @@ public class MultiCoEvolutionsMiner implements CoEvolutionsMiner {
                 CoEvolutionsManyCommit globalResult = new CoEvolutionsManyCommit(spec);
                 Commit beforeCommit = null;
                 for (Commit afterCommit : commits) {
-                    if (beforeCommit == null) {
-                        beforeCommit = afterCommit;
-                        continue;
+                    if (beforeCommit != null) {
+                        CoEvolutions r = handler.handle(handler.buildSpec(spec.srcSpec, EvolutionHandler
+                                .buildSpec(spec.srcSpec, beforeCommit.getId(), afterCommit.getId(), spec.evoSpec.miner),
+                                MyCoEvolutionsMiner.class));
+                        globalResult.add(r);
                     }
-                    CoEvolutions r = handler.handle(handler.buildSpec(spec.srcSpec, EvolutionHandler
-                            .buildSpec(spec.srcSpec, beforeCommit.getId(), afterCommit.getId(), spec.evoSpec.miner),
-                            MyCoEvolutionsMiner.class));
-                    globalResult.add(r);
+                    beforeCommit = afterCommit;
                 }
                 return globalResult;
             }
