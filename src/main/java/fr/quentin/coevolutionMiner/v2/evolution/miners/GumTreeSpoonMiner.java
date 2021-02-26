@@ -364,8 +364,10 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             }
 
             public AbstractVersionedTree getAVT(Range range) {
-                return this.mdiff.getMapping(range.getFile().getCommit()).get((ITree) ((CtElement) range.getOriginal())
-                        .getMetadata(SpoonGumTreeBuilder.GUMTREE_NODE));
+                ITree gtnode = (ITree) ((CtElement) range.getOriginal())
+                        .getMetadata(SpoonGumTreeBuilder.GUMTREE_NODE);
+                Map<ITree, AbstractVersionedTree> mapping = this.mdiff.getMapping(range.getFile().getCommit());
+                return mapping.get(gtnode);
             }
 
             // private boolean isComposed(Action op) {
