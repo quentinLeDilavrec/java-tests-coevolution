@@ -364,7 +364,7 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
             }
 
             public AbstractVersionedTree getAVT(Range range) {
-                return this.mdiff.getMapping(range.getFile().getCommit()).get((AbstractVersionedTree) ((CtElement) range.getOriginal())
+                return this.mdiff.getMapping(range.getFile().getCommit()).get((ITree) ((CtElement) range.getOriginal())
                         .getMetadata(SpoonGumTreeBuilder.GUMTREE_NODE));
             }
 
