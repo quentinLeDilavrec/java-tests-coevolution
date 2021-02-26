@@ -49,6 +49,7 @@ import fr.quentin.coevolutionMiner.v2.evolution.miners.MixedMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.MultiGTSMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsAtCommit;
+import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.SpecificifierAtProj;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.GumTreeSpoonMiner.EvolutionsAtCommit.EvolutionsAtProj;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
@@ -653,7 +654,12 @@ public class MyCoEvolutionsMiner implements CoEvolutionsMiner {
                                 "no applicable evolutions found thus no possibility to validate potential coevolutions");
                         continue;
                     } else if (evolutionsAtProjSet.size() > 1) {
-                        logger.warn("not handling the validation of coevolutions spanning over multiple projects");
+                        logger.warn("not handling the validation of coevolutions spanning over multiple projects, for following eatp");
+                        for (EvolutionsAtProj x : evolutionsAtProjSet) {
+                            SpecificifierAtProj sAtP = (GumTreeSpoonMiner.SpecificifierAtProj)x.spec;
+                            logger.warn(x.spec.commitIdBefore+"/" + sAtP.before_spec.relPath + "  to  " + x.spec.commitIdAfter+"/"+ sAtP.after_spec.relPath);
+                            
+                        }
                         continue;
                     }
 

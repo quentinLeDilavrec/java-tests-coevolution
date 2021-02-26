@@ -126,8 +126,8 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
 
     public static class SpecificifierAtProj extends Evolutions.Specifier {
 
-        private Project.Specifier<SpoonMiner> before_spec;
-        private Project.Specifier<SpoonMiner> after_spec;
+        public final Project.Specifier<SpoonMiner> before_spec;
+        public final Project.Specifier<SpoonMiner> after_spec;
 
         public SpecificifierAtProj(fr.quentin.coevolutionMiner.v2.sources.Sources.Specifier sources,
                 Project.Specifier<SpoonMiner> before_spec, Project.Specifier<SpoonMiner> after_spec,
