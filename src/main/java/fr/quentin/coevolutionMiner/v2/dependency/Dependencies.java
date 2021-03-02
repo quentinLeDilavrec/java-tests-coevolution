@@ -241,6 +241,7 @@ public abstract class Dependencies implements Iterable<Dependencies.Dependency> 
             ;
             causes.addAll(this.idCauses);
             effects.addAll(this.idEffects);
+            this.hashCode = hashCodeCompute();
         }
 
         private final String type;
@@ -296,6 +297,7 @@ public abstract class Dependencies implements Iterable<Dependencies.Dependency> 
             DescRange(Range range, String description) {
                 this.range = range;
                 this.description = description;
+                this.hashCode = hashCodeCompute();
             }
 
             public String getDescription() {
@@ -314,6 +316,12 @@ public abstract class Dependencies implements Iterable<Dependencies.Dependency> 
 
             @Override
             public int hashCode() {
+                return hashCode;
+            }
+
+            private final int hashCode;
+
+            private int hashCodeCompute() {
                 final int prime = 31;
                 int result = 1;
                 result = prime * result + ((description == null) ? 0 : description.hashCode());
@@ -352,9 +360,14 @@ public abstract class Dependencies implements Iterable<Dependencies.Dependency> 
 
         @Override
         public int hashCode() {
+            return hashCode;
+        }
+
+        private final int hashCode;
+
+        private int hashCodeCompute() {
             final int prime = 31;
             int result = 1;
-            result = prime * result + getEnclosingInstance().hashCode();
             result = prime * result + ((idCauses == null) ? 0 : idCauses.hashCode());
             result = prime * result + ((idEffects == null) ? 0 : idEffects.hashCode());
             result = prime * result + ((type == null) ? 0 : type.hashCode());
