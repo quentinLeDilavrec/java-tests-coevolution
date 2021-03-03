@@ -324,50 +324,9 @@ public abstract class Evolutions implements Iterable<Evolutions.Evolution> {
             }
             return strB.toString();
         }
-
-        public Map<String, Object> asMap() {
-            throw new UnsupportedOperationException("better solution to fix slow db, this is not needed anymore");
-            // final Map<String, Object> res = new HashMap<>();
-            // final Map<String, Object> evofields = new HashMap<>();
-            // res.put("content", evofields);
-            // evofields.put("repository", getEnclosingInstance().spec.sources.repository);
-            // evofields.put("commitIdBefore", getCommitBefore().getId());
-            // evofields.put("commitIdAfter", getCommitAfter().getId());
-            // evofields.put("type", getType());
-
-            // final List<Object> leftSideLocations = new ArrayList<>();
-            // res.put("leftSideLocations", leftSideLocations);
-            // for (final DescRange descR : getBefore()) { // TODO sort list
-            //     Range targetR = descR.getTarget();
-            //     final Map<String, Object> rDescR = Utils.formatRangeWithType(targetR);
-            //     leftSideLocations.add(rDescR);
-            //     rDescR.put("description", descR.getDescription());
-            //     evofields.putIfAbsent("before_" + abrv(descR.getDescription()), new ArrayList<>());
-            //     ((List<String>) evofields.get("before_" + abrv(descR.getDescription()))).add(rangeToString(rDescR));
-            // }
-            // final List<Object> rightSideLocations = new ArrayList<>();
-            // res.put("rightSideLocations", rightSideLocations);
-            // for (final DescRange descR : getAfter()) { // TODO sort list
-            //     Range targetR = descR.getTarget();
-            //     final Map<String, Object> rDescR = Utils.formatRangeWithType(targetR);
-            //     rightSideLocations.add(rDescR);
-            //     rDescR.put("description", descR.getDescription());
-            //     evofields.putIfAbsent("after_" + abrv(descR.getDescription()), new ArrayList<>());
-            //     ((List<String>) evofields.get("after_" + abrv(descR.getDescription()))).add(rangeToString(rDescR));
-            // }
-            // addUrl(res);
-            // return res;
-        }
     }
 
     public abstract Project<?>.AST.FileSnapshot.Range map(final Project<?>.AST.FileSnapshot.Range testBefore,
             final Project<?> target);
 
-    public List<Map<String, Object>> asListofMaps() {
-        List<Map<String, Object>> tmp = new ArrayList<>();
-        for (Evolution evolution : this) {
-            tmp.add(evolution.asMap());
-        }
-        return tmp;
-    }
 }

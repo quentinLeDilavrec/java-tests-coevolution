@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -37,6 +38,7 @@ import fr.quentin.coevolutionMiner.v2.ast.RangeMatchingException;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon.SpoonAST;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.CoEvolution;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
+import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution.DescRange;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.MultiGTSMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.storages.Neo4jEvolutionsStorage;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
@@ -277,6 +279,7 @@ public class Utils {
 		final CtElement e_ori = (CtElement) targetR.getOriginal();
 		if (e_ori != null) {
 			rDescR.put("type", formatedType(e_ori));
+			rDescR.put("isTest", isTest(e_ori)?true:isParentTest(e_ori)?"parent":null);
 		}
 		return rDescR;
 	}
@@ -330,5 +333,30 @@ public class Utils {
 			return Collections.emptyList();
 		}
 	    return commits;
+	}
+
+	public static Map<String, Object> formatEvolution(Evolutions.Evolution evo) {
+	    final Map<String, Object> res = new HashMap<>();
+	    res.put("type", evo.getType());
+	
+	    final List<Map<String, Object>> before = new ArrayList<>();
+	    for (final DescRange descR : evo.getBefore()) {
+	        Range targetR = descR.getTarget();
+	        final Map<String, Object> rDescR = Utils.formatRangeWithType(targetR);
+	        rDescR.put("description", descR.getDescription());
+	        before.add(rDescR);
+	    }
+	    res.put("before", before);
+	
+	    final List<Map<String, Object>> after = new ArrayList<>();
+	    for (final DescRange descR : evo.getAfter()) {
+	        Range targetR = descR.getTarget();
+	        final Map<String, Object> rDescR = Utils.formatRangeWithType(targetR);
+	        rDescR.put("description", descR.getDescription());
+	        after.add(rDescR);
+	    }
+	    res.put("after", after);
+	
+	    return res;
 	}
 }

@@ -14,6 +14,7 @@ import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
+import fr.quentin.coevolutionMiner.v2.utils.Utils;
 import spark.Request;
 import spark.Response;
 import spark.Route;
@@ -88,7 +89,7 @@ public class EvolutionRoute implements Route {
             JsonArray result = new JsonArray();
             for (Evolution evolution : evolutions) {
                 // TODO use body.cases to filter wanted evolutions
-                Map<String, Object> tmp = evolution.asMap();
+                Map<String, Object> tmp = Utils.formatEvolution(evolution);
                 result.add(gson.toJsonTree(tmp));
             }
             r = result;
