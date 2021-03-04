@@ -87,7 +87,7 @@ public class Server {
 		before((req, res) -> {
 			System.out.println(req.headers("Origin"));
 			res.header("Content-Type", "application/json");
-			if (DEFAULT_ORIGINS.contains(req.headers("Origin"))) {
+			if (autorizedOrigins.contains(req.headers("Origin"))) {
 				res.header("Access-Control-Allow-Origin", req.headers("Origin"));
 			}
 			res.header("Access-Control-Allow-Credentials", "true");
