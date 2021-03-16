@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Function;
 
 import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.Version;
@@ -336,27 +337,29 @@ public class Utils {
 	}
 
 	public static Map<String, Object> formatEvolution(Evolutions.Evolution evo) {
-	    final Map<String, Object> res = new HashMap<>();
-	    res.put("type", evo.getType());
-	
-	    final List<Map<String, Object>> before = new ArrayList<>();
-	    for (final DescRange descR : evo.getBefore()) {
-	        Range targetR = descR.getTarget();
-	        final Map<String, Object> rDescR = Utils.formatRangeWithType(targetR);
-	        rDescR.put("description", descR.getDescription());
-	        before.add(rDescR);
-	    }
-	    res.put("before", before);
-	
-	    final List<Map<String, Object>> after = new ArrayList<>();
-	    for (final DescRange descR : evo.getAfter()) {
-	        Range targetR = descR.getTarget();
-	        final Map<String, Object> rDescR = Utils.formatRangeWithType(targetR);
-	        rDescR.put("description", descR.getDescription());
-	        after.add(rDescR);
-	    }
-	    res.put("after", after);
-	
-	    return res;
+		return formatEvolution(evo,(descR)->{
+			Range targetR = descR.getTarget();
+			final Map<String, Object> rDescR = Utils.formatRangeWithType(targetR);
+			rDescR.put("description", descR.getDescription());
+			return rDescR;});
+	}
+
+	public static Map<String, Object> formatEvolution(Evolutions.Evolution evo, Function<DescRange, Map<String, Object>> cb) {
+		final Map<String, Object> res = new HashMap<>();
+		res.put("type", evo.getType());
+
+		final List<Map<String, Object>> before = new ArrayList<>();
+		for (final DescRange descR : evo.getBefore()) {
+			before.add(cb.apply(descR));
+		}
+		res.put("before", before);
+
+		final List<Map<String, Object>> after = new ArrayList<>();
+		for (final DescRange descR : evo.getAfter()) {
+			after.add(cb.apply(descR));
+		}
+		res.put("after", after);
+
+		return res;
 	}
 }

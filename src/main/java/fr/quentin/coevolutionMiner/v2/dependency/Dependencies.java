@@ -97,6 +97,7 @@ public abstract class Dependencies implements Iterable<Dependencies.Dependency> 
             r = list.size();
             map.put(aaa.getTarget(), r);
             Map<String, Object> o = makeRange(aaa);
+            o.put("isInTestCu", aaa.getTarget().getFile().isTest());
             list.add(o);
         }
         return r;

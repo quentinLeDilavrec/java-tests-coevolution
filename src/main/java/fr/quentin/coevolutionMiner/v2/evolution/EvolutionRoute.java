@@ -89,7 +89,7 @@ public class EvolutionRoute implements Route {
             JsonArray result = new JsonArray();
             for (Evolution evolution : evolutions) {
                 // TODO use body.cases to filter wanted evolutions
-                Map<String, Object> tmp = Utils.formatEvolution(evolution);
+                Map<String, Object> tmp = formatEvolution(evolution);
                 result.add(gson.toJsonTree(tmp));
             }
             r = result;
@@ -110,4 +110,13 @@ public class EvolutionRoute implements Route {
         }
     }
 
+    public static Map<String, Object> formatEvolution(Evolutions.Evolution evo) {
+        return Utils.formatEvolution(evo, (descR) -> {
+            fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range targetR = descR.getTarget();
+            final Map<String, Object> rDescR = Utils.formatRangeWithType(targetR);
+            rDescR.put("description", descR.getDescription());
+            rDescR.put("isInTestCu", descR.getTarget().getFile().isTest());
+            return rDescR;
+        });
+    }
 }
