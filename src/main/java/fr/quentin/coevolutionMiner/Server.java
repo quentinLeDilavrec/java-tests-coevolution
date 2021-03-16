@@ -217,8 +217,8 @@ public class Server {
 			r.append("---------------------").append(e.getMessage()).append(e.getStackTrace());
 			res.body(r.toString()); // TODO dangerous if not only for dev
 		});
-		Spark.awaitStop();
-		neo4jDriver.close();
+		// Spark.awaitStop();
+		// neo4jDriver.close();
 	}
 
 	// private static Route astHandler(BiFunction<String, QueryParamsMap,
