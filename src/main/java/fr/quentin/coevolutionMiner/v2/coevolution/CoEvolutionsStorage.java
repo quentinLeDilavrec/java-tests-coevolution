@@ -9,7 +9,7 @@ import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.coevolution.CoEvolutions.Specifier;
 import fr.quentin.coevolutionMiner.v2.coevolution.miners.MyCoEvolutionsMiner.CoEvolutionsExtension;
 
-public interface CoEvolutionsStorage extends AutoCloseable {
+public interface CoEvolutionsStorage {
 
     public void put(CoEvolutions value);
 

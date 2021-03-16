@@ -12,6 +12,8 @@ import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.neo4j.driver.Driver;
+
 import fr.quentin.coevolutionMiner.v2.Data;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 
@@ -25,13 +27,13 @@ public class CoEvolutionHandler implements AutoCloseable {
     private SourcesHandler sourcesHandler;
     private DependencyHandler impactHandler;
 
-    public CoEvolutionHandler(SourcesHandler sourcesHandler, ProjectHandler astHandler, EvolutionHandler evoHandler,
+    public CoEvolutionHandler(Driver neo4jDriver, SourcesHandler sourcesHandler, ProjectHandler astHandler, EvolutionHandler evoHandler,
             DependencyHandler impactHandler) {
         this.astHandler = astHandler;
         this.evoHandler = evoHandler;
         this.sourcesHandler = sourcesHandler;
         this.impactHandler = impactHandler;
-        this.neo4jStore = new Neo4jCoEvolutionsStorage(sourcesHandler, astHandler, evoHandler, impactHandler);
+        this.neo4jStore = new Neo4jCoEvolutionsStorage(neo4jDriver,sourcesHandler, astHandler, evoHandler, impactHandler);
     }
 
     public static CoEvolutions.Specifier buildSpec(Sources.Specifier src_id, Evolutions.Specifier evo_id) {
@@ -111,6 +113,5 @@ public class CoEvolutionHandler implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
-        neo4jStore.close();
     }
 }

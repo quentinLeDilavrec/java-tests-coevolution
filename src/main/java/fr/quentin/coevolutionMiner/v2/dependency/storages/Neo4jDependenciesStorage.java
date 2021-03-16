@@ -143,14 +143,8 @@ public class Neo4jDependenciesStorage implements DependenciesStorage {
 
     private final Driver driver;
 
-    public Neo4jDependenciesStorage(String uri, String user, String password) {
-        driver = GraphDatabase.driver(uri, AuthTokens.basic(user, password));
-    }
-
-    public Neo4jDependenciesStorage() {
-        this(MyProperties.getPropValues().getProperty("neo4jAddress"),
-                MyProperties.getPropValues().getProperty("neo4jId"),
-                MyProperties.getPropValues().getProperty("neo4jPwd"));
+    public Neo4jDependenciesStorage(Driver driver) {
+        this.driver = driver;
     }
 
     @Override
@@ -159,15 +153,6 @@ public class Neo4jDependenciesStorage implements DependenciesStorage {
         // TODO need to add root cause to impacts to be able to retrieve them,
         // maybe as a list in impacts
         return null;
-    }
-
-    private static String getCypher() {
-        return Utils.memoizedReadResource("impacts_cypher.sql");
-    }
-
-    @Override
-    public void close() throws Exception {
-        driver.close();
     }
 
     public static Map<Range, Integer> idsByRangeFromDependency(List<Dependency> chunk) {

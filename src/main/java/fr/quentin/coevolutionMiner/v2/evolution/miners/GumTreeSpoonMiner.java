@@ -322,19 +322,10 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                     // beforeProj.getAst()).launcher.getModel().getRootPackage(),
                     // ((ProjectSpoon.SpoonAST)
                     // afterProj.getAst()).launcher.getModel().getRootPackage());
-                    ((DiffImpl) diff).getComposed().forEach(op -> {
-                        try {
-                            addComposedEvolution(op, beforeProj, afterProj);
-                        } catch (RangeMatchingException e) {
-                            try {
-                                logger.warn("cannot format " + Objects.toString(op), e);
-                            } catch (Exception ee) {
-                                logger.warn("cannot format evolution", e);
-                            }
-                        }
-                    });
+                    Set<Action> checkWellDecomposed = new HashSet<>();
                     ((DiffImpl) diff).getAtomic().forEach(op -> {
                         try {
+                            checkWellDecomposed.add(op);
                             addAtomicEvolution(op, beforeProj, afterProj);
                         } catch (RangeMatchingException e) {
                             try {
@@ -344,6 +335,24 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
                             }
                         }
 
+                    });
+                    ((DiffImpl) diff).getComposed().forEach(op -> {
+                        try {
+                            for(MyAction<?> a : op.composed()) {
+                                if(a instanceof MyAction.AtomicAction) {
+                                    if(!checkWellDecomposed.contains(a)){
+                                        logger.warn("following action is not well decomposed :" + op + " into the action: " + a);
+                                    }
+                                }
+                            }
+                            addComposedEvolution(op, beforeProj, afterProj);
+                        } catch (RangeMatchingException e) {
+                            try {
+                                logger.warn("cannot format " + Objects.toString(op), e);
+                            } catch (Exception ee) {
+                                logger.warn("cannot format evolution", e);
+                            }
+                        }
                     });
                 }
 

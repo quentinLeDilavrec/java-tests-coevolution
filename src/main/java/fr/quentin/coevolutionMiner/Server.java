@@ -12,6 +12,10 @@ import java.util.stream.Collectors;
 
 import com.google.gson.JsonElement;
 
+import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+
 // import fr.quentin.coevolutionMiner.differs.ChangeDistillerHandler;
 import fr.quentin.coevolutionMiner.v1.differs.GumtreeSpoonHandler;
 import fr.quentin.coevolutionMiner.v1.impacts.ImpactGumtreeSpoonHandler;
@@ -33,7 +37,9 @@ import fr.quentin.coevolutionMiner.v2.evolution.miners.MultiGTSMiner;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.RefactoringMiner;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesRoute;
+import spark.Spark;
 import fr.quentin.coevolutionMiner.utils.DefaultDataHandler;
+import fr.quentin.coevolutionMiner.utils.MyProperties;
 
 import static spark.Spark.*;
 
@@ -63,9 +69,13 @@ public class Server {
 	public static void main(String[] args) {
 		int serverport = DEFAULT_PORT;
 		HashSet<String> allowedOrigins = new HashSet<String>(DEFAULT_ORIGINS);
-		if (args.length > 1) {
-			serverport = Integer.valueOf(args[1]);
-			allowedOrigins.addAll(Arrays.asList(Arrays.copyOfRange(args, 1, args.length)));
+		String neo4jAddr;
+		if (args.length > 0) {
+			serverport = Integer.valueOf(args[0]);
+			neo4jAddr = MyProperties.getPropValues().getProperty(args[1]);
+			allowedOrigins.addAll(Arrays.asList(Arrays.copyOfRange(args, 2, args.length)));
+		} else {
+			neo4jAddr = MyProperties.getPropValues().getProperty("neo4jAddress");
 		}
 		// validOrigins.add("http://127.0.0.1:8080");
 		// validOrigins.add("http://localhost:8080");
@@ -73,7 +83,7 @@ public class Server {
 		// validOrigins.add("http://localhost:8081");
 		// validOrigins.add("http://131.254.17.96:8080");
 
-		Server.serve(serverport, allowedOrigins);
+		Server.serve(serverport, neo4jAddr, allowedOrigins);
 	}
 
 	/**
@@ -81,7 +91,10 @@ public class Server {
 	 * @param serverport
 	 * @param autorizedOrigins like "http://131.254.17.96:8080"
 	 */
-	public static void serve(int serverport, Set<String> autorizedOrigins) {
+	public static void serve(int serverport, String neo4jAddr, Set<String> autorizedOrigins) {
+		final String user = MyProperties.getPropValues().getProperty("neo4jId");
+		final String pwd = MyProperties.getPropValues().getProperty("neo4jPwd");
+		final Driver neo4jDriver = GraphDatabase.driver(neo4jAddr, AuthTokens.basic(user, pwd));
 		port(serverport);
 
 		before((req, res) -> {
@@ -129,21 +142,21 @@ public class Server {
 		});
 
 		path("/api/v2", () -> {
-			SourcesHandler srcH = new SourcesHandler();
+			SourcesHandler srcH = new SourcesHandler(neo4jDriver);
 			path("/data", () -> {
 				SourcesRoute srcR = new SourcesRoute(srcH, "JGit");
 				put("/default", srcR);
 				put("/JGit", srcR);
 			});
 
-			ProjectHandler astH = new ProjectHandler(srcH);
+			ProjectHandler astH = new ProjectHandler(neo4jDriver, srcH);
 			path("/ast", () -> {
 				ProjectRoute astR = new ProjectRoute(srcH, astH, SpoonMiner.class);
 				put("/Spoon", astR);
 				put("/default", astR);
 			});
 
-			EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
+			EvolutionHandler evoH = new EvolutionHandler(neo4jDriver, srcH, astH);
 			path("/evolution", () -> {
 				EvolutionRoute evoGtsR = new EvolutionRoute(srcH, astH, evoH, MultiGTSMiner.class);
 				put("/GumtreeSpoon", evoGtsR);
@@ -154,16 +167,17 @@ public class Server {
 				put("/default", evoRmR);
 			});
 
-			DependencyHandler impactH = new DependencyHandler(srcH, astH, evoH);
+			DependencyHandler impactH = new DependencyHandler(neo4jDriver, srcH, astH, evoH);
 			path("/impact", () -> {
 				DependencyRoute impactR = new DependencyRoute(srcH, astH, evoH, impactH, "myMiner");
 				put("/myMiner", impactR);
 				put("/default", impactR);
 			});
 
-			CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH);
+			CoEvolutionHandler coevoH = new CoEvolutionHandler(neo4jDriver, srcH, astH, evoH, impactH);
 			path("/coevolution", () -> {
-				CoEvolutionRoute coevoR = new CoEvolutionRoute(srcH, astH, evoH, impactH, coevoH, MultiCoEvolutionsMiner.class);
+				CoEvolutionRoute coevoR = new CoEvolutionRoute(srcH, astH, evoH, impactH, coevoH,
+						MultiCoEvolutionsMiner.class);
 				put("/myMiner", coevoR);
 				put("/default", coevoR);
 			});
@@ -203,6 +217,8 @@ public class Server {
 			r.append("---------------------").append(e.getMessage()).append(e.getStackTrace());
 			res.body(r.toString()); // TODO dangerous if not only for dev
 		});
+		Spark.awaitStop();
+		neo4jDriver.close();
 	}
 
 	// private static Route astHandler(BiFunction<String, QueryParamsMap,

@@ -222,25 +222,12 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
 
     private final Driver driver;
 
-    public Neo4jEvolutionsStorage(String uri, String user, String password) {
-        driver = GraphDatabase.driver(uri, AuthTokens.basic(user, password));
-        // driver.close(); // TODO should be closed at some point
-
-    }
-
-    public Neo4jEvolutionsStorage() {
-        this(MyProperties.getPropValues().getProperty("neo4jAddress"),
-                MyProperties.getPropValues().getProperty("neo4jId"),
-                MyProperties.getPropValues().getProperty("neo4jPwd"));
+    public Neo4jEvolutionsStorage(Driver driver) {
+        this.driver = driver;
     }
 
     protected String getCommitCypher() {
         return Utils.memoizedReadResource("commits_cypher.cql");
-    }
-
-    @Override
-    public void close() throws Exception {
-        driver.close();
     }
 
     public static Map<Range, Integer> idsByRangeFromEvos(Iterable<Evolution> evolutions) {

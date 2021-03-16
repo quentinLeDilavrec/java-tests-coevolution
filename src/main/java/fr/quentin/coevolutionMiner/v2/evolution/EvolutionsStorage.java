@@ -1,6 +1,6 @@
 package fr.quentin.coevolutionMiner.v2.evolution;
 
-public interface EvolutionsStorage extends AutoCloseable {
+public interface EvolutionsStorage {
 
     public void put(Evolutions.Specifier impacts_spec, Evolutions value);
 

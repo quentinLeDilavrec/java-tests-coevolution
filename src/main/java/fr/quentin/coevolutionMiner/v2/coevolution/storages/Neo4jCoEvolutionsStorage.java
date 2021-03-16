@@ -378,15 +378,9 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
     private SourcesHandler sourcesHandler;
     private DependencyHandler impactHandler;
 
-    public Neo4jCoEvolutionsStorage(String uri, String user, String password) {
-        driver = GraphDatabase.driver(uri, AuthTokens.basic(user, password));
-    }
-
-    public Neo4jCoEvolutionsStorage(SourcesHandler sourcesHandler, ProjectHandler astHandler,
+    public Neo4jCoEvolutionsStorage(Driver driver, SourcesHandler sourcesHandler, ProjectHandler astHandler,
             EvolutionHandler evoHandler, DependencyHandler impactHandler) {
-        this(MyProperties.getPropValues().getProperty("neo4jAddress"),
-                MyProperties.getPropValues().getProperty("neo4jId"),
-                MyProperties.getPropValues().getProperty("neo4jPwd"));
+        this.driver = driver;
         this.astHandler = astHandler;
         this.evoHandler = evoHandler;
         this.sourcesHandler = sourcesHandler;
@@ -562,10 +556,6 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         return new ImmutablePair<Project.AST.FileSnapshot.Range, String>(range, type);
     }
 
-    // public static String getMinerCypher() {
-    //     return Utils.memoizedReadResource("coevolution_miner.cql");
-    // }
-
     public static Map<String, Object> formatCoEvolutionWithEvolutionsAsIds(Map<Evolution, Integer> idsByEvo,
             CoEvolution coevo) {
         final Map<String, Object> res = new HashMap<>();
@@ -645,8 +635,4 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         }
     }
 
-    @Override
-    public void close() throws Exception {
-        driver.close();
-    }
 }

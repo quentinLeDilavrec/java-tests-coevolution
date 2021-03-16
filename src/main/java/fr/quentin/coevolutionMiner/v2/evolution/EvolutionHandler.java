@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.neo4j.driver.Driver;
+
 import fr.quentin.coevolutionMiner.v2.Data;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
@@ -24,8 +26,8 @@ public class EvolutionHandler implements AutoCloseable {
 
 	private Map<Evolutions.Specifier, Data<Evolutions>> memoizedEvolutions = new ConcurrentHashMap<>();
 
-	public EvolutionHandler(SourcesHandler srcHandler, ProjectHandler astHandler) {
-		this.neo4jStore = new Neo4jEvolutionsStorage();
+	public EvolutionHandler(Driver neo4jDriver,SourcesHandler srcHandler, ProjectHandler astHandler) {
+		this.neo4jStore = new Neo4jEvolutionsStorage(neo4jDriver);
 		this.srcHandler = srcHandler;
 		this.astHandler = astHandler;
 	}
@@ -132,7 +134,6 @@ public class EvolutionHandler implements AutoCloseable {
 
 	@Override
 	public void close() throws Exception {
-		neo4jStore.close();
 	}
 
 }

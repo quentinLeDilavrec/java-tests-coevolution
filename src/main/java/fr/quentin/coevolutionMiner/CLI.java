@@ -47,11 +47,15 @@ import org.apache.maven.shared.invoker.Invoker;
 import org.apache.maven.shared.invoker.MavenInvocationException;
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
 import org.eclipse.jgit.errors.MissingObjectException;
+import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
 import org.refactoringminer.api.GitHistoryRefactoringMiner;
 import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringHandler;
 import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 
+import fr.quentin.coevolutionMiner.utils.MyProperties;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.utils.ThreadPrintStream;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
@@ -117,6 +121,8 @@ public class CLI {
                 .stream(Spliterators.spliteratorUnknownSize(iter, Spliterator.ORDERED | Spliterator.NONNULL), false);
     }
 
+    protected static Driver neo4jDriver;
+
     public static void main(String[] args) throws IOException {
         CommandLineParser parser = new DefaultParser();
 
@@ -131,7 +137,9 @@ public class CLI {
         options.addOption(null, "once", false,
                 "compute coevolutions between commit pairs, commits in between are ignored");
         options.addOption(null, "greedy", false, "search for coevo even if there is no RM evolutions");
-        options.addOption(null, "allModules", false, "also parse all modules present in profiles (by default only parse the modules in the default profile)");
+        options.addOption(null, "neo4jAddr", true, "address of neo4j server");
+        options.addOption(null, "allModules", false,
+                "also parse all modules present in profiles (by default only parse the modules in the default profile)");
         options.addOption("f", "file", true,
                 "a file that contain per line <repo> <stars> <list of important commitId time ordered and starting with the most recent>");
 
@@ -159,6 +167,12 @@ public class CLI {
             fr.quentin.coevolutionMiner.v2.evolution.miners.MultiGTSMiner.spanning = fr.quentin.coevolutionMiner.v2.utils.Utils.Spanning.ONCE;
             fr.quentin.coevolutionMiner.v2.coevolution.miners.MultiCoEvolutionsMiner.spanning = fr.quentin.coevolutionMiner.v2.utils.Utils.Spanning.ONCE;
         }
+
+        String uri = line.getOptionValue("neo4jAddr") != null ? line.getOptionValue("neo4jAddr")
+                : MyProperties.getPropValues().getProperty("neo4jAddress");
+        String user = MyProperties.getPropValues().getProperty("neo4jId");
+        String pwd = MyProperties.getPropValues().getProperty("neo4jPwd");
+        neo4jDriver = GraphDatabase.driver(uri, AuthTokens.basic(user, pwd));
         if (Objects.equals(args[0], "batch")) {
             if (line.getOptionValue("file") != null) {
                 try (Stream<ImmutablePair<Integer, String>> lines = indexedLines(
@@ -207,6 +221,7 @@ public class CLI {
         } else {
             throw new UnsupportedOperationException("use compare or ast");
         }
+        neo4jDriver.close();
         System.exit(0);
     }
 
@@ -240,7 +255,7 @@ public class CLI {
 
     abstract static class BatchExecutor implements AutoCloseable {
 
-        protected SourcesHandler srcH = new SourcesHandler();
+        protected SourcesHandler srcH = new SourcesHandler(neo4jDriver);
 
         protected Logger loggerFixedOutPut;
         ThreadPoolExecutor executor;
@@ -294,7 +309,8 @@ public class CLI {
             //     }
 
             // });
-            executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(pool_size, Executors.privilegedThreadFactory());
+            executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(pool_size,
+                    Executors.privilegedThreadFactory());
         }
 
         public final void process(Stream<ImmutablePair<Integer, String>> stream) {
@@ -340,11 +356,10 @@ public class CLI {
 
     static class BatchExecutor1 extends BatchExecutor {
         private int max_commits_impacts;
-
-        protected ProjectHandler astH = new ProjectHandler(srcH);
-        protected EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
-        protected DependencyHandler impactH = new DependencyHandler(srcH, astH, evoH);
-        protected CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH);
+        protected final ProjectHandler astH = new ProjectHandler(neo4jDriver, srcH);
+        protected final EvolutionHandler evoH = new EvolutionHandler(neo4jDriver, srcH, astH);
+        protected final DependencyHandler impactH = new DependencyHandler(neo4jDriver, srcH, astH, evoH);
+        protected final CoEvolutionHandler coevoH = new CoEvolutionHandler(neo4jDriver, srcH, astH, evoH, impactH);
 
         public BatchExecutor1(int pool_size, int max_commits_impacts) {
             super(pool_size);
@@ -492,10 +507,10 @@ public class CLI {
     static class BatchExecutor2 extends BatchExecutor {
         private int max_commits_impacts;
 
-        protected ProjectHandler astH = new ProjectHandler(srcH);
-        protected EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
-        protected DependencyHandler impactH = new DependencyHandler(srcH, astH, evoH);
-        protected CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH);
+        protected ProjectHandler astH = new ProjectHandler(neo4jDriver, srcH);
+        protected EvolutionHandler evoH = new EvolutionHandler(neo4jDriver, srcH, astH);
+        protected DependencyHandler impactH = new DependencyHandler(neo4jDriver, srcH, astH, evoH);
+        protected CoEvolutionHandler coevoH = new CoEvolutionHandler(neo4jDriver, srcH, astH, evoH, impactH);
 
         public BatchExecutor2(int pool_size, int max_commits_impacts) {
             super(pool_size);
@@ -649,11 +664,11 @@ public class CLI {
             int max_commits_impacts) {
         ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(pool_size);
 
-        try (SourcesHandler srcH = new SourcesHandler();
-                ProjectHandler astH = new ProjectHandler(srcH);
-                EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
-                DependencyHandler impactH = new DependencyHandler(srcH, astH, evoH);
-                CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH)) {
+        try (SourcesHandler srcH = new SourcesHandler(neo4jDriver);
+                ProjectHandler astH = new ProjectHandler(neo4jDriver, srcH);
+                EvolutionHandler evoH = new EvolutionHandler(neo4jDriver, srcH, astH);
+                DependencyHandler impactH = new DependencyHandler(neo4jDriver, srcH, astH, evoH);
+                CoEvolutionHandler coevoH = new CoEvolutionHandler(neo4jDriver, srcH, astH, evoH, impactH)) {
             System.out.println("Starting");
             stream.forEach(line -> {
                 logger.info("(laucher start) CLI status " + Long.toString(executor.getTaskCount()) + " "
@@ -771,11 +786,11 @@ public class CLI {
             Map<String, Object> sortings) {
         ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(pool_size);
 
-        try (SourcesHandler srcH = new SourcesHandler();
-                ProjectHandler astH = new ProjectHandler(srcH);
-                EvolutionHandler evoH = new EvolutionHandler(srcH, astH);
-                DependencyHandler impactH = new DependencyHandler(srcH, astH, evoH);
-                CoEvolutionHandler coevoH = new CoEvolutionHandler(srcH, astH, evoH, impactH)) {
+        try (SourcesHandler srcH = new SourcesHandler(neo4jDriver);
+                ProjectHandler astH = new ProjectHandler(neo4jDriver, srcH);
+                EvolutionHandler evoH = new EvolutionHandler(neo4jDriver, srcH, astH);
+                DependencyHandler impactH = new DependencyHandler(neo4jDriver, srcH, astH, evoH);
+                CoEvolutionHandler coevoH = new CoEvolutionHandler(neo4jDriver, srcH, astH, evoH, impactH)) {
 
             System.out.println("Starting batch from bdd");
             // TODO need to store releases given in csv from djamel for the folowing to work

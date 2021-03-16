@@ -1,6 +1,6 @@
 package fr.quentin.coevolutionMiner.v2.ast;
 
-public interface ProjectStorage extends AutoCloseable {
+public interface ProjectStorage {
 
     public <T> void put(Project.Specifier impacts_spec, Project<T> value);
 

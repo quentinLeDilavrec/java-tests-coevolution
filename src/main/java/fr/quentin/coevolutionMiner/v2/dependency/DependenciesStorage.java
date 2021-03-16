@@ -5,7 +5,7 @@ import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
 
-public interface DependenciesStorage extends AutoCloseable {
+public interface DependenciesStorage {
 
     public void put(Dependencies value);
 

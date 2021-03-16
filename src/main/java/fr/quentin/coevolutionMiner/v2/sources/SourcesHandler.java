@@ -3,6 +3,8 @@ package fr.quentin.coevolutionMiner.v2.sources;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.neo4j.driver.Driver;
+
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
 import fr.quentin.coevolutionMiner.v2.Data;
 import fr.quentin.coevolutionMiner.v2.sources.miners.JgitMiner;
@@ -13,7 +15,7 @@ public class SourcesHandler implements AutoCloseable {
 
     private Map<Sources.Specifier, Data<Sources>> memoizedSources = new ConcurrentHashMap<>();
 
-    public SourcesHandler() {
+    public SourcesHandler(Driver neo4jDriver) {
         this.neo4jStore = new Neo4jSourcesStorage();
     }
 

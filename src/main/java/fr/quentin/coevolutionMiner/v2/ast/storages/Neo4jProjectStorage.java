@@ -165,16 +165,8 @@ public class Neo4jProjectStorage implements ProjectStorage {
 
     private final Driver driver;
 
-    public Neo4jProjectStorage(String uri, String user, String password) {
-        driver = GraphDatabase.driver(uri, AuthTokens.basic(user, password));
-        // driver.close(); // TODO should be closed at some point
-
-    }
-
-    public Neo4jProjectStorage() {
-        this(MyProperties.getPropValues().getProperty("neo4jAddress"),
-                MyProperties.getPropValues().getProperty("neo4jId"),
-                MyProperties.getPropValues().getProperty("neo4jPwd"));
+    public Neo4jProjectStorage(Driver driver) {
+        this.driver = driver;
     }
 
     private static String getCypher() {
@@ -185,8 +177,4 @@ public class Neo4jProjectStorage implements ProjectStorage {
         return Utils.memoizedReadResource("commits_cypher.cql");
     }
 
-    @Override
-    public void close() throws Exception {
-        driver.close();
-    }
 }

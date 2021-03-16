@@ -3,6 +3,8 @@ package fr.quentin.coevolutionMiner.v2.ast;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.neo4j.driver.Driver;
+
 import fr.quentin.coevolutionMiner.v2.Data;
 import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
@@ -18,8 +20,8 @@ public class ProjectHandler implements AutoCloseable {
 	private Map<Project.Specifier<?>, Data<Project<?>>> memoizedAST = new ConcurrentHashMap<>();
 	private Neo4jProjectStorage neo4jStore;
 
-	public ProjectHandler(SourcesHandler srcHandler) {
-		this.neo4jStore = new Neo4jProjectStorage();
+	public ProjectHandler(Driver neo4jDriver, SourcesHandler srcHandler) {
+		this.neo4jStore = new Neo4jProjectStorage(neo4jDriver);
 		this.srcHandler = srcHandler;
 	}
 
@@ -50,12 +52,12 @@ public class ProjectHandler implements AutoCloseable {
 			}
 			ProjectStorage db = null;
 			switch (storeName) {
-				case "Neo4j":
-					res = neo4jStore.get(spec);
-					db = neo4jStore;
-					break;
-				default:
-					break;
+			case "Neo4j":
+				res = neo4jStore.get(spec);
+				db = neo4jStore;
+				break;
+			default:
+				break;
 			}
 			if (res != null) {
 				tmp.set(res);
@@ -64,13 +66,13 @@ public class ProjectHandler implements AutoCloseable {
 			// CAUTION miners should mind about circular deps of data given by handlers
 			Miners z = Miners.valueOf(spec.miner.getSimpleName());
 			switch (z) {
-				case SpoonMiner:
-					SpoonMiner minerInst = new SpoonMiner(spec, srcHandler);
-					res = (Project<U>) minerInst.compute();
-					populate(res);
-					break;
-				default:
-					throw new RuntimeException(spec.miner + " is not a registered AST miner.");
+			case SpoonMiner:
+				SpoonMiner minerInst = new SpoonMiner(spec, srcHandler);
+				res = (Project<U>) minerInst.compute();
+				populate(res);
+				break;
+			default:
+				throw new RuntimeException(spec.miner + " is not a registered AST miner.");
 			}
 			if (db != null) {
 				db.put(spec, res);
@@ -99,6 +101,5 @@ public class ProjectHandler implements AutoCloseable {
 
 	@Override
 	public void close() throws Exception {
-		neo4jStore.close();
 	}
 }
