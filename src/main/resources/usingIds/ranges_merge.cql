@@ -11,7 +11,7 @@ MERGE (r:Range {
     path:l.file,
     start:toInteger(l.start), 
     end:toInteger(l.end)})
-ON MATCH SET r.type = l.type, r.astPath = l.astPath, r.value = l.value, r.range = [toInteger(l.start),toInteger(l.end)]
-ON CREATE SET r.type = l.type, r.astPath = l.astPath, r.value = l.value, r.range = [toInteger(l.start),toInteger(l.end)]
+ON MATCH SET r.type = l.type, r.isTest = l.isTest, r.astPath = l.astPath, r.value = l.value, r.range = [toInteger(l.start),toInteger(l.end)]
+ON CREATE SET r.type = l.type, r.isTest = l.isTest, r.astPath = l.astPath, r.value = l.value, r.range = [toInteger(l.start),toInteger(l.end)]
 MERGE (r)-[:IS_RANGE_IN]->(snap)
 RETURN distinct ID(r) as id
