@@ -72,7 +72,7 @@ public class Server {
 		String neo4jAddr;
 		if (args.length > 0) {
 			serverport = Integer.valueOf(args[0]);
-			neo4jAddr = MyProperties.getPropValues().getProperty(args[1]);
+			neo4jAddr = args[1];
 			allowedOrigins.addAll(Arrays.asList(Arrays.copyOfRange(args, 2, args.length)));
 		} else {
 			neo4jAddr = MyProperties.getPropValues().getProperty("neo4jAddress");
