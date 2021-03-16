@@ -13,6 +13,7 @@ import org.neo4j.driver.Value;
 import org.neo4j.driver.exceptions.TransientException;
 
 import fr.quentin.coevolutionMiner.utils.MyProperties;
+import fr.quentin.coevolutionMiner.v2.ast.Project;
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 // import fr.quentin.impactMiner.Evolution;
 import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
@@ -34,6 +35,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -43,6 +45,7 @@ import java.util.Map.Entry;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
@@ -83,13 +86,22 @@ public class Neo4jEvolutionsStorage implements EvolutionsStorage {
             List<Map<String, Object>> formatedRanges = new ArrayList<>();
             Set<Range> keySet = new LinkedHashSet<>();
 
+            Set<Project.AST.FileSnapshot> visFiles = new HashSet<>();
             for (Entry<Range, Integer> entry : idsByRange.entrySet()) {
                 if (entry.getValue() == -1) {
                     Range r = entry.getKey();
                     keySet.add(r);
-                    formatedRanges.add(Utils.formatRangeWithType(r));
+                    Map<String, Object> fr = Utils.formatRangeWithType(r);
+                    Project.AST.FileSnapshot f = r.getFile();
+                    if (!visFiles.contains(f)) {
+                        visFiles.add(f);
+                        fr.put("isInTestCu", f.isTest());
+                    }
+                    formatedRanges.add(fr);
                 }
             }
+            // TODO check if it is useful
+            visFiles = null;
 
             try (Transaction tx = session.beginTransaction(config);) {
 

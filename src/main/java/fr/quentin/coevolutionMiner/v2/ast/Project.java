@@ -14,16 +14,20 @@ import java.util.Set;
 
 import com.sun.tools.javac.util.Iterators;
 
+import org.apache.commons.lang3.tuple.ImmutableTriple;
+
 import fr.quentin.coevolutionMiner.v2.ast.Project.AST.FileSnapshot.Range;
 import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner.ProjectSpoon.SpoonAST;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.Sources.Commit;
 import fr.quentin.coevolutionMiner.v2.utils.Iterators2;
 import fr.quentin.coevolutionMiner.v2.utils.Utils;
+import spoon.MavenLauncher;
 import spoon.reflect.code.CtBinaryOperator;
 import spoon.reflect.code.CtLiteral;
 import spoon.reflect.code.CtTypeAccess;
 import spoon.reflect.code.CtUnaryOperator;
+import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtExecutable;
 import spoon.reflect.declaration.CtNamedElement;
@@ -284,6 +288,23 @@ public class Project<T> implements Iterable<Project> {
 
             public AST getAST() {
                 return AST.this;
+            }
+
+            public Boolean isTest() {
+                for (Project<T>.AST.FileSnapshot.Range r : ranges.values()){
+                    T ori = r.getOriginal();
+                    if (ori instanceof CtElement) {
+                        SourcePosition pos = ((CtElement)ori).getPosition();
+                        ImmutableTriple<?, ?, MavenLauncher.SOURCE_TYPE> md = (ImmutableTriple<?,?, MavenLauncher.SOURCE_TYPE>) pos.getCompilationUnit().getMetadata("SourceTypeNRootDirectory");
+                        switch (md.right) {
+                            case TEST_SOURCE:
+                                return true;
+                            case APP_SOURCE:
+                                return false;
+                        }
+                    }
+                }
+                return null;
             }
 
             /**
