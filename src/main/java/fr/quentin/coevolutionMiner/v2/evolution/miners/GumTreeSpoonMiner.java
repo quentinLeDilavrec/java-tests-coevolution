@@ -268,50 +268,9 @@ public class GumTreeSpoonMiner implements EvolutionsMiner {
 
                 // TODO do it in SpoonMiner
                 if (beforeProj.getAst().isUsable() && afterProj.getAst().isUsable()) {
-                    CtPackage left = ((ProjectSpoon.SpoonAST) beforeProj.getAst()).launcher.getModel().getRootPackage();
-                    // TODO make a statically checkable API, for now to access, use:
-                    // (ImmutableTriple<Path,Path,MavenLauncher.SOURCE_TYPE>())cu.getMetadata("SourceTypeNRootDirectory");
-                    for (CompilationUnit cu : left.getFactory().CompilationUnit().getMap().values()) {
-                        for (File root : ((ProjectSpoon.SpoonAST) beforeProj.getAst()).launcher.getPomFile()
-                                .getSourceDirectories()) {
-                            if (cu.getFile().toPath().startsWith(root.toPath())) {
-                                cu.putMetadata("SourceTypeNRootDirectory", new ImmutableTriple<>(
-                                        ((ProjectSpoon.SpoonAST) beforeProj.getAst()).rootDir,
-                                        ((ProjectSpoon.SpoonAST) beforeProj.getAst()).rootDir.relativize(root.toPath()),
-                                        MavenLauncher.SOURCE_TYPE.APP_SOURCE));
-                            }
-                        }
-                        for (File root : ((ProjectSpoon.SpoonAST) beforeProj.getAst()).launcher.getPomFile()
-                                .getTestDirectories()) {
-                            if (cu.getFile().toPath().startsWith(root.toPath())) {
-                                cu.putMetadata("SourceTypeNRootDirectory", new ImmutableTriple<>(
-                                        ((ProjectSpoon.SpoonAST) beforeProj.getAst()).rootDir,
-                                        ((ProjectSpoon.SpoonAST) beforeProj.getAst()).rootDir.relativize(root.toPath()),
-                                        MavenLauncher.SOURCE_TYPE.TEST_SOURCE));
-                            }
-                        }
-                    }
                     CtPackage right = ((ProjectSpoon.SpoonAST) afterProj.getAst()).launcher.getModel().getRootPackage();
-                    for (CompilationUnit cu : right.getFactory().CompilationUnit().getMap().values()) {
-                        for (File root : ((ProjectSpoon.SpoonAST) afterProj.getAst()).launcher.getPomFile()
-                                .getSourceDirectories()) {
-                            if (cu.getFile().toPath().startsWith(root.toPath())) {
-                                cu.putMetadata("SourceTypeNRootDirectory", new ImmutableTriple<>(
-                                        ((ProjectSpoon.SpoonAST) afterProj.getAst()).rootDir,
-                                        ((ProjectSpoon.SpoonAST) afterProj.getAst()).rootDir.relativize(root.toPath()),
-                                        MavenLauncher.SOURCE_TYPE.APP_SOURCE));
-                            }
-                        }
-                        for (File root : ((ProjectSpoon.SpoonAST) afterProj.getAst()).launcher.getPomFile()
-                                .getTestDirectories()) {
-                            if (cu.getFile().toPath().startsWith(root.toPath())) {
-                                cu.putMetadata("SourceTypeNRootDirectory", new ImmutableTriple<>(
-                                        ((ProjectSpoon.SpoonAST) afterProj.getAst()).rootDir,
-                                        ((ProjectSpoon.SpoonAST) afterProj.getAst()).rootDir.relativize(root.toPath()),
-                                        MavenLauncher.SOURCE_TYPE.TEST_SOURCE));
-                            }
-                        }
-                    }
+                    CtPackage left = ((ProjectSpoon.SpoonAST) beforeProj.getAst()).launcher.getModel().getRootPackage();
+                    
                     this.scanner = new SpoonGumTreeBuilder();
                     ITree srcTree = scanner.getTree(left);
                     this.mdiff = new MultiDiffImpl(srcTree, commitBefore);

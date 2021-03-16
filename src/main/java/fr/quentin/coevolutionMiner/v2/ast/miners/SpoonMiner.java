@@ -42,9 +42,11 @@ import spoon.Launcher;
 import spoon.MavenLauncher;
 import spoon.SpoonException;
 import spoon.reflect.CtModel;
+import spoon.reflect.cu.CompilationUnit;
 import spoon.reflect.declaration.CtCompilationUnit;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtExecutable;
+import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.visitor.Filter;
 import spoon.support.compiler.FileSystemFolder;
@@ -52,6 +54,7 @@ import spoon.support.compiler.FilteringFolder;
 import spoon.support.compiler.SpoonPom;
 import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
 
+import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -154,62 +157,6 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         }
     }
 
-    private ProjectSpoon extracted(Sources src, Path path, Path root, SpoonPom spoonPom)
-            throws IOException, InterruptedException, Exception {
-        MavenLauncher launcher = spoonPom != null ? new MavenLauncher(spoonPom, MavenLauncher.SOURCE_TYPE.ALL_SOURCE)
-                : new MavenLauncher(path.toString(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE,
-                        MyProperties.getPropValues().getProperty("mavenHome"));
-        // FilteringFolder resources = new FilteringFolder();
-        // resources.addFolder(new FileSystemFolder(path.toString()));
-        // for (String string : x) {
-        // resources.removeAllThatMatch(Paths.get(path.toString(), string).toString());
-        // }
-        // launcher.getModelBuilder().addInputSource(resources);
-        launcher.getEnvironment().setLevel("INFO");
-        launcher.getEnvironment().setCommentEnabled(false);
-        launcher.getFactory().getEnvironment().setCommentEnabled(false);
-        launcher.getFactory().getEnvironment().setLevel("INFO");
-        // List<String> modules = launcher.getPomFile().getModel().getModules();
-        // System.out.println(modules.get(0));
-
-        StringBuilder prepareResult = new StringBuilder();
-        InvocationResult prepared = SourcesHelper.prepare(path, ".", x -> {
-            prepareResult.append(x + "\n");
-        });
-        logger.debug(prepareResult.toString());
-
-        CommandLineException compilerException = prepared.getExecutionException();
-        if (compilerException != null) {
-            logger.debug("Could not compile the source due to the following error", compilerException);
-        }
-
-        try {
-            launcher.buildModel();
-        } catch (Exception e) {
-            for (CategorizedProblem pb : ((JDTBasedSpoonCompiler) launcher.getModelBuilder()).getProblems()) {
-                logger.debug(pb.toString());
-                // System.err.println(pb.toString());
-            }
-            throw new RuntimeException(e);
-        }
-        // TODO compute stats
-        Set<Project<?>> modules = new HashSet<>();
-        Commit commit = src.getCommit(spec.commitId);
-        Path relPath = root.relativize(path);
-        ProjectSpoon r = new ProjectSpoon(new Specifier<>(spec.sources, relPath, spec.commitId, spec.miner), modules,
-                commit, path, launcher, compilerException);
-        computeCounts(launcher, r);
-        computeLOC2(path, r);
-        r.getAst().getGlobalStats().codeCompile = prepared.getExitCode();
-
-        List<SpoonPom> x = launcher.getPomFile().getModules();
-        System.out.println(x);
-        for (SpoonPom qq : x) {
-            modules.add(extracted(src, Paths.get(qq.getFileSystemParent().getAbsolutePath()), root, qq));
-        }
-        return r;
-    }
-
     private SpoonMiner.ProjectSpoon extractedPrecise(Sources src, Path path, Path root, SpoonPom spoonPom)
             throws IOException, InterruptedException, Exception {
         logger.traceEntry("parameters (src={}, path={}, root={}, spoonPom={})", src, path, root, spoonPom);
@@ -260,6 +207,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                         root, launcherCode, compilerExceptionCode);
                 r.getAst().getGlobalStats().codeAST = 1;
                 r.getAst().getGlobalStats().testsAST = 1;
+                enrichCu(launcherCode, r.getAst().rootDir);
             }
 
             StringBuilder prepareAllResult = new StringBuilder();
@@ -288,6 +236,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                     computeCounts(launcherAll, r);
                     r.getAst().getGlobalStats().codeAST = 0;
                     r.getAst().getGlobalStats().testsAST = 1;
+                    enrichCu(launcherAll, r.getAst().rootDir);
                 }
             }
 
@@ -297,6 +246,7 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
                 computeCounts(launcherAll, r);
                 r.getAst().getGlobalStats().codeAST = 0;
                 r.getAst().getGlobalStats().testsAST = 0;
+                enrichCu(launcherAll, r.getAst().rootDir);
             }
 
             r.getAst().getGlobalStats().codeCompile = preparedCode.getExitCode();
@@ -329,6 +279,26 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
         } finally {
             computeLOC2(path, r);
             logger.traceExit("result: {}", r);
+        }
+    }
+
+    public static void enrichCu(MavenLauncher launcher, Path rootDir) {
+        CtPackage left = launcher.getModel().getRootPackage();
+        // TODO make a statically checkable API, for now to access, use:
+        // (ImmutableTriple<Path,Path,MavenLauncher.SOURCE_TYPE>())cu.getMetadata("SourceTypeNRootDirectory");
+        for (CompilationUnit cu : left.getFactory().CompilationUnit().getMap().values()) {
+            for (File root : launcher.getPomFile().getSourceDirectories()) {
+                if (cu.getFile().toPath().startsWith(root.toPath())) {
+                    cu.putMetadata("SourceTypeNRootDirectory", new ImmutableTriple<>(rootDir,
+                            rootDir.relativize(root.toPath()), MavenLauncher.SOURCE_TYPE.APP_SOURCE));
+                }
+            }
+            for (File root : launcher.getPomFile().getTestDirectories()) {
+                if (cu.getFile().toPath().startsWith(root.toPath())) {
+                    cu.putMetadata("SourceTypeNRootDirectory", new ImmutableTriple<>(rootDir,
+                            rootDir.relativize(root.toPath()), MavenLauncher.SOURCE_TYPE.TEST_SOURCE));
+                }
+            }
         }
     }
 
@@ -434,92 +404,92 @@ public class SpoonMiner implements ProjectMiner<CtElement> {
 
         // AccessController.doPrivileged(new PrivilegedAction<Void>() {
         //     public Void run() {
-                ProcessBuilder processBuilder = new ProcessBuilder();
-                String[] command = new String[] { "scc", "-f", "json", "-c", path.toAbsolutePath().toString() };
-                processBuilder.command(command);
-                logger.info(
-                        " executing subprocess: " + Arrays.asList(command).stream().reduce("", (a, b) -> a + " " + b));
-                Process process = null;
-                int i = 0;
-                IOException ee = null;
-                while (i < 3) {
-                    try {
-                        process = processBuilder.start();
-                        break;
-                    } catch (IOException e) {
-                        i++;
-                        ee = e;
-                        logger.warn("fail " + i);
-                        try {
-                            logger.debug("try ls the directory");
-                            Process process2 = new ProcessBuilder()
-                                    .command(new String[] { "ls", path.toAbsolutePath().toString() }).start();
-                            int exitCode = process2.waitFor();
-                            logger.info("ret code of try other dir " + exitCode);
-                        } catch (IOException | InterruptedException eee) {
-                            logger.debug("fail try other dir", eee);
-                        }
-                        try {
-                            logger.debug("try other dir");
-                            Process process2 = new ProcessBuilder()
-                                    .command(new String[] { "scc", "-f", "json", "-c", "/home/qledilav/bin" }).start();
-                            int exitCode = process2.waitFor();
-                            logger.info("ret code of try other dir " + exitCode);
-                        } catch (IOException | InterruptedException eee) {
-                            logger.debug("fail try other dir", eee);
-                        }
-                        try {
-                            logger.debug("try abs exe");
-                            Process process2 = new ProcessBuilder().command(new String[] { "/home/qledilav/bin/scc",
-                                    "-f", "json", "-c", path.toAbsolutePath().toString() }).start();
-                            int exitCode = process2.waitFor();
-                            logger.info("ret code of try abs exe " + exitCode);
-                        } catch (IOException | InterruptedException eee) {
-                            logger.debug("fail try abs exe", eee);
-                        }
-                        try {
-                            logger.debug("try both");
-                            Process process2 = new ProcessBuilder().command(
-                                    new String[] { "/home/qledilav/bin/scc", "-f", "json", "-c", "/home/qledilav/bin" })
-                                    .start();
-                            int exitCode = process2.waitFor();
-                            logger.info("ret code of try both " + exitCode);
-                        } catch (IOException | InterruptedException eee) {
-                            logger.debug("fail try both", eee);
-                        }
-                    }
-                    try {
-                        Thread.sleep(5000);
-                    } catch (InterruptedException e) {
-                        logger.debug("fail sleep", e);
-                    }
-                }
-                if (i >= 3) {
-                    logger.warn("fail all tries", ee);
-                    return;
-                }
-                Gson gson = new Gson();
-                try (JsonReader reader = new JsonReader(new InputStreamReader(process.getInputStream()))) {
-                    fr.quentin.coevolutionMiner.v2.ast.Stats g = proj.getAst().getGlobalStats();
-                    g.loC = 0;
-                    reader.beginArray();
-                    while (reader.hasNext()) {
-                        Line line = gson.fromJson(reader, Line.class);
-                        if (line.name.equals("Java")) {
-                            g.javaLoC = line.loc;
-                        } else {
-                            g.loC += line.loc;
-                        }
-                    }
-                } catch (IOException e) {
-                    logger.debug("fail reader close", e);
+        ProcessBuilder processBuilder = new ProcessBuilder();
+        String[] command = new String[] { "scc", "-f", "json", "-c", path.toAbsolutePath().toString() };
+        processBuilder.command(command);
+        logger.info(" executing subprocess: " + Arrays.asList(command).stream().reduce("", (a, b) -> a + " " + b));
+        Process process = null;
+        int i = 0;
+        IOException ee = null;
+        while (i < 3) {
+            try {
+                process = processBuilder.start();
+                break;
+            } catch (IOException e) {
+                i++;
+                ee = e;
+                logger.warn("fail " + i);
+                try {
+                    logger.debug("try ls the directory");
+                    Process process2 = new ProcessBuilder()
+                            .command(new String[] { "ls", path.toAbsolutePath().toString() }).start();
+                    int exitCode = process2.waitFor();
+                    logger.info("ret code of try other dir " + exitCode);
+                } catch (IOException | InterruptedException eee) {
+                    logger.debug("fail try other dir", eee);
                 }
                 try {
-                    int exitCode = process.waitFor();
-                    logger.info("scc ended with exitCode " + exitCode);
-                } catch (InterruptedException e) {
-                    logger.info("scc interrupted");
+                    logger.debug("try other dir");
+                    Process process2 = new ProcessBuilder()
+                            .command(new String[] { "scc", "-f", "json", "-c", "/home/qledilav/bin" }).start();
+                    int exitCode = process2.waitFor();
+                    logger.info("ret code of try other dir " + exitCode);
+                } catch (IOException | InterruptedException eee) {
+                    logger.debug("fail try other dir", eee);
                 }
+                try {
+                    logger.debug("try abs exe");
+                    Process process2 = new ProcessBuilder().command(new String[] { "/home/qledilav/bin/scc", "-f",
+                            "json", "-c", path.toAbsolutePath().toString() }).start();
+                    int exitCode = process2.waitFor();
+                    logger.info("ret code of try abs exe " + exitCode);
+                } catch (IOException | InterruptedException eee) {
+                    logger.debug("fail try abs exe", eee);
+                }
+                try {
+                    logger.debug("try both");
+                    Process process2 = new ProcessBuilder()
+                            .command(
+                                    new String[] { "/home/qledilav/bin/scc", "-f", "json", "-c", "/home/qledilav/bin" })
+                            .start();
+                    int exitCode = process2.waitFor();
+                    logger.info("ret code of try both " + exitCode);
+                } catch (IOException | InterruptedException eee) {
+                    logger.debug("fail try both", eee);
+                }
+            }
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                logger.debug("fail sleep", e);
+            }
+        }
+        if (i >= 3) {
+            logger.warn("fail all tries", ee);
+            return;
+        }
+        Gson gson = new Gson();
+        try (JsonReader reader = new JsonReader(new InputStreamReader(process.getInputStream()))) {
+            fr.quentin.coevolutionMiner.v2.ast.Stats g = proj.getAst().getGlobalStats();
+            g.loC = 0;
+            reader.beginArray();
+            while (reader.hasNext()) {
+                Line line = gson.fromJson(reader, Line.class);
+                if (line.name.equals("Java")) {
+                    g.javaLoC = line.loc;
+                } else {
+                    g.loC += line.loc;
+                }
+            }
+        } catch (IOException e) {
+            logger.debug("fail reader close", e);
+        }
+        try {
+            int exitCode = process.waitFor();
+            logger.info("scc ended with exitCode " + exitCode);
+        } catch (InterruptedException e) {
+            logger.info("scc interrupted");
+        }
         //         return null;
         //     }
         // });
