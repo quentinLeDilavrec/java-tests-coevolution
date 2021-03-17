@@ -14,11 +14,14 @@ import spark.Response;
 import spark.Route;
 
 import fr.quentin.coevolutionMiner.v2.evolution.EvolutionHandler;
+import fr.quentin.coevolutionMiner.v2.evolution.Evolutions;
 import fr.quentin.coevolutionMiner.v2.evolution.miners.MixedMiner;
 import fr.quentin.coevolutionMiner.v2.sources.Sources;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.utils.SourcesHelper;
+import fr.quentin.coevolutionMiner.v2.ast.Project.Specifier;
 import fr.quentin.coevolutionMiner.v2.ast.ProjectHandler;
+import fr.quentin.coevolutionMiner.v2.ast.miners.SpoonMiner;
 
 public class DependencyRoute implements Route {
 
@@ -59,6 +62,7 @@ public class DependencyRoute implements Route {
         public String commitIdAfter;
         public String tagBefore;
         public String tagAfter;
+        public String side;
         /**
          * wanted cases
          */
@@ -94,10 +98,15 @@ public class DependencyRoute implements Route {
                     throw new RuntimeException(e);
                 }
             }
+
+            Evolutions.Specifier evoSpec = evoHandler.buildSpec(srcSpec, body.commitIdBefore, body.commitIdAfter,
+                    MixedMiner.class);
+
+            Specifier<SpoonMiner> astSpec = astHandler.buildSpec(srcSpec,
+                    "after".equals(body.side) ? body.commitIdAfter : body.commitIdBefore);
+
             // TODO use body.cases to filter wanted evolutions
-            r = impactsHandler.handle(impactsHandler.buildSpec(astHandler.buildSpec(srcSpec, body.commitIdBefore),
-                    evoHandler.buildSpec(srcSpec, body.commitIdBefore, body.commitIdAfter, MixedMiner.class), minerId))
-                    .toJson();
+            r = impactsHandler.handle(impactsHandler.buildSpec(astSpec, evoSpec, minerId)).toJson();
         } else if (body.repo != null && body.tagBefore != null && body.tagAfter != null) {
             JsonObject tmp = new JsonObject();
             tmp.addProperty("error", "tag impact handler not implemented yet");
