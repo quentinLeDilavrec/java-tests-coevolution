@@ -123,8 +123,11 @@ public class Neo4jSourcesStorage implements SourcesStorage {
         List<Map<String, Object>> fcommits = new ArrayList<>();
         Sources.Specifier spec = null;
         for (Commit commit : commits) {
-            spec = commit.getRepository().getEnclosingInstance().spec;
+            if (spec == null) {
+                spec = commit.getRepository().getEnclosingInstance().spec;
+            }
             Map<String, Object> o = new HashMap<>();
+            fcommits.add(o);
             o.put("repository", commit.getRepository().getUrl());
             o.put("commitId", commit.getId());
             o.put("parents", commit.getParents().stream().map(x -> x.getId()).collect(Collectors.toList()));

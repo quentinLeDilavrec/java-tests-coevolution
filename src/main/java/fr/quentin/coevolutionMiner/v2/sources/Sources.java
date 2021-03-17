@@ -170,6 +170,7 @@ public abstract class Sources {
         } else {
             Commit commit = new Commit(id);
             commits.put(id, commit);
+            updatedRelations.add(commit);
             return commit;
         }
     }
