@@ -141,14 +141,8 @@ public class Neo4jSourcesStorage implements SourcesStorage {
 
     public final Driver driver;
 
-    public Neo4jSourcesStorage(String uri, String user, String password) {
-        driver = GraphDatabase.driver(uri, AuthTokens.basic(user, password));
-    }
-
-    public Neo4jSourcesStorage() {
-        this(MyProperties.getPropValues().getProperty("neo4jAddress"),
-                MyProperties.getPropValues().getProperty("neo4jId"),
-                MyProperties.getPropValues().getProperty("neo4jPwd"));
+    public Neo4jSourcesStorage(Driver driver) {
+        this.driver = driver;
     }
 
     @Override

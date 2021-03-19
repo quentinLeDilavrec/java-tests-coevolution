@@ -16,7 +16,7 @@ public class SourcesHandler implements AutoCloseable {
     private Map<Sources.Specifier, Data<Sources>> memoizedSources = new ConcurrentHashMap<>();
 
     public SourcesHandler(Driver neo4jDriver) {
-        this.neo4jStore = new Neo4jSourcesStorage();
+        this.neo4jStore = new Neo4jSourcesStorage(neo4jDriver);
     }
 
     public Sources.Specifier buildSpec(String repository) {
