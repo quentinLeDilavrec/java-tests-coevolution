@@ -358,7 +358,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
     private Map<String, Object> basifyInitTests(ImpactedRange initialTest) {
         Map<String, Object> r = Utils.formatRangeWithType(initialTest.range);
         Map<String, Object> report = basifyReport(initialTest.report);
-        report.put("report", report);
+        r.put("report", report);
         return r;
     }
 
