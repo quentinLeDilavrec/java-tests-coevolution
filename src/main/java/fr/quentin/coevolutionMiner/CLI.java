@@ -785,7 +785,10 @@ public class CLI {
                                                         Integer start = x.get("start", 0);
                                                         Integer end = x.get("end", 0);
                                                         try {
+                                                            System.out.println("matched "+ path + ":" + start + ":" + end);
                                                             Range range = projectBefore.getRange(path, start, end);
+                                                            System.out.println(
+                                                                    "found " + range.toString());
                                                             Project project = range.getFile().getAST().getProject();
                                                             rangesPerProject.putIfAbsent(project, new HashSet<>());
                                                             rangesPerProject.get(project).add(range);
