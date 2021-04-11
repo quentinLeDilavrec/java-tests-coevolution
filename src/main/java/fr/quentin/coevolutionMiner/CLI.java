@@ -782,10 +782,10 @@ public class CLI {
                                                         Integer start = x.get("start", 0);
                                                         Integer end = x.get("end", 0);
                                                         try {
-                                                            System.out.println("matched "+ path + ":" + start + ":" + end);
-                                                            Range range = projectBefore.getRange(path, start, end);
                                                             System.out.println(
-                                                                    "found " + range.toString());
+                                                                    "matched " + path + ":" + start + ":" + end);
+                                                            Range range = projectBefore.getRange(path, start, end);
+                                                            System.out.println("found " + range.toString());
                                                             Project project = range.getFile().getAST().getProject();
                                                             rangesPerProject.putIfAbsent(project, new HashSet<>());
                                                             rangesPerProject.get(project).add(range);
@@ -809,12 +809,19 @@ public class CLI {
                                     for (Range initialTest : rangesPerProject.get(proj)) {
                                         // test and make the report
                                         EImpact.FailureReport report = null;
+                                        CtMethod testM = null;
+
                                         try {
-                                            report = FunctionalImpactRunner.runValidationCheckers(
-                                                    outDir,
-                                                    ((CtMethod) initialTest.getOriginal()).getDeclaringType()
-                                                            .getQualifiedName(),
-                                                    ((CtMethod) initialTest.getOriginal()).getSimpleName(), report);
+                                            testM = (CtMethod) initialTest.getOriginal();
+                                        } catch (Exception e) {
+                                        }
+                                        if (testM == null) {
+                                            continue;
+                                        }
+                                        try {
+                                            report = FunctionalImpactRunner.runValidationCheckers(outDir,
+                                                    testM.getDeclaringType().getQualifiedName(), testM.getSimpleName(),
+                                                    report);
                                         } catch (Exception e) {
                                             throw new RuntimeException(e);
                                         }
