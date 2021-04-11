@@ -58,6 +58,7 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.TransactionWork;
+import org.neo4j.driver.exceptions.TransientException;
 import org.refactoringminer.api.GitHistoryRefactoringMiner;
 import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringHandler;
@@ -795,6 +796,10 @@ public class CLI {
                                             return "";
                                         }
                                     });
+                                } catch (TransientException e) {
+                                    throw new RuntimeException(e);
+                                } catch (Exception e) {
+                                    throw new RuntimeException(e);
                                 }
                                 // find corresponding project and signature of test
                                 FillInitTests value = new FillInitTests(coevoSpec);
