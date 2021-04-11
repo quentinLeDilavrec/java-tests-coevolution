@@ -33,7 +33,7 @@ public class CoEvolutionHandler implements AutoCloseable {
         this.evoHandler = evoHandler;
         this.sourcesHandler = sourcesHandler;
         this.impactHandler = impactHandler;
-        this.neo4jStore = new Neo4jCoEvolutionsStorage(neo4jDriver,sourcesHandler, astHandler, evoHandler, impactHandler);
+        this.neo4jStore = new Neo4jCoEvolutionsStorage(neo4jDriver);
     }
 
     public static CoEvolutions.Specifier buildSpec(Sources.Specifier src_id, Evolutions.Specifier evo_id) {

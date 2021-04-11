@@ -44,7 +44,7 @@ import spoon.support.JavaOutputProcessor;
 import spoon.support.OutputDestinationHandler;
 import spoon.MavenLauncher;
 
-class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
+public class FunctionalImpactRunner implements Consumer<Set<Evolution>> {
     private final class OutputDestinationHandlerImpl implements OutputDestinationHandler {
         private final File expDir;
 

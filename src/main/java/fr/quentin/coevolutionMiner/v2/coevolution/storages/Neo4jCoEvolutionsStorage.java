@@ -337,11 +337,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
 
     @Override
     public synchronized void put(CoEvolutions value) {
-        List<Map<String, Object>> initTests = new ArrayList<>();
-        for (ImpactedRange initTest : value.getInitialTests()) {
-            initTests.add(basifyInitTests(initTest));
-        }
-        new ChunckedUploadInitTests(value.spec, initTests);
+        putInitTests(value);
 
         Set<CoEvolution> coevos = value.getCoEvolutions();
         new ChunckedUploadCoEvos(value.spec, new ArrayList<>(coevos));
@@ -355,14 +351,22 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
         new ChunckedUploadImpacts(value.spec, new ArrayList<>(value.getEImpacts()));
     }
 
-    private Map<String, Object> basifyInitTests(ImpactedRange initialTest) {
+    public void putInitTests(CoEvolutions value) {
+        List<Map<String, Object>> initTests = new ArrayList<>();
+        for (ImpactedRange initTest : value.getInitialTests()) {
+            initTests.add(basifyInitTests(initTest));
+        }
+        new ChunckedUploadInitTests(value.spec, initTests);
+    }
+
+    static Map<String, Object> basifyInitTests(ImpactedRange initialTest) {
         Map<String, Object> r = Utils.formatRangeWithType(initialTest.range);
         Map<String, Object> report = basifyReport(initialTest.report);
         r.put("report", report);
         return r;
     }
 
-    private static Map<String, Object> basifyReport(FailureReport fr) {
+    static Map<String, Object> basifyReport(FailureReport fr) {
         Map<String, Object> report = new HashMap<>();
         if (fr != null) {
             report.put("what", fr.what);
@@ -373,18 +377,9 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
     }
 
     private final Driver driver;
-    private ProjectHandler astHandler;
-    private EvolutionHandler evoHandler;
-    private SourcesHandler sourcesHandler;
-    private DependencyHandler impactHandler;
 
-    public Neo4jCoEvolutionsStorage(Driver driver, SourcesHandler sourcesHandler, ProjectHandler astHandler,
-            EvolutionHandler evoHandler, DependencyHandler impactHandler) {
+    public Neo4jCoEvolutionsStorage(Driver driver) {
         this.driver = driver;
-        this.astHandler = astHandler;
-        this.evoHandler = evoHandler;
-        this.sourcesHandler = sourcesHandler;
-        this.impactHandler = impactHandler;
     }
 
     @Override
