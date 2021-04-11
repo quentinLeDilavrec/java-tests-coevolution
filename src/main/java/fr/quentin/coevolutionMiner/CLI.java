@@ -760,9 +760,6 @@ public class CLI {
                         String initialCommitId = coevoSpec.evoSpec.commitIdBefore;
                         List<Sources.Commit> commits = Utils.getCommitList(src, initialCommitId,
                                 coevoSpec.evoSpec.commitIdAfter);
-                        logger.info(commits.size() > 2
-                                ? "caution computation of coevolutions only between consecutive commits"
-                                : "# of commits to analyze: " + commits.size());
                         logger.info(commits);
 
                         Commit beforeCommit = null;
@@ -807,14 +804,14 @@ public class CLI {
                                 // find corresponding project and signature of test
                                 FillInitTests value = new FillInitTests(coevoSpec);
                                 for (Project proj : rangesPerProject.keySet()) {
-                                    JavaOutputProcessor outputProcessor = new JavaOutputProcessor();
-                                    outputProcessor.setFactory(((SpoonAST) proj.getAst()).launcher.getFactory());
+                                    File outDir = ((SpoonAST) proj.getAst()).rootDir.toFile();
+                                    System.out.println("looking at " + outDir.toString());
                                     for (Range initialTest : rangesPerProject.get(proj)) {
                                         // test and make the report
                                         EImpact.FailureReport report = null;
                                         try {
                                             report = FunctionalImpactRunner.runValidationCheckers(
-                                                    outputProcessor.getOutputDirectory(),
+                                                    outDir,
                                                     ((CtMethod) initialTest.getOriginal()).getDeclaringType()
                                                             .getQualifiedName(),
                                                     ((CtMethod) initialTest.getOriginal()).getSimpleName(), report);
