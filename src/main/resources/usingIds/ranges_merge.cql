@@ -4,6 +4,7 @@ MERGE (repository:Repository {repository:l.repository})
 MERGE (commit:Commit {repository:l.repository, commitId:l.commitId})
 MERGE (commit)-[:IS_COMMIT_OF]->(repository)
 MERGE (snap:FileSnapshot {path:l.file, repository:l.repository, commitId:l.commitId})
+SET snap.isTest = COALESCE(snap.isTest,l.isInTestCu)
 MERGE (snap)-[:IS_SNAPSHOT_IN]->(commit)
 MERGE (r:Range {
     repository:l.repository,

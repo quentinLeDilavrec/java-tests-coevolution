@@ -132,6 +132,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
 
                 List<Map<String, Object>> toCreate = new ArrayList<>();
                 if (NO_UPDATE) {
+                    // TODO should always update tool who found element (if different)
                     for (int i = 0; i < coevolutionsId.size(); i++) {
                         Integer id = coevolutionsId.get(i);
                         Map<String, Object> formatedCoEvo = toMatch.get(i);
@@ -268,6 +269,7 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
 
                 List<Map<String, Object>> toCreate = new ArrayList<>();
                 if (NO_UPDATE) {
+                    // TODO should always update tool who found element (if different)
                     for (int i = 0; i < impactssId.size(); i++) {
                         Integer id = impactssId.get(i);
                         Map<String, Object> formatedCoEvo = toMatch.get(i);
@@ -354,14 +356,14 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
     public void putInitTests(CoEvolutions value) {
         List<Map<String, Object>> initTests = new ArrayList<>();
         for (ImpactedRange initTest : value.getInitialTests()) {
-            initTests.add(basifyInitTests(initTest));
+            initTests.add(basifyTest(initTest));
         }
         new ChunckedUploadInitTests(value.spec, initTests);
     }
 
-    static Map<String, Object> basifyInitTests(ImpactedRange initialTest) {
-        Map<String, Object> r = Utils.formatRangeWithType(initialTest.range);
-        Map<String, Object> report = basifyReport(initialTest.report);
+    public static Map<String, Object> basifyTest(ImpactedRange test) {
+        Map<String, Object> r = Utils.formatRangeWithType(test.range);
+        Map<String, Object> report = basifyReport(test.report);
         r.put("report", report);
         return r;
     }

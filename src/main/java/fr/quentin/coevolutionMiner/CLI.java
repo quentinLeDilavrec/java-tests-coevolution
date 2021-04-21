@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -58,6 +59,8 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.TransactionWork;
+import org.neo4j.driver.Value;
+import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.TransientException;
 import org.refactoringminer.api.GitHistoryRefactoringMiner;
 import org.refactoringminer.api.Refactoring;
@@ -94,6 +97,7 @@ import gumtree.spoon.diff.Diff;
 import gumtree.spoon.diff.operations.Operation;
 import spoon.MavenLauncher;
 import spoon.reflect.CtModel;
+import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
 import spoon.support.JavaOutputProcessor;
@@ -825,6 +829,7 @@ public class CLI {
                                         } catch (Exception e) {
                                             throw new RuntimeException(e);
                                         }
+
                                         EImpact eimpact = new EImpact(initialTest, report);
                                         value.addInitialTestResult(initialTest, eimpact);
                                     }
@@ -919,6 +924,227 @@ public class CLI {
                             continue;
                         }
                         logger.info("done filling commits in " + srcSpec.repository + " between " + commitIdBefore
+                                + " and " + commitIdAfter);
+                    } catch (Throwable e) {
+                        logger.error("failed to analyze the interval [" + commitIdBefore + "," + commitIdAfter + "] of "
+                                + srcSpec.repository, e);
+                        // break;
+                    } finally {
+                        if (splitedOut) {
+                            ((ThreadPrintStream) System.out).flush();
+                            ((ThreadPrintStream) System.err).flush();
+                            ((ThreadPrintStream) System.out).close();
+                            ((ThreadPrintStream) System.err).close();
+                        }
+                    }
+                }
+            }
+        }
+
+        @Override
+        public int process(List<String> s, int lineNumber) throws Exception {
+            if (s.size() < 1) {
+                logger.warn("there is no project to analyze o this line");
+                return 1;
+            } else if (s.size() < 2) {
+                logger.warn("you should give the aproximate number of stars of this project");
+                return 2;
+            } else if (s.size() < 4) {
+                logger.warn("need at least 2 release/commits to analyze " + s.get(0) + " but got " + s.size());
+                return 3;
+            }
+            Sources.Specifier srcSpec = srcH.buildSpec(s.get(0), Integer.parseInt(s.get(1)));
+            ReleaseExecutor executor = new ReleaseExecutor(srcSpec, lineNumber);
+            List<String> waypoints = s.subList(2, s.size());
+            executor.process(waypoints);
+            return 0;
+        }
+
+    }
+
+    static class BatchExecutorAfterTests extends BatchExecutor {
+        protected final ProjectHandler astH = new ProjectHandler(neo4jDriver, srcH);
+
+        public BatchExecutorAfterTests(int pool_size) {
+            super(pool_size);
+        }
+
+        @Override
+        protected void overridableClose() throws Exception {
+            astH.close();
+            super.overridableClose();
+        }
+
+        EImpact.ImpactedRange getIR(Range test, EImpact eimpact) {
+            return eimpact.getSharingTest(test);
+        }
+
+        static final String CYPHER_MORETESTS_MERGE = Utils.memoizedReadResource("usingIds/moreTests_merge.cql");
+
+        static class ChunckedUploadMoreTests extends Utils.SimpleChunckedUpload<Map<String, Object>> {
+            private final Specifier spec;
+
+            public ChunckedUploadMoreTests(Specifier spec, List<Map<String, Object>> processed) {
+                super(neo4jDriver, 10);
+                this.spec = spec;
+                execute(logger, 256, processed);
+            }
+
+            @Override
+            protected String getCypher() {
+                return CYPHER_MORETESTS_MERGE;
+            }
+
+            @Override
+            public Value format(Collection<Map<String, Object>> chunk) {
+                return Values.parameters("data", chunk);
+            }
+
+            @Override
+            protected String whatIsUploaded() {
+                return "more tests of " + spec.repository;
+            }
+
+        }
+
+        class ReleaseExecutor {
+
+            private Specifier srcSpec;
+            private int lineNumber;
+            private String rawPath;
+
+            public ReleaseExecutor(Specifier srcSpec, int lineNumber) throws URISyntaxException {
+                this.srcSpec = srcSpec;
+                this.lineNumber = lineNumber;
+                this.rawPath = SourcesHelper.parseAddress(srcSpec.repository);
+            }
+
+            public void process(List<String> waypoints) throws Exception {
+                String commitIdAfter = null;
+                String commitIdBefore = null;
+                for (int index = 0; index < waypoints.size() - 1; index++) {
+                    try {
+                        commitIdAfter = waypoints.get(index);
+                        commitIdBefore = waypoints.get(index + 1);
+                        if (commitIdBefore.equals(commitIdAfter)) {
+                            continue;
+                        }
+                        Thread.currentThread().setName("fillAftT " + lineNumber + " " + index);
+                        if (splitedOut) {
+                            ThreadPrintStream.redirectThreadLogs(
+                                    Paths.get(SourcesHelper.RESOURCES_PATH, "Logs", rawPath, commitIdBefore));
+                        }
+
+                        Sources src = srcH.handle(srcSpec);
+                        try {
+                            src.getCommitsBetween(commitIdBefore, commitIdAfter);
+                        } catch (MissingObjectException e) {
+                            continue;
+                        }
+                        Project<CtElement> projectBefore = astH.handle(astH.buildSpec(srcSpec, commitIdBefore));
+                        Project<CtElement> projectAfter = astH.handle(astH.buildSpec(srcSpec, commitIdAfter));
+                        Map<String, Project<CtElement>> pAperRelPath = new HashMap<>();
+                        for (Project project : projectAfter) {
+                            pAperRelPath.put(project.spec.relPath.toString(), project);
+                        }
+
+                        // Per commit
+                        String initialCommitId = commitIdBefore;
+                        List<Sources.Commit> commits = Utils.getCommitList(src, initialCommitId, commitIdAfter);
+                        logger.info(commits);
+
+                        Commit beforeCommit = null;
+                        for (Commit afterCommit : commits) {
+                            if (beforeCommit != null) {
+                                String currCommit = beforeCommit.getId();
+                                // query neo4j to find tests possibly impacted at this commit
+                                Map<Project, Set<Range>> rangesPerProject = new HashMap<>();
+                                try (Session session = neo4jDriver.session()) {
+                                    String done = session.readTransaction(new TransactionWork<String>() {
+                                        @Override
+                                        public String execute(Transaction tx) {
+                                            Value parameters = Values.parameters("repository", srcSpec.repository,
+                                                    "commitId", currCommit);
+                                            tx.run("MATCH (t:Range {isTest:true,repository:$repository,commitId:$commitId}) "
+                                                    + "RETURN t.path as path, t.start as start, t.end as end",
+                                                    parameters).forEachRemaining(x -> {
+                                                        String path = x.get("path", "");
+                                                        Integer start = x.get("start", 0);
+                                                        Integer end = x.get("end", 0);
+                                                        try {
+                                                            System.out.println(
+                                                                    "matched " + path + ":" + start + ":" + end);
+                                                            Range range = projectBefore.getRange(path, start, end);
+                                                            System.out.println("found " + range.toString());
+                                                            Project project = range.getFile().getAST().getProject();
+                                                            rangesPerProject.putIfAbsent(project, new HashSet<>());
+                                                            rangesPerProject.get(project).add(range);
+                                                        } catch (RangeMatchingException e) {
+                                                            e.printStackTrace();
+                                                        }
+                                                    });
+                                            return "";
+                                        }
+                                    });
+                                } catch (TransientException e) {
+                                    throw new RuntimeException(e);
+                                } catch (Exception e) {
+                                    throw new RuntimeException(e);
+                                }
+                                // find corresponding project and signature of test
+                                Set<EImpact.ImpactedRange> value = new HashSet<>();
+                                for (Project proj : rangesPerProject.keySet()) {
+                                    // find after proj
+                                    Project afterProj = pAperRelPath.get(proj.spec.relPath.toString());
+                                    if (afterProj == null || afterProj.getAst() == null) {
+                                        continue;
+                                    }
+                                    File outDir = ((SpoonAST) afterProj.getAst()).rootDir.toFile();
+                                    System.out.println("looking at " + outDir.toString());
+                                    for (Range testBefore : rangesPerProject.get(proj)) {
+                                        Range test = null;
+                                        // test and make the report
+                                        EImpact.FailureReport report = null;
+                                        CtMethod testM = null;
+                                        try {
+                                            CtMethod testMbefore = (CtMethod) testBefore.getOriginal();
+                                            // find after range
+                                            testM = ((SpoonMiner.ProjectSpoon.SpoonAST) afterProj.getAst()).launcher
+                                                    .getFactory().Class()
+                                                    .get(testMbefore.getDeclaringType().getQualifiedName())
+                                                    .getMethod(testMbefore.getSimpleName());
+                                            SourcePosition position = testM.getPosition();
+                                            test = afterProj.getRange(
+                                                    afterProj.getAst().rootDir.relativize(position.getFile().toPath())
+                                                            .toString(),
+                                                    position.getSourceStart(), position.getSourceEnd(), testM);
+                                            System.out.println("after test " + test.toString());
+                                        } catch (Exception e) {
+                                        }
+                                        if (testM == null || test == null) {
+                                            continue;
+                                        }
+                                        try {
+                                            report = FunctionalImpactRunner.runValidationCheckers(outDir,
+                                                    testM.getDeclaringType().getQualifiedName(), testM.getSimpleName(),
+                                                    report);
+                                            value.add(new EImpact.ImpactedRange(test,report));
+                                        } catch (Exception e) {
+                                            logger.error("validation checker", e);
+                                        }
+                                    }
+                                }
+                                // upload the inittest with reports
+                                List<Map<String, Object>> initTests = new ArrayList<>();
+                                for (ImpactedRange initTest : value) {
+                                    initTests.add(Neo4jCoEvolutionsStorage.basifyTest(initTest));
+                                }
+                                new ChunckedUploadMoreTests(srcSpec, initTests);
+                            }
+                            beforeCommit = afterCommit;
+                        }
+
+                        logger.info("done filling after tests in " + srcSpec.repository + " between " + commitIdBefore
                                 + " and " + commitIdAfter);
                     } catch (Throwable e) {
                         logger.error("failed to analyze the interval [" + commitIdBefore + "," + commitIdAfter + "] of "
