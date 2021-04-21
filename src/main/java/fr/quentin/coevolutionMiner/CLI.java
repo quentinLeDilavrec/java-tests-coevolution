@@ -247,6 +247,16 @@ public class CLI {
                             Integer.parseInt(line.getOptionValue("thread", "1")));
                 }
             }
+        } else if (Objects.equals(args[0], "batchAfterTests")) {
+            if (line.getOptionValue("file") != null) {
+                try (Stream<ImmutablePair<Integer, String>> lines = indexedLines(
+                        Files.newBufferedReader(Paths.get(line.getOptionValue("file"))));) {
+                    batchAfterTests(
+                            lines.skip(Integer.parseInt(line.getOptionValue("start", "0")))
+                                    .limit(Integer.parseInt(line.getOptionValue("limit", "1"))),
+                            Integer.parseInt(line.getOptionValue("thread", "1")));
+                }
+            }
         } else if (Objects.equals(args[0], "ast")) {
             if (line.hasOption("repo")) {
                 System.out.println(ast(line.getOptionValue("repo"), line.getArgList().get(0)));
@@ -289,6 +299,14 @@ public class CLI {
 
     public static void batchFillInitTests(Stream<ImmutablePair<Integer, String>> stream, int pool_size) {
         try (BatchExecutor executor = new BatchExecutorFillInitTests(pool_size);) {
+            executor.process(stream);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void batchAfterTests(Stream<ImmutablePair<Integer, String>> stream, int pool_size) {
+        try (BatchExecutor executor = new BatchExecutorAfterTests(pool_size);) {
             executor.process(stream);
         } catch (Exception e) {
             throw new RuntimeException(e);
