@@ -324,7 +324,7 @@ public class CLI {
     }
 
     public static void batchFillTests(Stream<ImmutablePair<Integer, String>> stream, int pool_size) {
-        try (BatchExecutor executor = new BatchExecutorAfterTests(pool_size);) {
+        try (BatchExecutor executor = new BatchExecutorFillTests(pool_size);) {
             executor.process(stream);
         } catch (Exception e) {
             throw new RuntimeException(e);
