@@ -48,6 +48,7 @@ import fr.quentin.coevolutionMiner.v2.evolution.Evolutions.Evolution;
 import fr.quentin.coevolutionMiner.v2.evolution.storages.Neo4jEvolutionsStorage;
 import fr.quentin.coevolutionMiner.v2.sources.SourcesHandler;
 import fr.quentin.coevolutionMiner.v2.utils.Utils;
+import spoon.reflect.declaration.CtMethod;
 
 public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
     public static Logger logger = LogManager.getLogger();
@@ -363,6 +364,12 @@ public class Neo4jCoEvolutionsStorage implements CoEvolutionsStorage {
 
     public static Map<String, Object> basifyTest(ImpactedRange test) {
         Map<String, Object> r = Utils.formatRangeWithType(test.range);
+
+        try {
+            CtMethod m = (CtMethod) test.range.getOriginal();
+            r.put("qualifiedName", m.getDeclaringType().getQualifiedName() + "#" + m.getSimpleName());
+        } catch (Exception e) {
+        }
         Map<String, Object> report = basifyReport(test.report);
         r.put("report", report);
         return r;
