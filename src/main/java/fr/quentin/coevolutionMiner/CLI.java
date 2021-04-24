@@ -56,6 +56,7 @@ import org.eclipse.jgit.errors.MissingObjectException;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.TransactionWork;
@@ -1291,6 +1292,13 @@ public class CLI {
 
         }
 
+        class R {
+            String path;
+            Integer start;
+            Integer end;
+            protected boolean alreadyTested;
+        }
+
         class ReleaseExecutor {
 
             private Specifier srcSpec;
@@ -1335,43 +1343,40 @@ public class CLI {
                         for (Commit afterCommit : commits) {
                             if (beforeCommit != null) {
                                 String currCommit = beforeCommit.getId();
+
                                 Project<CtElement> projectBefore = astH.handle(astH.buildSpec(srcSpec, currCommit));
-                                Project<CtElement> projectAfter = astH
-                                        .handle(astH.buildSpec(srcSpec, afterCommit.getId()));
                                 Evolutions.Specifier evoSpec = EvolutionHandler.buildSpec(srcSpec, currCommit,
                                         afterCommit.getId());
                                 CoEvolutions.Specifier coevoSpec = CoEvolutionHandler.buildSpec(srcSpec, evoSpec);
-                                Map<String, Project<CtElement>> pAperRelPath = new HashMap<>();
-                                for (Project project : projectAfter) {
-                                    pAperRelPath.put(project.spec.relPath.toString(), project);
-                                }
                                 // query neo4j to find tests possibly impacted at this commit
-                                Map<Project, Set<Range>> rangesPerProject = new HashMap<>();
+                                List<R> matchedRanges = new ArrayList<>();
+                                List<String> testedAfter = new ArrayList<>();
                                 try (Session session = neo4jDriver.session()) {
                                     String done = session.readTransaction(new TransactionWork<String>() {
                                         @Override
                                         public String execute(Transaction tx) {
                                             Map<String, Object> parameters = new HashMap<>();
                                             parameters.put("repository", srcSpec.repository);
-                                            parameters.put("commitId", currCommit);
-                                            tx.run("MATCH (t:Range {isTest:true,repository:$repository,commitId:$commitId}) "
-                                                    + "RETURN t.path as path, t.start as start, t.end as end",
-                                                    parameters).forEachRemaining(x -> {
-                                                        String path = x.get("path", "");
-                                                        Integer start = x.get("start", 0);
-                                                        Integer end = x.get("end", 0);
-                                                        try {
-                                                            System.out.println(
-                                                                    "matched " + path + ":" + start + ":" + end);
-                                                            Range range = projectBefore.getRange(path, start, end);
-                                                            System.out.println("found " + range.toString());
-                                                            Project project = range.getFile().getAST().getProject();
-                                                            rangesPerProject.putIfAbsent(project, new HashSet<>());
-                                                            rangesPerProject.get(project).add(range);
-                                                        } catch (RangeMatchingException e) {
-                                                            e.printStackTrace();
-                                                        }
-                                                    });
+                                            parameters.put("commitIdBefore", currCommit);
+                                            parameters.put("commitIdAfter", afterCommit.getId());
+                                            Result req = tx.run("MATCH (t:Range {isTest:true,repository:$repository}) "
+                                                    + "WHERE t.commitId = $commitIdBefore OR t.commitId = $commitIdAfter"
+                                                    + "RETURN distinct t.path as path, t.start as start, t.end as end,"
+                                                    + "t.commitId = $commitIdBefore as before, t.failWhen is null as notTested",
+                                                    parameters);
+                                            req.forEachRemaining(x -> {
+                                                if (x.get("before", false)) {
+                                                    R r = new R();
+                                                    r.path = x.get("path", "");
+                                                    r.start = x.get("start", 0);
+                                                    r.end = x.get("end", 0);
+                                                    r.alreadyTested = !x.get("notTested", true);
+                                                    matchedRanges.add(r);
+                                                } else if (!x.get("notTested", true)) {
+                                                    testedAfter.add(x.get("path", "") + ":" + x.get("start", 0) + ":"
+                                                            + x.get("end", 0));
+                                                }
+                                            });
                                             return "";
                                         }
                                     });
@@ -1379,6 +1384,35 @@ public class CLI {
                                     throw new RuntimeException(e);
                                 } catch (Exception e) {
                                     throw new RuntimeException(e);
+                                }
+
+                                if (matchedRanges.size() > 0) {
+                                    projectBefore = astH.handle(astH.buildSpec(srcSpec, currCommit));
+                                } else {
+                                    continue;
+                                }
+                                Map<Project, ImmutablePair<Set<Range>,Set<Range>>> rangesPerProject = new HashMap<>();
+                                for (R r : matchedRanges) {
+                                    try {
+                                        System.out.println("matched " + r.path + ":" + r.start + ":" + r.end);
+                                        Range range = projectBefore.getRange(r.path, r.start, r.end);
+                                        System.out.println("found " + range.toString());
+                                        Project project = range.getFile().getAST().getProject();
+                                        rangesPerProject.putIfAbsent(project, new ImmutablePair<>(new HashSet<>(),new HashSet<>()));
+                                        if (!r.alreadyTested) {
+                                            rangesPerProject.get(project).right.add(range);
+                                        }
+                                        rangesPerProject.get(project).left.add(range);
+                                    } catch (RangeMatchingException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+
+                                Project<CtElement> projectAfter = astH
+                                        .handle(astH.buildSpec(srcSpec, afterCommit.getId()));
+                                Map<String, Project<CtElement>> pAperRelPath = new HashMap<>();
+                                for (Project project : projectAfter) {
+                                    pAperRelPath.put(project.spec.relPath.toString(), project);
                                 }
                                 // find corresponding project and signature of test
                                 FillInitTests value = new FillInitTests(coevoSpec);
@@ -1392,7 +1426,8 @@ public class CLI {
                                     }
                                     File outDirBefore = ((SpoonAST) proj.getAst()).rootDir.toFile();
                                     System.out.println("looking at " + outDirBefore.toString());
-                                    for (Range testBefore : rangesPerProject.get(proj)) {
+                                    ImmutablePair<Set<Range>, Set<Range>> currRanges = rangesPerProject.get(proj);
+                                    for (Range testBefore : currRanges.left) {
                                         System.out.println("before test " + testBefore.toString());
                                         Range testAfter = null;
                                         // test and make the report
@@ -1409,11 +1444,15 @@ public class CLI {
                                             continue;
                                         }
                                         try {
-                                            reportBefore = FunctionalImpactRunner.runValidationCheckers(outDirBefore,
-                                                    testMBefore.getDeclaringType().getQualifiedName(),
-                                                    testMBefore.getSimpleName(), reportBefore);
-                                            EImpact eimpact = new EImpact(testBefore, reportBefore);
-                                            value.addInitialTestResult(testBefore, eimpact);
+                                            if (currRanges.right.contains(testBefore)) {
+                                                // use if needed to add a prop
+                                            } else {
+                                                reportBefore = FunctionalImpactRunner.runValidationCheckers(outDirBefore,
+                                                        testMBefore.getDeclaringType().getQualifiedName(),
+                                                        testMBefore.getSimpleName(), reportBefore);
+                                                EImpact eimpact = new EImpact(testBefore, reportBefore);
+                                                value.addInitialTestResult(testBefore, eimpact);
+                                            }
                                         } catch (Exception e) {
                                             throw new RuntimeException(e);
                                         }
@@ -1437,10 +1476,14 @@ public class CLI {
                                             continue;
                                         }
                                         try {
-                                            reportAfter = FunctionalImpactRunner.runValidationCheckers(outDirAfter,
-                                                    testMAfter.getDeclaringType().getQualifiedName(),
-                                                    testMAfter.getSimpleName(), reportAfter);
-                                            valuesAfter.add(new EImpact.ImpactedRange(testAfter, reportAfter));
+                                            if (!testedAfter.contains(testAfter.getFile().getPath() + ":"
+                                                    + testAfter.getStart() + ":" + testAfter.getEnd())) {
+                                                reportAfter = FunctionalImpactRunner.runValidationCheckers(outDirAfter,
+                                                        testMAfter.getDeclaringType().getQualifiedName(),
+                                                        testMAfter.getSimpleName(), reportAfter);
+                                                valuesAfter.add(new EImpact.ImpactedRange(testAfter, reportAfter));
+                                            }
+                                            
                                         } catch (Exception e) {
                                             logger.error("validation checker", e);
                                         }
