@@ -1360,8 +1360,8 @@ public class CLI {
                                             parameters.put("commitIdBefore", currCommit);
                                             parameters.put("commitIdAfter", afterCommit.getId());
                                             Result req = tx.run("MATCH (t:Range {isTest:true,repository:$repository}) "
-                                                    + "WHERE t.commitId = $commitIdBefore OR t.commitId = $commitIdAfter"
-                                                    + "RETURN distinct t.path as path, t.start as start, t.end as end,"
+                                                    + "WHERE t.commitId = $commitIdBefore OR t.commitId = $commitIdAfter "
+                                                    + "RETURN distinct t.path as path, t.start as start, t.end as end, "
                                                     + "t.commitId = $commitIdBefore as before, t.failWhen is null as notTested",
                                                     parameters);
                                             req.forEachRemaining(x -> {
