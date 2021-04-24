@@ -5,8 +5,8 @@ MERGE (r:Range {range:[toInteger(initTest.start),toInteger(initTest.end)], start
                 path:initTest.file, repository:initTest.repository, commitId:initTest.commitId})
 ON MATCH SET r.isTest = initTest.isTest, r.type = initTest.type, 
     r.failureLog = initTest.report.what, r.failWhen = COALESCE(initTest.report.`when`, false), r.failWhere = initTest.report.`where`,
-    r.qualifiedName=test.qualifiedName
+    r.qualifiedName=initTest.qualifiedName
 ON CREATE SET r.isTest = initTest.isTest, r.type = initTest.type, 
     r.failureLog = initTest.report.what, r.failWhen = COALESCE(initTest.report.`when`, false), r.failWhere = initTest.report.`where`,
-    r.qualifiedName=test.qualifiedName
+    r.qualifiedName=initTest.qualifiedName
 RETURN ID(r)
