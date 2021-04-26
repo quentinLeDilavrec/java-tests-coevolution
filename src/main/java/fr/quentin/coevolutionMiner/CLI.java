@@ -1359,8 +1359,8 @@ public class CLI {
                                             parameters.put("repository", srcSpec.repository);
                                             parameters.put("commitIdBefore", currCommit);
                                             parameters.put("commitIdAfter", afterCommit.getId());
-                                            Result req = tx.run("MATCH (t:Range {isTest:true,repository:$repository}) "
-                                                    + "WHERE t.commitId = $commitIdBefore OR t.commitId = $commitIdAfter "
+                                            Result req = tx.run("MATCH (t:Range {repository:$repository}) "
+                                                    + "WHERE (t.commitId = $commitIdBefore OR t.commitId = $commitIdAfter) AND (t.isTest=true OR EXISTS((t)-[]-(:Impact)))"
                                                     + "RETURN distinct t.path as path, t.start as start, t.end as end, "
                                                     + "t.commitId = $commitIdBefore as before, t.failWhen is null as notTested",
                                                     parameters);
