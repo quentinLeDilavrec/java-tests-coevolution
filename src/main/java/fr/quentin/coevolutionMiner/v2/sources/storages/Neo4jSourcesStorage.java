@@ -44,9 +44,9 @@ public class Neo4jSourcesStorage implements SourcesStorage {
     @Override
     public void put(Sources sources) {
         Map<String, Object> value = new HashMap<>();
-        Repository adfa = sources.getRepository();
-        value.put("repository", adfa.getUrl());
-        value.put("releases", adfa.getReleases());
+        Repository repo = sources.getRepository();
+        value.put("repository", repo.getUrl());
+        value.put("releases", repo.getReleases());
         try (Session session = driver.session()) {
             String done = session.writeTransaction(new TransactionWork<String>() {
                 @Override
@@ -130,6 +130,9 @@ public class Neo4jSourcesStorage implements SourcesStorage {
             fcommits.add(o);
             o.put("repository", commit.getRepository().getUrl());
             o.put("commitId", commit.getId());
+            if (commit.getTryAnalyze()) {
+                o.put("tryAnalyze", true);
+            }
             o.put("parents", commit.getParents().stream().map(x -> x.getId()).collect(Collectors.toList()));
         }
         new ChunckedUploadCommits(spec, fcommits);

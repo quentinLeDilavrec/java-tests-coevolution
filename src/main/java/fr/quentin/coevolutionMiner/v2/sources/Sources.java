@@ -175,6 +175,15 @@ public abstract class Sources {
         }
     }
 
+    public final Commit getCommit(String id, boolean tryAna) {
+        Commit r = getCommit(id);
+        if (tryAna && !r.tryAnalyze) {
+               r.tryAnalyze = true;
+               updatedRelations.add(r);
+        }
+        return r;
+    }
+
     protected final void addParent(Commit x, Commit c) {
         if (!x.parents.contains(c)) {
             x.parents.add(c);
@@ -190,6 +199,8 @@ public abstract class Sources {
     public class Commit implements Version {
         final List<Commit> parents = new ArrayList<>();
         final List<Commit> childrens = new ArrayList<>();
+        boolean tryAnalyze = false;
+        public boolean getTryAnalyze() {return tryAnalyze;}
         private final String id;
 
         public Repository getRepository() {
@@ -307,7 +318,11 @@ public abstract class Sources {
 
     }
 
-    public abstract List<Commit> getCommitsBetween(String commitIdBefore, String commitIdAfter) throws Exception;
+    public final List<Commit> getCommitsBetween(String commitIdBefore, String commitIdAfter) throws Exception {
+        return getCommitsBetween(commitIdBefore, commitIdAfter, true);
+    };
+
+    public abstract List<Commit> getCommitsBetween(String commitIdBefore, String commitIdAfter, boolean tryAnalyze) throws Exception;
 
     // /*
     // * Not sure, for example, it would be used to represent maven artefacts.

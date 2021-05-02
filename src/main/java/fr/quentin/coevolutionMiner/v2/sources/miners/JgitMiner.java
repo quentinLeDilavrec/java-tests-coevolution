@@ -35,7 +35,7 @@ public class JgitMiner implements SourcesMiner {
             }
 
             @Override
-            public List<Sources.Commit> getCommitsBetween(String commitIdBefore, String commitIdAfter)
+            public List<Sources.Commit> getCommitsBetween(String commitIdBefore, String commitIdAfter, boolean tryAnalyze)
                     throws Exception {
                 try (SourcesHelper helper = open();) {
                     Set<Sources.Commit> main = new HashSet<>();
@@ -46,7 +46,7 @@ public class JgitMiner implements SourcesMiner {
                         Commit o = getCommit(name);
                         for (RevCommit commit : x.getParents()) {
                             String pname = commit.getId().getName();
-                            Commit p = getCommit(pname);
+                            Commit p = getCommit(pname, tryAnalyze);
                             main.add(p);
                             addParent(o, p);
                         }
